@@ -176,7 +176,7 @@ class TinkerGraph private constructor(
         edges.remove(edge.id())
 
         // Mark as removed
-        edge.markRemoved()
+        edge.markEdgeRemoved()
     }
 
     /**
