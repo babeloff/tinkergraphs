@@ -81,7 +81,7 @@ class TinkerVertexTest {
         val vertexProperty = vertex.addVertexProperty("score", 95.5)
 
         // Add meta-property
-        vertexProperty.property("timestamp", System.currentTimeMillis())
+        vertexProperty.property("timestamp", 1234567890L)
         vertexProperty.property("source", "test")
 
         assertTrue(vertexProperty.hasMetaProperties())

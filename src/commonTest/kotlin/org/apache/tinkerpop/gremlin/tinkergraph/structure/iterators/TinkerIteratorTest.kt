@@ -40,8 +40,8 @@ class TinkerIteratorTest {
         e3 = v1.addEdge("uses", v4, "frequency", "daily", "type", "interaction")
 
         // Create indices for testing
-        graph.createIndex("name", Vertex::class.java)
-        graph.createIndex("type", Edge::class.java)
+        graph.createIndex("name", Vertex::class)
+        graph.createIndex("type", Edge::class)
     }
 
     @Test
@@ -437,7 +437,7 @@ class TinkerIteratorTest {
     fun testIndexOptimization() {
         // Test that indexed properties use efficient lookup
         val graph = TinkerGraph.open()
-        graph.createIndex("name", Vertex::class.java)
+        graph.createIndex("name", Vertex::class)
 
         // Create vertices
         val testV1 = graph.addVertex("name", "test1", "age", 25)

@@ -177,15 +177,8 @@ class TinkerVertexProperty<V>(
         if (this === other) return true
         if (other !is VertexProperty<*>) return false
 
-        // VertexProperty equality is based on id when both have ids
-        return if (this is Element && other is Element) {
-            this.id() == other.id()
-        } else {
-            // Fall back to key/value/element equality
-            propertyKey == other.key() &&
-            propertyValue == other.value() &&
-            vertex == other.element()
-        }
+        // VertexProperty equality is based on id
+        return this.id() == other.id()
     }
 
     override fun hashCode(): Int {

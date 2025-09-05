@@ -342,7 +342,7 @@ class TinkerEdgeTest {
         edge.property("strength", 0.8)
 
         // Create index
-        graph.createIndex("type", Edge::class.java)
+        graph.createIndex("type", Edge::class)
 
         // Test index lookup
         val indexedEdges = graph.edgeIndex.get("type", "friendship")

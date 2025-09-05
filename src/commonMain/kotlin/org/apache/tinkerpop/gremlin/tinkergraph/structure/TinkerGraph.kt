@@ -3,6 +3,7 @@ package org.apache.tinkerpop.gremlin.tinkergraph.structure
 import org.apache.tinkerpop.gremlin.structure.*
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.iterators.TinkerVertexIterator
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.iterators.TinkerEdgeIterator
+import kotlin.reflect.KClass
 
 /**
  * An in-memory graph database implementation of TinkerPop's Graph interface.
@@ -208,7 +209,7 @@ class TinkerGraph private constructor(
     /**
      * Create an index for faster property lookups.
      */
-    fun createIndex(key: String, elementClass: Class<out Element>) {
+    fun createIndex(key: String, elementClass: KClass<out Element>) {
         when (elementClass.simpleName) {
             "Vertex", "TinkerVertex" -> {
                 vertexIndex.createKeyIndex(key)
@@ -225,7 +226,7 @@ class TinkerGraph private constructor(
     /**
      * Drop an index.
      */
-    fun dropIndex(key: String, elementClass: Class<out Element>) {
+    fun dropIndex(key: String, elementClass: KClass<out Element>) {
         when (elementClass.simpleName) {
             "Vertex", "TinkerVertex" -> vertexIndex.dropKeyIndex(key)
             "Edge", "TinkerEdge" -> edgeIndex.dropKeyIndex(key)
@@ -236,7 +237,7 @@ class TinkerGraph private constructor(
     /**
      * Get the indexed keys for a given element class.
      */
-    fun getIndexedKeys(elementClass: Class<out Element>): Set<String> {
+    fun getIndexedKeys(elementClass: KClass<out Element>): Set<String> {
         return when (elementClass.simpleName) {
             "Vertex", "TinkerVertex" -> vertexIndex.getIndexedKeys()
             "Edge", "TinkerEdge" -> edgeIndex.getIndexedKeys()

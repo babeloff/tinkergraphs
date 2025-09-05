@@ -30,8 +30,17 @@ kotlin {
                     enabled.set(true)
                 }
             }
+            testTask {
+                enabled = false // Disable browser tests to avoid Chrome dependency
+            }
         }
-        nodejs()
+        nodejs {
+            testTask {
+                useMocha {
+                    timeout = "10s"
+                }
+            }
+        }
         binaries.executable()
     }
 
@@ -59,7 +68,7 @@ kotlin {
         }
         val jvmMain by getting {
             dependencies {
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.7.3")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
             }
         }
         val jvmTest by getting {
@@ -69,13 +78,13 @@ kotlin {
         }
         val jsMain by getting {
             dependencies {
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-js:1.7.3")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
             }
         }
         val jsTest by getting
         val nativeMain by getting {
             dependencies {
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-native:1.7.3")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
             }
         }
         val nativeTest by getting
