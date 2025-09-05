@@ -1,6 +1,7 @@
 package org.apache.tinkerpop.gremlin.tinkergraph.structure
 
 import org.apache.tinkerpop.gremlin.structure.*
+import org.apache.tinkerpop.gremlin.tinkergraph.platform.Platform
 
 /**
  * IndexCache provides memory optimization for frequently accessed index entries.
@@ -13,7 +14,7 @@ class IndexCache<T : Element> {
     /**
      * LRU cache for index query results.
      */
-    private val cache = LinkedHashMap<CacheKey, CacheEntry<T>>(16, 0.75f, true)
+    private val cache = Platform.createLinkedHashMap<CacheKey, CacheEntry<T>>(16, 0.75f, true)
 
     /**
      * Maximum number of entries to keep in cache.
@@ -53,7 +54,7 @@ class IndexCache<T : Element> {
      */
     fun put(indexType: IndexType, key: String, parameters: Map<String, Any?>, result: Set<T>) {
         val cacheKey = CacheKey(indexType, key, parameters)
-        val entry = CacheEntry(result.toSet(), System.currentTimeMillis())
+        val entry = CacheEntry(result.toSet(), Platform.currentTimeMillis())
 
         // Add to cache
         cache[cacheKey] = entry
@@ -170,7 +171,7 @@ class IndexCache<T : Element> {
      * Remove expired entries from the cache.
      */
     fun cleanupExpired() {
-        val currentTime = System.currentTimeMillis()
+        val currentTime = Platform.currentTimeMillis()
         val toRemove = cache.entries
             .filter { (_, entry) -> currentTime - entry.timestamp > maxAge }
             .map { it.key }
@@ -288,7 +289,7 @@ class IndexCache<T : Element> {
         val stats = getStatistics()
 
         when {
-            hitRate < 0.2 -> recommendations.add("Consider increasing cache size or reducing max age - low hit rate (${"%.2f".format(hitRate * 100)}%)")
+            hitRate < 0.2 -> recommendations.add("Consider increasing cache size or reducing max age - low hit rate (${Platform.formatPercentage(hitRate * 100)}%)")
             hitRate > 0.8 && cache.size < maxSize * 0.5 -> recommendations.add("Cache size could potentially be reduced - high hit rate with low utilization")
         }
 
@@ -306,7 +307,9 @@ class IndexCache<T : Element> {
     }
 
     /**
-     * Evict entries if cache exceeds maximum size.
+     * Evicts cache entries if the cache exceeds the maximum allowed size.
+     * Uses a FIFO eviction strategy, removing the oldest entries first until
+     * the cache size is within limits. Updates the eviction counter for statistics.
      */
     private fun evictIfNecessary() {
         while (cache.size > maxSize) {
@@ -317,10 +320,15 @@ class IndexCache<T : Element> {
     }
 
     /**
-     * Check if a cache entry is expired.
+     * Checks if a cache entry has expired based on its timestamp.
+     * An entry is considered expired if the time since its creation
+     * exceeds the configured maximum age.
+     *
+     * @param entry the cache entry to check for expiration
+     * @return true if the entry is expired, false otherwise
      */
     private fun isExpired(entry: CacheEntry<T>): Boolean {
-        return System.currentTimeMillis() - entry.timestamp > maxAge
+        return Platform.currentTimeMillis() - entry.timestamp > maxAge
     }
 
     /**
@@ -360,6 +368,6 @@ class IndexCache<T : Element> {
 
     override fun toString(): String {
         val stats = getStatistics()
-        return "IndexCache[size=${cache.size}, hitRate=${"%.2f".format(getHitRate() * 100)}%, memoryMB=${estimateMemoryUsage() / 1_000_000}]"
+        return "IndexCache[size=${cache.size}, hitRate=${Platform.formatPercentage(getHitRate() * 100)}%, memoryMB=${estimateMemoryUsage() / 1_000_000}]"
     }
 }

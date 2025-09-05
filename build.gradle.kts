@@ -1,6 +1,7 @@
 plugins {
     kotlin("multiplatform") version "2.1.0"
     kotlin("plugin.serialization") version "2.1.0"
+    id("org.jetbrains.dokka") version "1.9.20"
     `maven-publish`
 }
 
@@ -18,6 +19,17 @@ repositories {
 
 kotlin {
     jvmToolchain(23)
+
+    // Suppress expect/actual classes beta warning
+    targets.all {
+        compilations.all {
+            compileTaskProvider.configure {
+                compilerOptions {
+                    freeCompilerArgs.add("-Xexpect-actual-classes")
+                }
+            }
+        }
+    }
 
     // JVM target
     jvm {
@@ -67,6 +79,7 @@ kotlin {
             dependencies {
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.3")
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
+                implementation("io.github.oshai:kotlin-logging:7.0.0")
             }
         }
         val commonTest by getting {
@@ -77,6 +90,7 @@ kotlin {
         val jvmMain by getting {
             dependencies {
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
+                implementation("ch.qos.logback:logback-classic:1.4.14")
             }
         }
         val jvmTest by getting {
@@ -131,5 +145,52 @@ publishing {
                 }
             }
         }
+    }
+}
+
+// Documentation generation tasks
+tasks.register("generateDocs") {
+    group = "documentation"
+    description = "Generate all documentation including KDoc and AsciiDoc"
+    dependsOn("dokkaHtml", "buildAsciiDoc")
+}
+
+tasks.register<Exec>("buildAsciiDoc") {
+    group = "documentation"
+    description = "Build AsciiDoc documentation using external tools"
+
+    doFirst {
+        mkdir("build/docs")
+    }
+
+    commandLine("bash", "-c", """
+        if command -v asciidoctor >/dev/null 2>&1; then
+            echo "Building HTML documentation..."
+            asciidoctor -r asciidoctor-diagram docs/roadmap.adoc -o build/docs/roadmap.html
+
+            if command -v asciidoctor-pdf >/dev/null 2>&1; then
+                echo "Building PDF documentation..."
+                asciidoctor-pdf -r asciidoctor-diagram docs/roadmap.adoc -o build/docs/roadmap.pdf
+            else
+                echo "Warning: asciidoctor-pdf not found, skipping PDF generation"
+            fi
+
+            if command -v asciidoctor-revealjs >/dev/null 2>&1; then
+                echo "Building reveal.js presentation..."
+                asciidoctor-revealjs docs/roadmap.adoc -o build/docs/roadmap-slides.html
+            else
+                echo "Warning: asciidoctor-revealjs not found, skipping slides generation"
+            fi
+        else
+            echo "Warning: asciidoctor not found, skipping AsciiDoc documentation generation"
+            echo "Install using: pixi run docs-setup"
+        fi
+    """.trimIndent())
+}
+
+// Configure Dokka for KDoc generation
+tasks.named("dokkaHtml") {
+    doFirst {
+        mkdir("build/docs/kdoc")
     }
 }

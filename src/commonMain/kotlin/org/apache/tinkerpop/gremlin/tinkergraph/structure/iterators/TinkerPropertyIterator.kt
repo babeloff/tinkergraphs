@@ -36,7 +36,6 @@ class TinkerPropertyIterator<V>(
      * Creates the base sequence with all filters applied.
      * Uses lazy evaluation to process properties on-demand.
      */
-    @Suppress("UNCHECKED_CAST")
     private fun createBaseSequence(): Sequence<Property<V>> {
         if (element !is TinkerElement) {
             return emptySequence()
@@ -45,7 +44,14 @@ class TinkerPropertyIterator<V>(
         return element.getProperties().asSequence()
             .filter { (key, _) -> matchesKeyFilter(key) }
             .filter { (key, _) -> matchesHiddenFilter(key) }
-            .map { (_, property) -> property as Property<V> }
+            .mapNotNull { (_, property) ->
+                try {
+                    @Suppress("UNCHECKED_CAST") // Safe cast - Property interface guarantees type consistency
+                    property as Property<V>
+                } catch (e: ClassCastException) {
+                    null
+                }
+            }
             .filter { property -> property.isPresent() }
             .filter { property -> matchesValueFilters(property.value()) }
     }
@@ -167,7 +173,6 @@ class TinkerVertexPropertyIterator<V>(
      * Creates the base sequence with all filters applied.
      * Uses lazy evaluation to process vertex properties on-demand.
      */
-    @Suppress("UNCHECKED_CAST")
     private fun createBaseSequence(): Sequence<VertexProperty<V>> {
         if (element !is TinkerElement) {
             return emptySequence()
@@ -176,7 +181,14 @@ class TinkerVertexPropertyIterator<V>(
         return element.getProperties().asSequence()
             .filter { (key, _) -> matchesKeyFilter(key) }
             .map { (_, property) -> property }
-            .filterIsInstance<VertexProperty<V>>()
+            .mapNotNull { property ->
+                try {
+                    @Suppress("UNCHECKED_CAST") // Safe cast - VertexProperty interface guarantees type consistency
+                    property as? VertexProperty<V>
+                } catch (e: ClassCastException) {
+                    null
+                }
+            }
             .filter { property -> property.isPresent() }
             .filter { property -> matchesCardinalityFilter(property) }
             .filter { property -> matchesValueFilters(property.value()) }
@@ -287,7 +299,6 @@ class TinkerMetaPropertyIterator<V>(
      * Creates the base sequence with all filters applied.
      * Uses lazy evaluation to process meta-properties on-demand.
      */
-    @Suppress("UNCHECKED_CAST")
     private fun createBaseSequence(): Sequence<Property<V>> {
         if (vertexProperty !is TinkerVertexProperty) {
             return emptySequence()
@@ -295,7 +306,14 @@ class TinkerMetaPropertyIterator<V>(
 
         return vertexProperty.getProperties().asSequence()
             .filter { (key, _) -> matchesKeyFilter(key) }
-            .map { (_, property) -> property as Property<V> }
+            .mapNotNull { (_, property) ->
+                try {
+                    @Suppress("UNCHECKED_CAST") // Safe cast - Property interface guarantees type consistency
+                    property as Property<V>
+                } catch (e: ClassCastException) {
+                    null
+                }
+            }
             .filter { property -> property.isPresent() }
             .filter { property -> matchesValueFilters(property.value()) }
     }

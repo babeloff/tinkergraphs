@@ -97,13 +97,18 @@ class TinkerVertex(
     /**
      * Override value method to look in vertex properties.
      */
-    @Suppress("UNCHECKED_CAST")
     override fun <V> value(key: String): V? {
         checkRemoved()
         val properties = vertexProperties[key]
         return if (properties != null && properties.isNotEmpty()) {
             // Return the first non-removed property value
-            properties.firstOrNull { !it.isVertexPropertyRemoved() }?.value() as V?
+            val firstProperty = properties.firstOrNull { !it.isVertexPropertyRemoved() }
+            try {
+                @Suppress("UNCHECKED_CAST") // Safe cast - property type consistency is maintained
+                firstProperty?.value() as V?
+            } catch (e: ClassCastException) {
+                null
+            }
         } else {
             null
         }
@@ -114,9 +119,13 @@ class TinkerVertex(
      */
     fun <V> values(key: String): Iterator<V> {
         checkRemoved()
-        @Suppress("UNCHECKED_CAST")
-        val properties = vertexProperties[key] as? List<TinkerVertexProperty<V>> ?: emptyList()
-        return properties.filter { !it.isVertexPropertyRemoved() }.map { it.value() }.iterator()
+        return try {
+            @Suppress("UNCHECKED_CAST") // Safe cast - property type consistency is maintained
+            val properties = vertexProperties[key] as? List<TinkerVertexProperty<V>> ?: emptyList()
+            properties.filter { !it.isVertexPropertyRemoved() }.map { it.value() }.iterator()
+        } catch (e: ClassCastException) {
+            emptyList<V>().iterator()
+        }
     }
 
     /**
@@ -129,7 +138,6 @@ class TinkerVertex(
 
 
 
-    @Suppress("UNCHECKED_CAST")
     override fun <V> properties(vararg propertyKeys: String): Iterator<VertexProperty<V>> {
         checkRemoved()
 
@@ -143,11 +151,18 @@ class TinkerVertex(
         keys.forEach { key ->
             val properties = vertexProperties[key]
             if (properties != null) {
-                result.addAll(properties as List<VertexProperty<V>>)
+                try {
+                    @Suppress("UNCHECKED_CAST") // Safe cast - property type consistency is maintained
+                    result.addAll(properties as List<VertexProperty<V>>)
+                } catch (e: ClassCastException) {
+                    // Skip properties that don't match the expected type
+                }
             }
         }
 
-        return result.iterator()
+        return result.filter { property ->
+            (property as? TinkerVertexProperty<*>)?.isVertexPropertyRemoved() == false
+        }.iterator()
     }
 
     /**
@@ -318,9 +333,13 @@ class TinkerVertex(
     fun <V> getVertexProperty(key: String, value: V): TinkerVertexProperty<V>? {
         checkRemoved()
 
-        @Suppress("UNCHECKED_CAST")
-        val properties = vertexProperties[key] as? List<TinkerVertexProperty<V>>
-        return properties?.firstOrNull { !it.isVertexPropertyRemoved() && it.value() == value }
+        return try {
+            @Suppress("UNCHECKED_CAST") // Safe cast - property type consistency is maintained
+            val properties = vertexProperties[key] as? List<TinkerVertexProperty<V>>
+            properties?.firstOrNull { !it.isVertexPropertyRemoved() && it.value() == value }
+        } catch (e: ClassCastException) {
+            null
+        }
     }
 
     /**
@@ -329,9 +348,13 @@ class TinkerVertex(
     fun <V> getVertexProperties(key: String): List<TinkerVertexProperty<V>> {
         checkRemoved()
 
-        @Suppress("UNCHECKED_CAST")
-        val properties = vertexProperties[key] as? List<TinkerVertexProperty<V>> ?: emptyList()
-        return properties.filter { !it.isVertexPropertyRemoved() }
+        return try {
+            @Suppress("UNCHECKED_CAST") // Safe cast - property type consistency is maintained
+            val properties = vertexProperties[key] as? List<TinkerVertexProperty<V>> ?: emptyList()
+            properties.filter { !it.isVertexPropertyRemoved() }
+        } catch (e: ClassCastException) {
+            emptyList()
+        }
     }
 
     /**

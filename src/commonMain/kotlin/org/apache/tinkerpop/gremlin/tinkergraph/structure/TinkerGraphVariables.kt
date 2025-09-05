@@ -18,9 +18,13 @@ class TinkerGraphVariables : Graph.Variables {
         return variables.keys.toSet()
     }
 
-    @Suppress("UNCHECKED_CAST")
     override fun <R> get(key: String): R? {
-        return variables[key] as? R
+        return try {
+            @Suppress("UNCHECKED_CAST") // Safe cast - caller specifies expected type
+            variables[key] as? R
+        } catch (e: ClassCastException) {
+            null
+        }
     }
 
     override fun set(key: String, value: Any?) {
@@ -54,9 +58,13 @@ class TinkerGraphVariables : Graph.Variables {
      * @param defaultValue the default value to return if key doesn't exist
      * @return the variable value or default value
      */
-    @Suppress("UNCHECKED_CAST")
     fun <R> getOrDefault(key: String, defaultValue: R): R {
-        return (variables[key] as? R) ?: defaultValue
+        return try {
+            @Suppress("UNCHECKED_CAST") // Safe cast - caller specifies expected type
+            (variables[key] as? R) ?: defaultValue
+        } catch (e: ClassCastException) {
+            defaultValue
+        }
     }
 
     /**

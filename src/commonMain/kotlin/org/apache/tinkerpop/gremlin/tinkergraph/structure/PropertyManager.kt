@@ -261,7 +261,12 @@ class PropertyManager(private val graph: TinkerGraph) {
     }
 
     /**
-     * Notify listeners of property addition.
+     * Notifies all registered property listeners of a property addition event.
+     * Handles any exceptions thrown by listeners to prevent disruption of the main operation.
+     * Failed notifications are logged but do not affect the property addition process.
+     *
+     * @param vertex the vertex to which the property was added
+     * @param property the vertex property that was added
      */
     private fun notifyPropertyAdded(vertex: TinkerVertex, property: TinkerVertexProperty<*>) {
         propertyListeners.forEach { listener ->
@@ -275,7 +280,12 @@ class PropertyManager(private val graph: TinkerGraph) {
     }
 
     /**
-     * Notify listeners of property removal.
+     * Notifies all registered property listeners of a property removal event.
+     * Handles any exceptions thrown by listeners to prevent disruption of the main operation.
+     * Failed notifications are logged but do not affect the property removal process.
+     *
+     * @param vertex the vertex from which the property was removed
+     * @param property the vertex property that was removed
      */
     private fun notifyPropertyRemoved(vertex: TinkerVertex, property: TinkerVertexProperty<*>) {
         propertyListeners.forEach { listener ->

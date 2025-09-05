@@ -108,8 +108,8 @@ class PropertyQueryEngine(private val graph: TinkerGraph) {
 
         // Use range index if available
         val result = if (graph.vertexRangeIndex.isRangeIndexed(key)) {
-            val minComparable = minValue as? Comparable<Any>
-            val maxComparable = maxValue as? Comparable<Any>
+            val minComparable = RangeIndex.safeComparable(minValue)
+            val maxComparable = RangeIndex.safeComparable(maxValue)
             graph.vertexRangeIndex.rangeQuery(key, minComparable, maxComparable, inclusive, inclusive)
         } else {
             // Fall back to criterion-based query
@@ -248,7 +248,13 @@ class PropertyQueryEngine(private val graph: TinkerGraph) {
     }
 
     /**
-     * Evaluate a property criterion against a vertex.
+     * Evaluates a property criterion against a vertex to determine if it matches.
+     * This method handles all types of criteria including exact matches, ranges,
+     * exists checks, and compound expressions.
+     *
+     * @param vertex the vertex to evaluate the criterion against
+     * @param criterion the property criterion to evaluate
+     * @return true if the vertex satisfies the criterion, false otherwise
      */
     private fun evaluateCriterion(vertex: TinkerVertex, criterion: PropertyCriterion): Boolean {
         return when (criterion) {
@@ -314,7 +320,13 @@ class PropertyQueryEngine(private val graph: TinkerGraph) {
     }
 
     /**
-     * Evaluate a property criterion against a specific vertex property.
+     * Evaluates a property criterion against a specific vertex property.
+     * This method is used when working with multi-property vertices where
+     * each property instance needs to be evaluated individually.
+     *
+     * @param property the vertex property to evaluate
+     * @param criterion the property criterion to apply
+     * @return true if the property satisfies the criterion, false otherwise
      */
     private fun evaluatePropertyCriterion(
         property: TinkerVertexProperty<*>,
@@ -493,7 +505,13 @@ class PropertyQueryEngine(private val graph: TinkerGraph) {
     }
 
     /**
-     * Execute query using composite index strategy.
+     * Executes a query using a composite index strategy.
+     * Uses the composite index to efficiently find vertices that match
+     * multiple property criteria, then applies any remaining filters.
+     *
+     * @param strategy the composite index strategy to use
+     * @param secondaryFilters additional criteria to apply after index lookup
+     * @return sequence of vertices matching all criteria
      */
     private fun executeCompositeQuery(
         strategy: IndexOptimizer.CompositeIndexStrategy,
@@ -516,15 +534,21 @@ class PropertyQueryEngine(private val graph: TinkerGraph) {
     }
 
     /**
-     * Execute query using range index strategy.
+     * Executes a query using a range index strategy.
+     * Uses the range index to efficiently find vertices within a specified
+     * value range, then applies any remaining filters.
+     *
+     * @param strategy the range index strategy to use
+     * @param secondaryFilters additional criteria to apply after index lookup
+     * @return sequence of vertices matching all criteria
      */
     private fun executeRangeQuery(
         strategy: IndexOptimizer.RangeIndexStrategy,
         secondaryFilters: List<PropertyCriterion>
     ): Set<TinkerVertex> {
         val criterion = strategy.criterion
-        val minComparable = criterion.minValue as? Comparable<Any>
-        val maxComparable = criterion.maxValue as? Comparable<Any>
+        val minComparable = RangeIndex.safeComparable(criterion.minValue)
+        val maxComparable = RangeIndex.safeComparable(criterion.maxValue)
 
         val candidates = graph.vertexRangeIndex.rangeQuery(
             criterion.key,

@@ -1,6 +1,7 @@
 package org.apache.tinkerpop.gremlin.tinkergraph.structure
 
 import org.apache.tinkerpop.gremlin.structure.*
+import org.apache.tinkerpop.gremlin.tinkergraph.platform.Platform
 
 /**
  * RangeIndex provides efficient range query capabilities for comparable property values.
@@ -40,7 +41,7 @@ class RangeIndex<T : Element> {
     fun createRangeIndex(key: String) {
         if (!rangeIndexedKeys.contains(key)) {
             rangeIndexedKeys.add(key)
-            sortedIndices[key] = sortedMapOf()
+            sortedIndices[key] = Platform.createSortedMap()
         }
     }
 
@@ -255,7 +256,6 @@ class RangeIndex<T : Element> {
      * @param oldValue the old property value (null if property was added)
      * @param element the element whose property changed
      */
-    @Suppress("UNCHECKED_CAST")
     fun autoUpdate(key: String, newValue: Any?, oldValue: Any?, element: T) {
         if (!isRangeIndexed(key)) return
 
@@ -265,8 +265,8 @@ class RangeIndex<T : Element> {
         clearCacheForKey(key)
 
         // Remove element from old value index
-        if (oldValue != null && oldValue is Comparable<*>) {
-            val oldComparable = oldValue as Comparable<Any>
+        val oldComparable = safeComparable(oldValue)
+        if (oldComparable != null) {
             val oldSet = sortedIndex[oldComparable]
             if (oldSet != null) {
                 oldSet.remove(element)
@@ -277,8 +277,8 @@ class RangeIndex<T : Element> {
         }
 
         // Add element to new value index
-        if (newValue != null && newValue is Comparable<*>) {
-            val newComparable = newValue as Comparable<Any>
+        val newComparable = safeComparable(newValue)
+        if (newComparable != null) {
             val newSet = sortedIndex.getOrPut(newComparable) { mutableSetOf() }
             newSet.add(element)
         }
@@ -289,12 +289,12 @@ class RangeIndex<T : Element> {
      *
      * @param element the element to index
      */
-    @Suppress("UNCHECKED_CAST")
     fun addElement(element: T) {
         rangeIndexedKeys.forEach { key ->
             try {
                 val value = element.value<Any>(key)
-                if (value is Comparable<*>) {
+                val comparable = safeComparable(value)
+                if (comparable != null) {
                     autoUpdate(key, value, null, element)
                 }
             } catch (e: Exception) {
@@ -308,12 +308,12 @@ class RangeIndex<T : Element> {
      *
      * @param element the element to remove from indices
      */
-    @Suppress("UNCHECKED_CAST")
     fun removeElement(element: T) {
         rangeIndexedKeys.forEach { key ->
             try {
                 val value = element.value<Any>(key)
-                if (value is Comparable<*>) {
+                val comparable = safeComparable(value)
+                if (comparable != null) {
                     autoUpdate(key, null, value, element)
                 }
             } catch (e: Exception) {
@@ -328,19 +328,19 @@ class RangeIndex<T : Element> {
      * @param key the property key to rebuild
      * @param elements all elements to scan for this property
      */
-    @Suppress("UNCHECKED_CAST")
     fun rebuildRangeIndex(key: String, elements: Collection<T>) {
         if (!isRangeIndexed(key)) return
 
         // Clear existing index for this key
-        sortedIndices[key] = sortedMapOf()
+        sortedIndices[key] = Platform.createSortedMap()
         clearCacheForKey(key)
 
         // Rebuild from elements
         elements.forEach { element ->
             try {
                 val value = element.value<Any>(key)
-                if (value is Comparable<*>) {
+                val comparable = safeComparable(value)
+                if (comparable != null) {
                     autoUpdate(key, value, null, element)
                 }
             } catch (e: Exception) {
@@ -457,4 +457,57 @@ class RangeIndex<T : Element> {
         val includeMin: Boolean,
         val includeMax: Boolean
     )
+
+    companion object {
+        /**
+         * Safely converts a value to Comparable<Any> if possible.
+         *
+         * @param value the value to convert
+         * @return the value as Comparable<Any> if it implements Comparable, null otherwise
+         */
+        fun <V> safeComparable(value: V?): Comparable<Any>? {
+            return when (value) {
+                null -> null
+                is Comparable<*> -> {
+                    try {
+                        @Suppress("UNCHECKED_CAST") // This is safe because we checked is Comparable<*>
+                        value as Comparable<Any>
+                    } catch (e: ClassCastException) {
+                        null
+                    }
+                }
+                else -> null
+            }
+        }
+
+        /**
+         * Safely performs a range query with automatic type conversion.
+         *
+         * @param rangeIndex the range index to query
+         * @param key the property key
+         * @param minValue the minimum value (will be safely converted)
+         * @param maxValue the maximum value (will be safely converted)
+         * @param includeMin whether to include the minimum value
+         * @param includeMax whether to include the maximum value
+         * @return set of elements within the range, or empty set if conversion fails
+         */
+        fun <T : Element, V> safeRangeQuery(
+            rangeIndex: RangeIndex<T>,
+            key: String,
+            minValue: V? = null,
+            maxValue: V? = null,
+            includeMin: Boolean = true,
+            includeMax: Boolean = true
+        ): Set<T> {
+            val safeMin = safeComparable(minValue)
+            val safeMax = safeComparable(maxValue)
+
+            // If we couldn't convert the values, return empty set
+            if ((minValue != null && safeMin == null) || (maxValue != null && safeMax == null)) {
+                return emptySet()
+            }
+
+            return rangeIndex.rangeQuery(key, safeMin, safeMax, includeMin, includeMax)
+        }
+    }
 }

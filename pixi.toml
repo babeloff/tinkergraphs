@@ -33,3 +33,32 @@ cmd = "gradle clean"
 gradle = "9.0.*"
 openjdk = "23.0.*"
 kotlin = "2.2.*"
+ruby = ">=3.0"
+
+# Documentation generation tasks
+[tasks.docs]
+cmd = "gradle generateDocs"
+
+# Install required gems for documentation
+[tasks.docs-setup]
+cmd = "gem install asciidoctor asciidoctor-diagram asciidoctor-revealjs asciidoctor-pdf"
+
+# Generate AsciiDoc documentation with diagrams
+[tasks.docs-adoc]
+cmd = "asciidoctor -r asciidoctor-diagram docs/roadmap.adoc -o build/docs/roadmap.html"
+
+# Generate PDF documentation
+[tasks.docs-pdf]
+cmd = "asciidoctor-pdf -r asciidoctor-diagram docs/roadmap.adoc -o build/docs/roadmap.pdf"
+
+# Generate reveal.js presentation
+[tasks.docs-slides]
+cmd = "asciidoctor-revealjs docs/roadmap.adoc -o build/docs/roadmap-slides.html"
+
+# Generate all available documentation formats
+[tasks.docs-all]
+cmd = "pixi run docs-adoc && pixi run docs-pdf && pixi run docs-slides"
+
+# Check available asciidoctor tools
+[tasks.docs-check]
+cmd = "ruby -e \"puts 'Ruby version: ' + RUBY_VERSION; %w[asciidoctor asciidoctor-diagram asciidoctor-revealjs asciidoctor-pdf].each {|gem| begin; require gem; puts gem + ': available'; rescue LoadError; puts gem + ': not available'; end}\""

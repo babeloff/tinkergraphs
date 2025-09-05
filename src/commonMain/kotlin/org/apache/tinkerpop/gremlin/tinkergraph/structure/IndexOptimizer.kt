@@ -1,6 +1,7 @@
 package org.apache.tinkerpop.gremlin.tinkergraph.structure
 
 import org.apache.tinkerpop.gremlin.structure.*
+import org.apache.tinkerpop.gremlin.tinkergraph.platform.Platform
 
 /**
  * IndexOptimizer provides query plan optimization and index selection strategies
@@ -86,7 +87,13 @@ class IndexOptimizer<T : Element>(
     }
 
     /**
-     * Find the best composite index strategy for the given query keys and criteria.
+     * Finds the best composite index strategy for the given query keys and criteria.
+     * Evaluates available composite indices to find the one that covers the most query keys
+     * and provides the best selectivity for the given criteria.
+     *
+     * @param queryKeys the set of property keys being queried
+     * @param criteria the list of query criteria to evaluate against
+     * @return CompositeIndexStrategy if a suitable composite index is found, null otherwise
      */
     private fun findBestCompositeStrategy(
         queryKeys: Set<String>,
@@ -105,7 +112,12 @@ class IndexOptimizer<T : Element>(
     }
 
     /**
-     * Find the best range index strategy for range queries.
+     * Finds the best range index strategy for range queries.
+     * Searches through the criteria to find range-based queries and selects
+     * the most selective range index available.
+     *
+     * @param criteria the list of query criteria to evaluate
+     * @return RangeIndexStrategy if a suitable range index is found, null otherwise
      */
     private fun findBestRangeStrategy(criteria: List<PropertyQueryEngine.PropertyCriterion>): RangeIndexStrategy? {
         val rangeCriteria = criteria.filterIsInstance<PropertyQueryEngine.RangeCriterion>()
@@ -122,7 +134,13 @@ class IndexOptimizer<T : Element>(
     }
 
     /**
-     * Find the best single property index strategy.
+     * Finds the best single property index strategy.
+     * Evaluates each indexed property key to find the one with the best selectivity
+     * (lowest estimated result count) for the given query criteria.
+     *
+     * @param queryKeys the set of property keys being queried
+     * @param criteria the list of query criteria to evaluate against
+     * @return SingleIndexStrategy if a suitable index is found, null otherwise
      */
     private fun findBestSingleStrategy(
         queryKeys: Set<String>,
@@ -144,7 +162,11 @@ class IndexOptimizer<T : Element>(
     }
 
     /**
-     * Calculate selectivity for a range criterion (lower is more selective).
+     * Calculates selectivity for a range criterion (lower values indicate higher selectivity).
+     * Uses range statistics to estimate what fraction of values fall within the specified range.
+     *
+     * @param criterion the range criterion to evaluate
+     * @return selectivity estimate between 0.0 (highly selective) and 1.0 (not selective)
      */
     private fun calculateRangeSelectivity(criterion: PropertyQueryEngine.RangeCriterion): Double {
         if (!rangeIndex.isRangeIndexed(criterion.key)) return 1.0
@@ -175,7 +197,11 @@ class IndexOptimizer<T : Element>(
     }
 
     /**
-     * Get or calculate selectivity for a single property index.
+     * Gets or calculates selectivity for a single property index.
+     * Uses caching to avoid recalculating selectivity for the same property key.
+     *
+     * @param key the property key to get selectivity for
+     * @return cached or calculated selectivity estimate
      */
     private fun getIndexSelectivity(key: String): Double {
         return selectivityCache.getOrPut(key) {
@@ -184,7 +210,12 @@ class IndexOptimizer<T : Element>(
     }
 
     /**
-     * Calculate selectivity for a single property index.
+     * Calculates selectivity for a single property index.
+     * Estimates selectivity based on the number of unique values in the index
+     * compared to the total number of indexed values.
+     *
+     * @param key the property key to calculate selectivity for
+     * @return selectivity estimate between 0.0 (highly selective) and 1.0 (not selective)
      */
     private fun calculateIndexSelectivity(key: String): Double {
         if (!tinkerIndex.isIndexed(key)) return 1.0
@@ -198,7 +229,12 @@ class IndexOptimizer<T : Element>(
     }
 
     /**
-     * Extract unique property keys from query criteria.
+     * Extracts unique property keys from query criteria.
+     * Analyzes all criteria to build a set of property keys that are being queried,
+     * which is used for index strategy selection.
+     *
+     * @param criteria the list of query criteria to analyze
+     * @return set of unique property keys referenced in the criteria
      */
     private fun extractQueryKeys(criteria: List<PropertyQueryEngine.PropertyCriterion>): Set<String> {
         val keys = mutableSetOf<String>()
@@ -219,17 +255,26 @@ class IndexOptimizer<T : Element>(
     }
 
     /**
-     * Record a query pattern for statistics and optimization.
+     * Records a query pattern for statistics and optimization.
+     * Tracks frequently used query patterns to help with index recommendations
+     * and performance analysis.
+     *
+     * @param queryKeys the set of property keys used in this query
      */
     private fun recordQuery(queryKeys: Set<String>) {
         val keyPattern = queryKeys.sorted().joinToString(",")
         val stats = queryStats.getOrPut(keyPattern) { QueryStats() }
         stats.queryCount++
-        stats.lastUsed = System.currentTimeMillis()
+        stats.lastUsed = Platform.currentTimeMillis()
     }
 
     /**
-     * Estimate cost for composite index strategy.
+     * Estimates the execution cost for a composite index strategy.
+     * Cost is based on the number of applicable criteria and the selectivity
+     * of the composite index.
+     *
+     * @param strategy the composite index strategy to evaluate
+     * @return estimated cost between 0.01 (very efficient) and 1.0 (least efficient)
      */
     private fun estimateCompositeCost(strategy: CompositeIndexStrategy): Double {
         val compositeSelectivity = strategy.applicableCriteria.size * 0.1 // More criteria = better
@@ -237,21 +282,33 @@ class IndexOptimizer<T : Element>(
     }
 
     /**
-     * Estimate cost for range index strategy.
+     * Estimates the execution cost for a range index strategy.
+     * Cost is directly based on the selectivity of the range criterion.
+     *
+     * @param strategy the range index strategy to evaluate
+     * @return estimated cost between 0.01 (very efficient) and 1.0 (least efficient)
      */
     private fun estimateRangeCost(strategy: RangeIndexStrategy): Double {
         return calculateRangeSelectivity(strategy.criterion).coerceIn(0.01, 1.0)
     }
 
     /**
-     * Estimate cost for single index strategy.
+     * Estimates the execution cost for a single property index strategy.
+     * Cost is based on the selectivity of the indexed property.
+     *
+     * @param strategy the single index strategy to evaluate
+     * @return estimated cost based on index selectivity
      */
     private fun estimateSingleCost(strategy: SingleIndexStrategy): Double {
         return getIndexSelectivity(strategy.key)
     }
 
     /**
-     * Estimate cost for full table scan.
+     * Estimates the cost for a full table scan.
+     * This is always the highest cost option, used as a fallback when no
+     * suitable indices are available.
+     *
+     * @return maximum cost value of 1.0
      */
     private fun estimateFullScanCost(): Double {
         return 1.0 // Highest cost
@@ -387,7 +444,7 @@ class IndexOptimizer<T : Element>(
      */
     data class QueryStats(
         var queryCount: Int = 0,
-        var lastUsed: Long = System.currentTimeMillis()
+        var lastUsed: Long = Platform.currentTimeMillis()
     )
 
     /**

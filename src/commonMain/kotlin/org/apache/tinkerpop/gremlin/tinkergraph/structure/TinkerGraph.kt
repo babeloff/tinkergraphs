@@ -1,5 +1,6 @@
 package org.apache.tinkerpop.gremlin.tinkergraph.structure
 
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.apache.tinkerpop.gremlin.structure.*
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.iterators.TinkerVertexIterator
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.iterators.TinkerEdgeIterator
@@ -8,10 +9,21 @@ import kotlin.reflect.KClass
 /**
  * An in-memory graph database implementation of TinkerPop's Graph interface.
  * TinkerGraph is a toy graph database that is useful for testing and learning purposes.
+ *
+ * This implementation provides:
+ * - In-memory storage for vertices and edges
+ * - Property indexing for fast lookups
+ * - Composite indexing for multi-property queries
+ * - Cross-platform logging integration via KmLogging
+ *
+ * @param configuration Graph configuration parameters
+ * @since 1.0.0
  */
 class TinkerGraph private constructor(
     private val configuration: Map<String, Any?>
 ) : Graph {
+
+
 
     /**
      * Internal storage for vertices, keyed by vertex ID.
@@ -116,6 +128,7 @@ class TinkerGraph private constructor(
     internal val propertyQueryEngine: PropertyQueryEngine = PropertyQueryEngine(this)
 
     override fun addVertex(vararg keyValues: Any?): Vertex {
+        logger.debug { "Adding vertex with keyValues: ${keyValues.contentToString()}" }
         val properties = ElementHelper.asMap(keyValues)
         return addVertex(properties)
     }
@@ -124,8 +137,11 @@ class TinkerGraph private constructor(
         val id = ElementHelper.getIdValue(properties) ?: getNextId()
         val label = ElementHelper.getLabelValue(properties) ?: Vertex.DEFAULT_LABEL
 
+        logger.debug { "Creating vertex with id: $id, label: $label, properties: $properties" }
+
         // Check if vertex with this ID already exists
         if (vertices.containsKey(id)) {
+            logger.warn { "Attempt to create vertex with existing id: $id" }
             throw Graph.Exceptions.vertexWithIdAlreadyExists(id)
         }
 
@@ -136,15 +152,23 @@ class TinkerGraph private constructor(
         // Add properties (excluding reserved keys)
         ElementHelper.attachProperties(vertex, ElementHelper.removeReservedKeys(properties))
 
+        logger.info { "Successfully created vertex with id: $id, total vertices: ${vertices.size}" }
         return vertex
     }
 
     override fun vertex(id: Any?): Vertex? {
-        return vertices[id]
+        logger.debug { "Looking up vertex with id: $id" }
+        val vertex = vertices[id]
+        if (vertex == null) {
+            logger.debug { "Vertex with id: $id not found" }
+        }
+        return vertex
     }
 
     override fun vertices(vararg vertexIds: Any?): Iterator<Vertex> {
+        logger.debug { "Retrieving vertices: ${if (vertexIds.isEmpty()) "all" else vertexIds.contentToString()}" }
         return if (vertexIds.isEmpty()) {
+            logger.debug { "Returning all ${vertices.size} vertices" }
             TinkerVertexIterator.all(this)
         } else {
             TinkerVertexIterator.byIds(this, *vertexIds)
@@ -152,11 +176,18 @@ class TinkerGraph private constructor(
     }
 
     override fun edge(id: Any?): Edge? {
-        return edges[id]
+        logger.debug { "Looking up edge with id: $id" }
+        val edge = edges[id]
+        if (edge == null) {
+            logger.debug { "Edge with id: $id not found" }
+        }
+        return edge
     }
 
     override fun edges(vararg edgeIds: Any?): Iterator<Edge> {
+        logger.debug { "Retrieving edges: ${if (edgeIds.isEmpty()) "all" else edgeIds.contentToString()}" }
         return if (edgeIds.isEmpty()) {
+            logger.debug { "Returning all ${edges.size} edges" }
             TinkerEdgeIterator.all(this)
         } else {
             TinkerEdgeIterator.byIds(this, *edgeIds)
@@ -174,8 +205,11 @@ class TinkerGraph private constructor(
     ): TinkerEdge {
         val id = ElementHelper.getIdValue(properties) ?: getNextId()
 
+        logger.debug { "Creating edge with id: $id, label: $label, from vertex: ${outVertex.id()} to vertex: ${inVertex.id()}" }
+
         // Check if edge with this ID already exists
         if (edges.containsKey(id)) {
+            logger.warn { "Attempt to create edge with existing id: $id" }
             throw Graph.Exceptions.edgeWithIdAlreadyExists(id)
         }
 
@@ -190,6 +224,7 @@ class TinkerGraph private constructor(
         // Add properties (excluding reserved keys)
         ElementHelper.attachProperties(edge, ElementHelper.removeReservedKeys(properties))
 
+        logger.info { "Successfully created edge with id: $id, total edges: ${edges.size}" }
         return edge
     }
 
@@ -534,6 +569,11 @@ class TinkerGraph private constructor(
     }
 
     companion object {
+        /**
+         * Logger instance for TinkerGraph operations.
+         */
+        private val logger = KotlinLogging.logger {}
+
         // Configuration keys
         const val GREMLIN_TINKERGRAPH_ALLOW_NULL_PROPERTY_VALUES = "gremlin.tinkerGraph.allowNullPropertyValues"
         const val GREMLIN_TINKERGRAPH_DEFAULT_VERTEX_PROPERTY_CARDINALITY = "gremlin.tinkerGraph.defaultVertexPropertyCardinality"
