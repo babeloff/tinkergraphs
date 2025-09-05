@@ -1,0 +1,309 @@
+= TinkerGraph Kotlin Multiplatform - Source Material Provenance
+:toc: left
+:toclevels: 3
+:sectnums:
+:source-highlighter: highlight.js
+
+== Overview
+
+This document tracks all source materials, references, and inspirations used in the development of the TinkerGraph Kotlin Multiplatform implementation. It serves as both attribution to original authors and a reference for understanding the design decisions made in this port.
+
+== Primary Source Materials
+
+=== Apache TinkerPop TinkerGraph (Java)
+
+**Primary Reference Implementation**
+
+* *Repository*: https://github.com/apache/tinkerpop
+* *Specific Path*: `/tinkergraph-gremlin/src/main/java/org/apache/tinkerpop/gremlin/tinkergraph/`
+* *License*: Apache License 2.0
+* *Version Referenced*: 3.7.x branch
+* *Authors*: Apache TinkerPop Community
+* *Description*: The canonical Java implementation of TinkerGraph, serving as the reference for API compatibility and behavior.
+
+**Key Components Referenced:**
+
+* `TinkerGraph.java` - Main graph implementation
+* `TinkerVertex.java` - Vertex implementation
+* `TinkerEdge.java` - Edge implementation
+* `TinkerElement.java` - Base element class
+* `TinkerVertexProperty.java` - Vertex property implementation
+* `TinkerIndex.java` - Indexing system
+* `TinkerHelper.java` - Utility methods
+* `TinkerGraphVariables.java` - Graph variables implementation
+
+**Documentation:**
+
+* *API Documentation*: https://tinkerpop.apache.org/javadocs/current/full/
+* *User Guide*: https://tinkerpop.apache.org/docs/current/reference/
+* *TinkerGraph Specific*: https://tinkerpop.apache.org/docs/current/reference/#tinkergraph-gremlin
+
+=== TinkerGraph JavaScript Implementation
+
+**Secondary Reference for JavaScript Patterns**
+
+* *Repository*: https://github.com/jbmusso/tinkergraph-js
+* *Author*: Jean-Baptiste Musso <jbmusso+github@gmail.com>
+* *License*: MIT License
+* *Version*: 3.0.0
+* *Description*: Pure JavaScript implementation providing patterns for JavaScript-specific optimizations and API design.
+
+**Key Insights:**
+
+* Property management patterns
+* JavaScript-friendly API design
+* Memory management strategies
+* Iteration and traversal patterns
+
+**Referenced Files:**
+
+* `src/structure/TinkerGraph.js`
+* `src/structure/TinkerVertex.js`
+* `src/structure/TinkerEdge.js`
+* `src/structure/TinkerElement.js`
+* `src/structure/TinkerIndex.js`
+* `src/ElementHelper.js`
+
+=== Gremlin TinkerGraph JavaScript
+
+**Higher-Level API Reference**
+
+* *Repository*: https://github.com/jbmusso/gremlin-tinkergraph
+* *Author*: Jean-Baptiste Musso
+* *License*: MIT License
+* *Description*: Higher-level JavaScript implementation with object-oriented patterns and enhanced APIs.
+
+**Key Contributions:**
+
+* Object-oriented design patterns
+* Enhanced property handling
+* Fluent API designs
+* Error handling strategies
+
+== Supporting References
+
+=== Apache TinkerPop Core Interfaces
+
+**Structural Foundation**
+
+* *Repository*: https://github.com/apache/tinkerpop
+* *Path*: `/gremlin-core/src/main/java/org/apache/tinkerpop/gremlin/structure/`
+* *License*: Apache License 2.0
+
+**Referenced Interfaces:**
+
+* `Graph.java` - Core graph interface
+* `Vertex.java` - Vertex interface
+* `Edge.java` - Edge interface
+* `Element.java` - Base element interface
+* `Property.java` - Property interface
+* `VertexProperty.java` - Vertex property interface
+* `Direction.java` - Direction enumeration
+
+=== Kotlin Multiplatform Documentation
+
+**Platform Implementation Guidance**
+
+* *Source*: JetBrains Kotlin Documentation
+* *URL*: https://kotlinlang.org/docs/multiplatform.html
+* *Areas Referenced*:
+  - Expected/actual declarations
+  - Platform-specific implementations
+  - Common code patterns
+  - Performance considerations
+
+=== Graph Database Design Patterns
+
+**Theoretical and Implementation Guidance**
+
+* *Book*: "Graph Databases" by Ian Robinson, Jim Webber, and Emil Eifrem
+* *Publisher*: O'Reilly Media
+* *Edition*: 2nd Edition
+* *ISBN*: 978-1491930892
+* *Areas Referenced*:
+  - Graph data modeling
+  - Index design patterns
+  - Performance optimization strategies
+
+== API Compatibility References
+
+=== TinkerPop Blueprints Legacy
+
+**Historical API Context**
+
+* *Repository*: https://github.com/tinkerpop/blueprints (archived)
+* *License*: BSD 3-Clause
+* *Purpose*: Understanding evolution of graph APIs and maintaining backward compatibility concepts
+
+=== Gremlin Language Specification
+
+**Query Language Compatibility**
+
+* *Documentation*: https://tinkerpop.apache.org/docs/current/reference/#graph-traversal-steps
+* *Purpose*: Ensuring graph structure supports standard Gremlin traversals
+* *Areas*:
+  - Graph traversal patterns
+  - Property access patterns
+  - Element filtering requirements
+
+== Performance and Design References
+
+=== Graph Algorithm References
+
+**Algorithmic Foundations**
+
+* *Book*: "Introduction to Algorithms" by Cormen, Leiserson, Rivest, and Stein
+* *Edition*: 3rd Edition
+* *Chapters*: 22-26 (Graph Algorithms)
+* *Purpose*: Implementation of efficient graph traversal and search algorithms
+
+=== Memory Management Patterns
+
+**Platform-Specific Optimization**
+
+* *JVM*: "Java Performance: The Definitive Guide" by Scott Oaks
+* *JavaScript*: MDN Web Docs - Memory Management
+* *Native*: Kotlin/Native documentation on memory management
+
+== Testing and Validation References
+
+=== Test Structure Patterns
+
+**Test Organization**
+
+* *Source*: Apache TinkerPop test suites
+* *Path*: `/tinkergraph-gremlin/src/test/java/`
+* *Purpose*: Ensuring comprehensive test coverage and compatibility validation
+
+=== Property-Based Testing
+
+**Testing Methodology**
+
+* *Library*: Kotest Property Testing
+* *Documentation*: https://kotest.io/docs/proptest/property-based-testing.html
+* *Purpose*: Ensuring robustness through property-based testing strategies
+
+== Code Quality and Style References
+
+=== Kotlin Coding Conventions
+
+**Code Style Standards**
+
+* *Source*: JetBrains Kotlin Style Guide
+* *URL*: https://kotlinlang.org/docs/coding-conventions.html
+* *Areas*:
+  - Naming conventions
+  - File organization
+  - Documentation standards
+
+=== Apache Software Foundation Guidelines
+
+**Open Source Best Practices**
+
+* *Source*: Apache Software Foundation
+* *URL*: https://www.apache.org/foundation/
+* *Areas*:
+  - Licensing compliance
+  - Attribution requirements
+  - Community guidelines
+
+== Build and Distribution References
+
+=== Gradle Multiplatform Configuration
+
+**Build System Setup**
+
+* *Documentation*: Gradle Kotlin DSL and Kotlin Multiplatform Plugin
+* *URL*: https://docs.gradle.org/current/userguide/kotlin_dsl.html
+* *Purpose*: Multi-target build configuration
+
+=== Package Distribution
+
+**Platform-Specific Distribution**
+
+* *Maven Central*: https://central.sonatype.org/
+* *NPM*: https://docs.npmjs.com/
+* *Native Distribution*: Kotlin/Native compilation guidelines
+
+== License Compatibility
+
+=== Primary License
+
+**Apache License 2.0**
+
+* *Compatibility*: Compatible with MIT, BSD, and other permissive licenses
+* *Requirements*: Attribution and license notice preservation
+* *Source Files*: All original Java TinkerPop code
+
+=== Secondary Licenses
+
+**MIT License Components**
+
+* *Sources*: JavaScript implementations (tinkergraph-js, gremlin-tinkergraph)
+* *Compatibility*: Fully compatible with Apache 2.0
+* *Requirements*: Copyright notice preservation
+
+== Attribution Requirements
+
+=== Copyright Notices
+
+All files derived from or inspired by the referenced materials will include appropriate copyright notices:
+
+```
+/*
+ * Based on Apache TinkerPop TinkerGraph implementation
+ * Original work: Copyright (c) Apache Software Foundation
+ *
+ * Kotlin Multiplatform implementation
+ * Copyright (c) [Year] [Contributors]
+ *
+ * Licensed under the Apache License, Version 2.0
+ */
+```
+
+=== Documentation Attribution
+
+This implementation acknowledges:
+
+* Apache TinkerPop community for the original design and implementation
+* Jean-Baptiste Musso for JavaScript implementation insights
+* JetBrains for Kotlin Multiplatform technology
+* Graph database community for theoretical foundations
+
+== Revision History
+
+[cols="1,2,3"]
+|===
+|Version |Date |Changes
+
+|1.0 |2024-01-XX |Initial provenance documentation
+|===
+
+== Notes
+
+=== Derivative Work Classification
+
+This implementation is a derivative work based on:
+
+1. **Structural derivation** from Apache TinkerPop interfaces
+2. **Behavioral compatibility** with Java TinkerGraph implementation
+3. **Pattern inspiration** from JavaScript implementations
+4. **Platform adaptation** for Kotlin Multiplatform
+
+=== Original Contributions
+
+While based on existing implementations, this project contributes:
+
+1. **Kotlin Multiplatform architecture** - Novel for graph databases
+2. **Platform-specific optimizations** - Tailored for each target platform
+3. **Modern Kotlin idioms** - Updated API patterns and language features
+4. **Cross-platform consistency** - Unified API across all platforms
+
+=== Compliance Verification
+
+Regular compliance checks ensure:
+
+* Proper attribution maintenance
+* License requirement fulfillment
+* API compatibility preservation
+* Community guideline adherence
