@@ -66,8 +66,8 @@ class TinkerGraph private constructor(
     }
 
     override fun addVertex(properties: Map<String, Any?>): Vertex {
-        val id = properties[T.id] ?: getNextId()
-        val label = properties[T.label] as? String ?: Vertex.DEFAULT_LABEL
+        val id = ElementHelper.getIdValue(properties) ?: getNextId()
+        val label = ElementHelper.getLabelValue(properties) ?: Vertex.DEFAULT_LABEL
 
         // Check if vertex with this ID already exists
         if (vertices.containsKey(id)) {
@@ -79,10 +79,7 @@ class TinkerGraph private constructor(
         vertices[id] = vertex
 
         // Add properties (excluding reserved keys)
-        properties.filterKeys { it != T.id && it != T.label }
-            .forEach { (key, value) ->
-                vertex.property(key, value)
-            }
+        ElementHelper.attachProperties(vertex, ElementHelper.removeReservedKeys(properties))
 
         return vertex
     }
@@ -120,7 +117,7 @@ class TinkerGraph private constructor(
         label: String,
         properties: Map<String, Any?>
     ): TinkerEdge {
-        val id = properties[T.id] ?: getNextId()
+        val id = ElementHelper.getIdValue(properties) ?: getNextId()
 
         // Check if edge with this ID already exists
         if (edges.containsKey(id)) {
@@ -136,10 +133,7 @@ class TinkerGraph private constructor(
         inVertex.addInEdge(edge)
 
         // Add properties (excluding reserved keys)
-        properties.filterKeys { it != T.id && it != T.label }
-            .forEach { (key, value) ->
-                edge.property(key, value)
-            }
+        ElementHelper.attachProperties(edge, ElementHelper.removeReservedKeys(properties))
 
         return edge
     }
@@ -303,11 +297,5 @@ class TinkerGraph private constructor(
         override fun supportsAnyIds(): Boolean = true
     }
 
-    /**
-     * Reserved property keys for TinkerPop.
-     */
-    object T {
-        const val id = "id"
-        const val label = "label"
-    }
+
 }
