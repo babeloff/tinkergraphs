@@ -1,6 +1,8 @@
 package org.apache.tinkerpop.gremlin.tinkergraph.structure
 
 import org.apache.tinkerpop.gremlin.structure.*
+import org.apache.tinkerpop.gremlin.tinkergraph.structure.iterators.TinkerVertexIterator
+import org.apache.tinkerpop.gremlin.tinkergraph.structure.iterators.TinkerEdgeIterator
 
 /**
  * An in-memory graph database implementation of TinkerPop's Graph interface.
@@ -90,9 +92,9 @@ class TinkerGraph private constructor(
 
     override fun vertices(vararg vertexIds: Any?): Iterator<Vertex> {
         return if (vertexIds.isEmpty()) {
-            vertices.values.iterator()
+            TinkerVertexIterator.all(this)
         } else {
-            vertexIds.mapNotNull { vertices[it] }.iterator()
+            TinkerVertexIterator.byIds(this, *vertexIds)
         }
     }
 
@@ -102,9 +104,9 @@ class TinkerGraph private constructor(
 
     override fun edges(vararg edgeIds: Any?): Iterator<Edge> {
         return if (edgeIds.isEmpty()) {
-            edges.values.iterator()
+            TinkerEdgeIterator.all(this)
         } else {
-            edgeIds.mapNotNull { edges[it] }.iterator()
+            TinkerEdgeIterator.byIds(this, *edgeIds)
         }
     }
 
@@ -166,8 +168,8 @@ class TinkerGraph private constructor(
      */
     internal fun removeEdge(edge: TinkerEdge) {
         // Remove from vertex adjacency lists
-        edge.outVertex().removeOutEdge(edge)
-        edge.inVertex().removeInEdge(edge)
+        (edge.outVertex() as TinkerVertex).removeOutEdge(edge)
+        (edge.inVertex() as TinkerVertex).removeInEdge(edge)
 
         // Remove from edge index
         edgeIndex.removeElement(edge)

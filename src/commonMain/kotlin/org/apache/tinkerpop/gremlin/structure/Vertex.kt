@@ -56,7 +56,7 @@ interface Vertex : Element {
      * @param propertyKeys optional property keys to filter
      * @return iterator of vertex properties
      */
-    fun <V> properties(vararg propertyKeys: String): Iterator<VertexProperty<V>>
+    override fun <V> properties(vararg propertyKeys: String): Iterator<VertexProperty<V>>
 
     /**
      * Default vertex label

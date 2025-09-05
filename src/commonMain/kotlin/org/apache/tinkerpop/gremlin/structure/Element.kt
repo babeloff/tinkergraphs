@@ -45,6 +45,13 @@ interface Element {
     fun <V> properties(vararg propertyKeys: String): Iterator<Property<V>>
 
     /**
+     * Get a property by key.
+     * @param key the property key
+     * @return the property or Property.empty() if not found
+     */
+    fun <V> property(key: String): Property<V>
+
+    /**
      * Add or set a property on this element.
      * @param key the property key
      * @param value the property value

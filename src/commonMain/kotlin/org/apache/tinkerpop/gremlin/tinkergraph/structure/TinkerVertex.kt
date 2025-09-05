@@ -1,6 +1,8 @@
 package org.apache.tinkerpop.gremlin.tinkergraph.structure
 
 import org.apache.tinkerpop.gremlin.structure.*
+import org.apache.tinkerpop.gremlin.tinkergraph.structure.iterators.TinkerEdgeIterator
+import org.apache.tinkerpop.gremlin.tinkergraph.structure.iterators.TinkerVertexTraversingIterator
 
 /**
  * TinkerVertex is the vertex implementation for TinkerGraph.
@@ -48,44 +50,12 @@ class TinkerVertex(
 
     override fun edges(direction: Direction, vararg edgeLabels: String): Iterator<Edge> {
         checkRemoved()
-
-        val labels = if (edgeLabels.isEmpty()) null else edgeLabels.toSet()
-        val edges = mutableSetOf<TinkerEdge>()
-
-        when (direction) {
-            Direction.OUT -> {
-                collectEdges(outEdges, labels, edges)
-            }
-            Direction.IN -> {
-                collectEdges(inEdges, labels, edges)
-            }
-            Direction.BOTH -> {
-                collectEdges(outEdges, labels, edges)
-                collectEdges(inEdges, labels, edges)
-            }
-        }
-
-        return edges.iterator()
+        return TinkerEdgeIterator.fromVertex(this, direction, *edgeLabels)
     }
 
     override fun vertices(direction: Direction, vararg edgeLabels: String): Iterator<Vertex> {
         checkRemoved()
-
-        val vertices = mutableSetOf<Vertex>()
-        val edgeIterator = edges(direction, *edgeLabels)
-
-        while (edgeIterator.hasNext()) {
-            val edge = edgeIterator.next() as TinkerEdge
-            when (direction) {
-                Direction.OUT -> vertices.add(edge.inVertex())
-                Direction.IN -> vertices.add(edge.outVertex())
-                Direction.BOTH -> {
-                    vertices.add(edge.otherVertex(this))
-                }
-            }
-        }
-
-        return vertices.iterator()
+        return TinkerVertexTraversingIterator.traverse(this, direction, *edgeLabels)
     }
 
     override fun <V> property(key: String, value: V, vararg keyValues: Any?): VertexProperty<V> {
@@ -96,6 +66,37 @@ class TinkerVertex(
         val cardinality = elementGraph.defaultVertexPropertyCardinality
 
         return addVertexProperty(key, value, metaProperties, cardinality)
+    }
+
+    /**
+     * Override the two-parameter property method to create VertexProperty objects.
+     */
+    override fun <V> property(key: String, value: V): VertexProperty<V> {
+        checkRemoved()
+        ElementHelper.validateProperty(key, value)
+        return addVertexProperty(key, value)
+    }
+
+    /**
+     * Override value method to look in vertex properties.
+     */
+    @Suppress("UNCHECKED_CAST")
+    override fun <V> value(key: String): V? {
+        checkRemoved()
+        val properties = vertexProperties[key]
+        return if (properties != null && properties.isNotEmpty()) {
+            properties.first().value() as V?
+        } else {
+            null
+        }
+    }
+
+    /**
+     * Override keys method to return keys from vertex properties.
+     */
+    override fun keys(): Set<String> {
+        checkRemoved()
+        return vertexProperties.keys.toSet()
     }
 
     /**

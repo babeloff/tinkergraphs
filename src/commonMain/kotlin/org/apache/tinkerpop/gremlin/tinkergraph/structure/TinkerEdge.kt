@@ -153,6 +153,13 @@ class TinkerEdge(
     }
 
     /**
+     * Check if this edge is removed (for iterator filtering).
+     */
+    internal fun isEdgeRemoved(): Boolean {
+        return edgeRemoved || super.isRemoved()
+    }
+
+    /**
      * Get both vertices as a pair.
      * @return Pair of (outVertex, inVertex)
      */

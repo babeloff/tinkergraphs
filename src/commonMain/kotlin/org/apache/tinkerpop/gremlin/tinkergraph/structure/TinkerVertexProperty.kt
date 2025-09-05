@@ -77,13 +77,28 @@ class TinkerVertexProperty<V>(
     fun vertex(): TinkerVertex = vertex
 
     /**
+     * Get the cardinality of this vertex property.
+     * For TinkerGraph, cardinality is determined by the graph's default setting.
+     */
+    fun cardinality(): VertexProperty.Cardinality {
+        return elementGraph.defaultVertexPropertyCardinality
+    }
+
+    /**
      * Check if this vertex property has been removed and throw exception if so.
      */
     private fun checkNotRemoved() {
         if (propertyRemoved) {
-            throw VertexProperty.Exceptions.propertyDoesNotExist()
+            throw IllegalStateException("VertexProperty has been removed")
         }
         checkRemoved() // Check if element is removed
+    }
+
+    /**
+     * Check if this vertex property is removed (for iterator filtering).
+     */
+    internal fun isVertexPropertyRemoved(): Boolean {
+        return propertyRemoved || super.isRemoved()
     }
 
     /**
@@ -178,13 +193,13 @@ class TinkerVertexProperty<V>(
     }
 
     override fun toString(): String {
-        val metaProps = if (hasMetaProperties()) {
-            elementProperties.entries.joinToString(",") { "${it.key}=${it.value.value()}" }
+        val metaPropsStr = if (hasMetaProperties()) {
+            val metaProps = elementProperties.entries.joinToString(",") { "${it.key}=${it.value.value()}" }
             "[$metaProps]"
         } else {
             ""
         }
-        return "vp[$propertyKey->$propertyValue$metaProps]"
+        return "vp[$propertyKey->$propertyValue$metaPropsStr]"
     }
 
     companion object {

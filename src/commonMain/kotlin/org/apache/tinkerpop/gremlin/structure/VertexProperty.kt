@@ -14,7 +14,7 @@ interface VertexProperty<V> : Element, Property<V> {
      * Get the Vertex that owns this VertexProperty.
      * @return the vertex that owns this property
      */
-    fun element(): Vertex
+    override fun element(): Vertex
 
     /**
      * Get a property of this VertexProperty.
@@ -107,6 +107,7 @@ interface VertexProperty<V> : Element, Property<V> {
             override fun keys(): Set<String> = emptySet()
             override fun <U> value(key: String): U? = null
             override fun <U> properties(vararg propertyKeys: String): Iterator<Property<U>> = emptyList<Property<U>>().iterator()
+            override fun <U> property(key: String): Property<U> = Property.empty()
             override fun <U> property(key: String, value: U): Property<U> = Property.empty()
             override fun <U> values(key: String): Iterator<U> = emptyList<U>().iterator()
 

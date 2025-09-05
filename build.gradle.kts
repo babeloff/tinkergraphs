@@ -1,6 +1,6 @@
 plugins {
-    kotlin("multiplatform") version "1.9.20"
-    kotlin("plugin.serialization") version "1.9.20"
+    kotlin("multiplatform") version "2.1.0"
+    kotlin("plugin.serialization") version "2.1.0"
     `maven-publish`
 }
 
@@ -12,9 +12,10 @@ repositories {
 }
 
 kotlin {
+    jvmToolchain(23)
+
     // JVM target
     jvm {
-        jvmToolchain(11)
         withJava()
         testRuns["test"].executionTask.configure {
             useJUnitPlatform()

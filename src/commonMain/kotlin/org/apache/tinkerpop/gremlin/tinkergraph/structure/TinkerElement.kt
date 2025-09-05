@@ -54,6 +54,13 @@ abstract class TinkerElement(
             .iterator()
     }
 
+    @Suppress("UNCHECKED_CAST")
+    override fun <V> property(key: String): Property<V> {
+        checkRemoved()
+        val property = elementProperties[key] as? Property<V>
+        return if (property?.isPresent() == true) property else Property.empty()
+    }
+
     override fun <V> property(key: String, value: V): Property<V> {
         checkRemoved()
         validateProperty(key, value)
@@ -114,6 +121,21 @@ abstract class TinkerElement(
      */
     internal fun markRemoved() {
         removed = true
+    }
+
+    /**
+     * Get the internal properties map for iterator support.
+     * This method is used by the TinkerGraph iterators for efficient property access.
+     */
+    internal fun getProperties(): Map<String, Property<*>> {
+        return elementProperties
+    }
+
+    /**
+     * Check if this element is removed (for iterator filtering).
+     */
+    internal fun isRemoved(): Boolean {
+        return removed
     }
 
     /**

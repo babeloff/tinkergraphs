@@ -31,3 +31,5 @@ cmd = "gradle clean"
 
 [dependencies]
 gradle = "9.0.*"
+openjdk = "23.0.*"
+kotlin = "2.2.*"
