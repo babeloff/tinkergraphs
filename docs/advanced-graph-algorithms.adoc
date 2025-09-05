@@ -1,0 +1,583 @@
+= Advanced Graph Algorithms for TinkerGraph
+:toc:
+:toclevels: 3
+:sectanchors:
+:source-highlighter: highlightjs
+
+== Overview
+
+This document provides comprehensive documentation for the advanced graph algorithms implemented in TinkerGraph. These algorithms extend the basic graph functionality with sophisticated analysis capabilities including weighted pathfinding, minimum spanning trees, strongly connected components, and connectivity analysis.
+
+All algorithms are implemented as extension functions on the `Graph` interface and support multiplatform deployment across JVM, JavaScript, and Native platforms.
+
+== Implementation Philosophy
+
+The advanced algorithms follow these key principles:
+
+* **Extension Functions**: All algorithms are implemented as `Graph` extensions for clean API integration
+* **Multiplatform Compatibility**: Pure Kotlin implementation works across all target platforms
+* **Performance Optimization**: Algorithms leverage TinkerGraph's efficient iterator implementations
+* **Correctness**: Each algorithm includes comprehensive test coverage and validation
+* **Documentation**: All algorithms include Wikipedia references and complexity analysis
+
+== Weighted Graph Algorithms
+
+=== Dijkstra's Shortest Path Algorithm
+
+==== Purpose
+
+Dijkstra's algorithm finds the shortest path between two vertices in a weighted graph where all edge weights are non-negative. It explores vertices in order of their distance from the source vertex.
+
+==== Function Signature
+
+[source,kotlin]
+----
+fun Graph.dijkstraShortestPath(
+    from: Vertex,
+    to: Vertex,
+    weightProperty: String = "weight",
+    direction: Direction = Direction.OUT
+): WeightedPath?
+----
+
+==== Parameters
+
+* `from`: The starting vertex
+* `to`: The target vertex
+* `weightProperty`: The edge property containing weights (default: "weight")
+* `direction`: Edge traversal direction (default: Direction.OUT for directed graphs)
+
+==== Return Value
+
+Returns a `WeightedPath` object containing:
+
+* `vertices`: List of vertices forming the shortest path
+* `totalWeight`: Total weight of the path
+
+Returns `null` if no path exists between the vertices.
+
+==== Time Complexity
+
+* **Time**: O((V + E) log V) with binary heap
+* **Space**: O(V)
+
+Where V is the number of vertices and E is the number of edges.
+
+==== Usage Examples
+
+[source,kotlin]
+----
+val graph = TinkerGraph.open()
+val v1 = graph.addVertex("name", "A")
+val v2 = graph.addVertex("name", "B")
+val v3 = graph.addVertex("name", "C")
+
+// Add weighted edges
+val e1 = v1.addEdge("road", v2)
+e1.property("weight", 5.0)
+val e2 = v2.addEdge("road", v3)
+e2.property("weight", 3.0)
+
+// Find shortest path
+val path = graph.dijkstraShortestPath(v1, v3)
+path?.let {
+    println("Path: ${it.vertices.map { v -> v.value<String>("name") }}")
+    println("Total distance: ${it.totalWeight}")
+}
+// Output: Path: [A, B, C], Total distance: 8.0
+----
+
+==== Algorithm Details
+
+The implementation uses a priority queue approach:
+
+1. Initialize distances to infinity except source (distance 0)
+2. Add all vertices to unvisited set
+3. While unvisited vertices remain:
+   - Select vertex with minimum distance
+   - If target reached, reconstruct path
+   - Update distances to neighbors
+   - Mark vertex as visited
+
+==== References
+
+* https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm[Dijkstra's algorithm on Wikipedia]
+* Dijkstra, E. W. (1959). "A note on two problems in connexion with graphs"
+
+== Directed Graph Algorithms
+
+=== Topological Sorting
+
+==== Purpose
+
+Topological sorting produces a linear ordering of vertices in a directed acyclic graph (DAG) such that for every directed edge (u, v), vertex u appears before v in the ordering.
+
+==== Function Signature
+
+[source,kotlin]
+----
+fun Graph.topologicalSort(direction: Direction = Direction.OUT): List<Vertex>?
+----
+
+==== Parameters
+
+* `direction`: Edge traversal direction (default: Direction.OUT)
+
+==== Return Value
+
+Returns a list of vertices in topological order, or `null` if the graph contains cycles.
+
+==== Time Complexity
+
+* **Time**: O(V + E)
+* **Space**: O(V)
+
+==== Usage Examples
+
+[source,kotlin]
+----
+val graph = TinkerGraph.open()
+val task1 = graph.addVertex("task", "compile")
+val task2 = graph.addVertex("task", "test")
+val task3 = graph.addVertex("task", "package")
+val task4 = graph.addVertex("task", "deploy")
+
+// Define dependencies
+task1.addEdge("dependsOn", task2)  // test depends on compile
+task2.addEdge("dependsOn", task3)  // package depends on test
+task3.addEdge("dependsOn", task4)  // deploy depends on package
+
+val order = graph.topologicalSort()
+order?.let { tasks ->
+    println("Execution order: ${tasks.map { it.value<String>("task") }}")
+}
+// Output: Execution order: [compile, test, package, deploy]
+----
+
+==== Algorithm Details
+
+Uses Kahn's algorithm:
+
+1. Calculate in-degree for each vertex
+2. Add vertices with zero in-degree to queue
+3. While queue is not empty:
+   - Remove vertex from queue and add to result
+   - For each neighbor, decrease in-degree
+   - If neighbor's in-degree becomes zero, add to queue
+4. If result contains all vertices, return it; otherwise graph has cycles
+
+==== References
+
+* https://en.wikipedia.org/wiki/Topological_sorting[Topological sorting on Wikipedia]
+* Kahn, A. B. (1962). "Topological sorting of large networks"
+
+=== Strongly Connected Components (Tarjan's Algorithm)
+
+==== Purpose
+
+Finds all strongly connected components in a directed graph. A strongly connected component is a maximal set of vertices such that there is a directed path from each vertex to every other vertex in the component.
+
+==== Function Signature
+
+[source,kotlin]
+----
+fun Graph.tarjanStronglyConnectedComponents(direction: Direction = Direction.OUT): List<Set<Vertex>>
+----
+
+==== Parameters
+
+* `direction`: Edge traversal direction (default: Direction.OUT)
+
+==== Return Value
+
+Returns a list of sets, where each set contains the vertices of one strongly connected component.
+
+==== Time Complexity
+
+* **Time**: O(V + E)
+* **Space**: O(V)
+
+==== Usage Examples
+
+[source,kotlin]
+----
+val graph = TinkerGraph.open()
+val v1 = graph.addVertex("id", 1)
+val v2 = graph.addVertex("id", 2)
+val v3 = graph.addVertex("id", 3)
+val v4 = graph.addVertex("id", 4)
+
+// Create strongly connected component
+v1.addEdge("connects", v2)
+v2.addEdge("connects", v3)
+v3.addEdge("connects", v1)  // Forms SCC: {v1, v2, v3}
+v3.addEdge("connects", v4)  // v4 is separate component
+
+val components = graph.tarjanStronglyConnectedComponents()
+println("Found ${components.size} strongly connected components")
+components.forEachIndexed { index, component ->
+    println("Component ${index + 1}: ${component.map { it.value<Int>("id") }}")
+}
+// Output:
+// Found 2 strongly connected components
+// Component 1: [1, 2, 3]
+// Component 2: [4]
+----
+
+==== Algorithm Details
+
+Tarjan's algorithm uses DFS with additional bookkeeping:
+
+1. Maintain discovery time and low-link value for each vertex
+2. Use stack to keep track of current path
+3. For each unvisited vertex, perform DFS:
+   - Assign discovery time and low-link value
+   - Push vertex onto stack
+   - For each neighbor:
+     - If unvisited, recurse and update low-link
+     - If on stack, update low-link with discovery time
+   - If vertex is root of SCC (low-link equals discovery time):
+     - Pop vertices from stack until current vertex to form SCC
+
+==== References
+
+* https://en.wikipedia.org/wiki/Tarjan%27s_strongly_connected_components_algorithm[Tarjan's strongly connected components algorithm on Wikipedia]
+* Tarjan, R. (1972). "Depth-first search and linear graph algorithms"
+
+== Minimum Spanning Tree Algorithms
+
+=== Kruskal's Algorithm
+
+==== Purpose
+
+Finds the minimum spanning tree of a connected, undirected graph. A minimum spanning tree connects all vertices with the minimum total edge weight.
+
+==== Function Signature
+
+[source,kotlin]
+----
+fun Graph.kruskalMinimumSpanningTree(weightProperty: String = "weight"): Set<Edge>
+----
+
+==== Parameters
+
+* `weightProperty`: Edge property containing weights (default: "weight")
+
+==== Return Value
+
+Returns a set of edges forming the minimum spanning tree.
+
+==== Time Complexity
+
+* **Time**: O(E log E) due to sorting edges
+* **Space**: O(V)
+
+==== Usage Examples
+
+[source,kotlin]
+----
+val graph = TinkerGraph.open()
+val v1 = graph.addVertex("city", "A")
+val v2 = graph.addVertex("city", "B")
+val v3 = graph.addVertex("city", "C")
+val v4 = graph.addVertex("city", "D")
+
+// Add weighted roads
+val roads = listOf(
+    v1.addEdge("road", v2).also { it.property("weight", 4.0) },
+    v1.addEdge("road", v3).also { it.property("weight", 2.0) },
+    v2.addEdge("road", v3).also { it.property("weight", 1.0) },
+    v2.addEdge("road", v4).also { it.property("weight", 5.0) },
+    v3.addEdge("road", v4).also { it.property("weight", 3.0) }
+)
+
+val mst = graph.kruskalMinimumSpanningTree()
+val totalWeight = mst.sumOf { it.value<Double>("weight") }
+println("MST contains ${mst.size} edges with total weight: $totalWeight")
+// Output: MST contains 3 edges with total weight: 6.0
+----
+
+==== Algorithm Details
+
+Kruskal's algorithm uses a greedy approach with union-find:
+
+1. Sort all edges by weight in ascending order
+2. Initialize union-find data structure
+3. For each edge in sorted order:
+   - If edge connects different components, add to MST
+   - Union the components
+   - Stop when MST has V-1 edges
+
+==== References
+
+* https://en.wikipedia.org/wiki/Kruskal%27s_algorithm[Kruskal's algorithm on Wikipedia]
+* Kruskal, J. B. (1956). "On the shortest spanning subtree of a graph"
+
+== Graph Connectivity Analysis
+
+=== Articulation Points (Cut Vertices)
+
+==== Purpose
+
+Finds all articulation points in an undirected graph. An articulation point is a vertex whose removal increases the number of connected components.
+
+==== Function Signature
+
+[source,kotlin]
+----
+fun Graph.articulationPoints(): Set<Vertex>
+----
+
+==== Return Value
+
+Returns a set of vertices that are articulation points.
+
+==== Time Complexity
+
+* **Time**: O(V + E)
+* **Space**: O(V)
+
+==== Usage Examples
+
+[source,kotlin]
+----
+val graph = TinkerGraph.open()
+val v1 = graph.addVertex("id", 1)
+val v2 = graph.addVertex("id", 2)
+val v3 = graph.addVertex("id", 3)
+val v4 = graph.addVertex("id", 4)
+
+// Create bridge structure
+v1.addEdge("connects", v2)
+v2.addEdge("connects", v3)  // v2 and v3 are articulation points
+v3.addEdge("connects", v4)
+
+val articulationPoints = graph.articulationPoints()
+println("Articulation points: ${articulationPoints.map { it.value<Int>("id") }}")
+// Output: Articulation points: [2, 3]
+----
+
+==== References
+
+* https://en.wikipedia.org/wiki/Biconnected_component[Biconnected component on Wikipedia]
+
+=== Bridges (Cut Edges)
+
+==== Purpose
+
+Finds all bridges in an undirected graph. A bridge is an edge whose removal increases the number of connected components.
+
+==== Function Signature
+
+[source,kotlin]
+----
+fun Graph.bridges(): Set<Edge>
+----
+
+==== Return Value
+
+Returns a set of edges that are bridges.
+
+==== Time Complexity
+
+* **Time**: O(V + E)
+* **Space**: O(V)
+
+==== Usage Examples
+
+[source,kotlin]
+----
+val graph = TinkerGraph.open()
+val v1 = graph.addVertex("id", 1)
+val v2 = graph.addVertex("id", 2)
+val v3 = graph.addVertex("id", 3)
+
+val e1 = v1.addEdge("connects", v2)
+val bridge = v2.addEdge("connects", v3)
+
+val bridges = graph.bridges()
+println("Found ${bridges.size} bridge(s)")
+// Output: Found 2 bridge(s)
+----
+
+==== References
+
+* https://en.wikipedia.org/wiki/Bridge_(graph_theory)[Bridge in graph theory on Wikipedia]
+
+== Graph Properties
+
+=== Bipartite Graph Detection
+
+==== Purpose
+
+Determines if a graph is bipartite (can be colored with two colors such that no adjacent vertices have the same color).
+
+==== Function Signature
+
+[source,kotlin]
+----
+fun Graph.isBipartite(): Pair<Boolean, Map<Any?, Int>>
+----
+
+==== Return Value
+
+Returns a pair containing:
+
+* `Boolean`: True if the graph is bipartite
+* `Map<Any?, Int>`: Color assignment (0 or 1) for each vertex
+
+==== Time Complexity
+
+* **Time**: O(V + E)
+* **Space**: O(V)
+
+==== Usage Examples
+
+[source,kotlin]
+----
+val graph = TinkerGraph.open()
+val students = (1..3).map { graph.addVertex("type", "student", "id", it) }
+val courses = (1..2).map { graph.addVertex("type", "course", "id", it) }
+
+// Students can only connect to courses (bipartite)
+students[0].addEdge("enrolled", courses[0])
+students[1].addEdge("enrolled", courses[1])
+students[2].addEdge("enrolled", courses[0])
+
+val (isBipartite, coloring) = graph.isBipartite()
+println("Graph is bipartite: $isBipartite")
+// Output: Graph is bipartite: true
+----
+
+==== References
+
+* https://en.wikipedia.org/wiki/Bipartite_graph[Bipartite graph on Wikipedia]
+
+== Graph Reachability
+
+=== Reachable Vertices
+
+==== Purpose
+
+Finds all vertices reachable from a given starting vertex.
+
+==== Function Signature
+
+[source,kotlin]
+----
+fun Graph.reachableVertices(start: Vertex, direction: Direction = Direction.OUT): Set<Vertex>
+----
+
+==== Parameters
+
+* `start`: The starting vertex
+* `direction`: Edge traversal direction (default: Direction.OUT)
+
+==== Return Value
+
+Returns a set of all reachable vertices (including the start vertex).
+
+==== Time Complexity
+
+* **Time**: O(V + E)
+* **Space**: O(V)
+
+=== Transitive Closure
+
+==== Purpose
+
+Computes the transitive closure of a directed graph. The transitive closure contains an edge from vertex i to vertex j if there is a directed path from i to j.
+
+==== Function Signature
+
+[source,kotlin]
+----
+fun Graph.transitiveClosure(): Map<Vertex, Set<Vertex>>
+----
+
+==== Return Value
+
+Returns a map where each vertex maps to the set of vertices reachable from it.
+
+==== Time Complexity
+
+* **Time**: O(V * (V + E))
+* **Space**: O(V²)
+
+==== References
+
+* https://en.wikipedia.org/wiki/Transitive_closure[Transitive closure on Wikipedia]
+
+== Performance Considerations
+
+=== Memory Usage
+
+All algorithms are designed to minimize memory usage:
+
+* **Vertex Tracking**: Uses vertex IDs instead of vertex objects where possible
+* **Lazy Evaluation**: Some operations return sequences for streaming processing
+* **Early Termination**: Algorithms terminate as soon as results are found
+
+=== Multiplatform Optimization
+
+* **Pure Kotlin**: No platform-specific dependencies
+* **Standard Collections**: Uses only Kotlin standard library
+* **Iterator Integration**: Leverages TinkerGraph's optimized iterators
+
+=== Edge Weight Handling
+
+* **Default Weights**: Edges without weight properties default to 1.0
+* **Type Safety**: Weight extraction handles various numeric types
+* **Property Access**: Uses TinkerGraph's standard property access methods
+
+== Testing and Validation
+
+All algorithms include comprehensive test coverage:
+
+=== Test Categories
+
+* **Basic Functionality**: Single vertex, simple paths, basic structures
+* **Edge Cases**: Empty graphs, disconnected components, self-loops
+* **Complex Scenarios**: Large graphs, multiple components, various topologies
+* **Error Conditions**: Invalid parameters, missing properties, malformed graphs
+
+=== Validation Approach
+
+* **Known Results**: Tests verify against manually computed expected outcomes
+* **Mathematical Properties**: Algorithms satisfy theoretical constraints
+* **Performance**: Time and space complexity within expected bounds
+
+== Future Enhancements
+
+Potential additions to the advanced algorithm suite:
+
+=== Weighted Graph Extensions
+
+* **Bellman-Ford Algorithm**: Shortest paths with negative weights
+* **Floyd-Warshall Algorithm**: All-pairs shortest paths
+* **A* Search**: Heuristic-based pathfinding
+* **Johnson's Algorithm**: All-pairs shortest paths with negative weights
+
+=== Flow Networks
+
+* **Ford-Fulkerson Algorithm**: Maximum flow computation
+* **Edmonds-Karp Algorithm**: Maximum flow with BFS
+* **Dinic's Algorithm**: Improved maximum flow
+
+=== Advanced Connectivity
+
+* **Stoer-Wagner Algorithm**: Minimum cut computation
+* **Karger's Algorithm**: Randomized minimum cut
+* **Edge-disjoint Paths**: Multiple independent paths
+
+=== Specialized Algorithms
+
+* **Euler Path/Circuit**: Eulerian path detection (Fleury's algorithm)
+* **Hamiltonian Path**: NP-complete path problems
+* **Graph Coloring**: Vertex and edge coloring algorithms
+
+== Conclusion
+
+The advanced graph algorithms provide a solid foundation for sophisticated graph analysis in TinkerGraph. The implementations are production-ready, well-tested, and maintain the project's standards for code quality and multiplatform compatibility.
+
+These algorithms enable complex graph analysis scenarios while preserving TinkerGraph's performance characteristics and ease of use. The comprehensive documentation and test coverage ensure reliable operation across all supported platforms.
