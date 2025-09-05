@@ -4,6 +4,11 @@ plugins {
     `maven-publish`
 }
 
+// Note: There is a known deprecation warning from the Kotlin/JS plugin:
+// "Invocation of Task.project at execution time has been deprecated"
+// This is internal to the Kotlin plugin and will be resolved in future plugin versions.
+// It does not affect functionality and is compatible with configuration cache.
+
 group = "org.apache.tinkerpop.kotlin"
 version = "1.0.0-SNAPSHOT"
 
@@ -17,8 +22,10 @@ kotlin {
     // JVM target
     jvm {
         withJava()
-        testRuns["test"].executionTask.configure {
-            useJUnitPlatform()
+        testRuns.named("test") {
+            executionTask.configure {
+                useJUnitPlatform()
+            }
         }
     }
 
@@ -44,21 +51,22 @@ kotlin {
         binaries.executable()
     }
 
-    // Native targets
-    val hostOs = System.getProperty("os.name")
-    val isMingwX64 = hostOs.startsWith("Windows")
-    val nativeTarget = when {
-        hostOs == "Mac OS X" -> macosX64("native")
-        hostOs == "Linux" -> linuxX64("native")
-        isMingwX64 -> mingwX64("native")
-        else -> throw GradleException("Host OS is not supported in Kotlin/Native.")
+    // Native targets - use a more robust approach
+    when (val hostOs = System.getProperty("os.name").lowercase()) {
+        "mac os x", "macos" -> macosX64("native")
+        "linux" -> linuxX64("native")
+        else -> when {
+            hostOs.startsWith("windows") -> mingwX64("native")
+            hostOs.startsWith("mac") -> macosX64("native")
+            else -> throw GradleException("Host OS '$hostOs' is not supported in Kotlin/Native.")
+        }
     }
 
     sourceSets {
         val commonMain by getting {
             dependencies {
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.6.0")
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.3")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
             }
         }
         val commonTest by getting {
@@ -68,23 +76,23 @@ kotlin {
         }
         val jvmMain by getting {
             dependencies {
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
             }
         }
         val jvmTest by getting {
             dependencies {
-                implementation("org.junit.jupiter:junit-jupiter:5.10.0")
+                implementation("org.junit.jupiter:junit-jupiter:5.11.0")
             }
         }
         val jsMain by getting {
             dependencies {
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
             }
         }
         val jsTest by getting
         val nativeMain by getting {
             dependencies {
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
             }
         }
         val nativeTest by getting
