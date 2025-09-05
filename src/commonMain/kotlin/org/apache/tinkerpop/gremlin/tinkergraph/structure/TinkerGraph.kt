@@ -63,6 +63,16 @@ class TinkerGraph private constructor(
      */
     private val graphFeatures: TinkerGraphFeatures = TinkerGraphFeatures()
 
+    /**
+     * Property manager for advanced property operations.
+     */
+    internal val propertyManager: PropertyManager = PropertyManager(this)
+
+    /**
+     * Property query engine for advanced property querying.
+     */
+    internal val propertyQueryEngine: PropertyQueryEngine = PropertyQueryEngine(this)
+
     override fun addVertex(vararg keyValues: Any?): Vertex {
         val properties = ElementHelper.asMap(keyValues)
         return addVertex(properties)
@@ -243,6 +253,63 @@ class TinkerGraph private constructor(
             "Edge", "TinkerEdge" -> edgeIndex.getIndexedKeys()
             else -> throw IllegalArgumentException("Class is not indexable: ${elementClass.simpleName}")
         }
+    }
+
+    /**
+     * Get the property manager for advanced property operations.
+     */
+    fun propertyManager(): PropertyManager = propertyManager
+
+    /**
+     * Get the property query engine for advanced property querying.
+     */
+    fun propertyQueryEngine(): PropertyQueryEngine = propertyQueryEngine
+
+    /**
+     * Add a vertex property with explicit cardinality and meta-properties.
+     */
+    fun <V> addVertexProperty(
+        vertex: TinkerVertex,
+        key: String,
+        value: V,
+        cardinality: VertexProperty.Cardinality = defaultVertexPropertyCardinality,
+        metaProperties: Map<String, Any?> = emptyMap(),
+        id: Any? = null
+    ): TinkerVertexProperty<V> {
+        return propertyManager.addVertexProperty(vertex, key, value, cardinality, metaProperties, id)
+    }
+
+    /**
+     * Query vertices by property criteria.
+     */
+    fun queryVertices(criteria: List<PropertyQueryEngine.PropertyCriterion>): Iterator<TinkerVertex> {
+        return propertyQueryEngine.queryVertices(criteria)
+    }
+
+    /**
+     * Query vertices by a single property criterion.
+     */
+    fun queryVertices(criterion: PropertyQueryEngine.PropertyCriterion): Iterator<TinkerVertex> {
+        return propertyQueryEngine.queryVertices(criterion)
+    }
+
+    /**
+     * Range query for numeric properties.
+     */
+    fun queryVerticesByRange(
+        key: String,
+        minValue: Number?,
+        maxValue: Number?,
+        inclusive: Boolean = true
+    ): Iterator<TinkerVertex> {
+        return propertyQueryEngine.queryVerticesByRange(key, minValue, maxValue, inclusive)
+    }
+
+    /**
+     * Get comprehensive property statistics for the graph.
+     */
+    fun getPropertyStatistics(): Map<String, PropertyQueryEngine.GraphPropertyStats> {
+        return propertyQueryEngine.getGraphPropertyStatistics()
     }
 
     companion object {

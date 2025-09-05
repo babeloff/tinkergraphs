@@ -33,6 +33,12 @@ class TinkerVertex(
      */
     private val vertexProperties: MutableMap<String, MutableList<TinkerVertexProperty<*>>> = mutableMapOf()
 
+    /**
+     * Cardinality tracking for property keys.
+     * Maps property key to its cardinality.
+     */
+    private val propertyCardinalities: MutableMap<String, VertexProperty.Cardinality> = mutableMapOf()
+
     override fun addEdge(label: String, inVertex: Vertex, vararg keyValues: Any?): Edge {
         val properties = ElementHelper.asMap(keyValues)
         return addEdge(label, inVertex, properties)
@@ -60,7 +66,7 @@ class TinkerVertex(
 
     override fun <V> property(key: String, value: V, vararg keyValues: Any?): VertexProperty<V> {
         checkRemoved()
-        ElementHelper.validateProperty(key, value)
+        ElementHelper.validateProperty(key, value, elementGraph.allowNullPropertyValues)
 
         val metaProperties = ElementHelper.asMap(keyValues)
         val cardinality = elementGraph.defaultVertexPropertyCardinality
@@ -69,11 +75,22 @@ class TinkerVertex(
     }
 
     /**
+     * Add a vertex property with explicit cardinality specification.
+     */
+    fun <V> property(key: String, value: V, cardinality: VertexProperty.Cardinality, vararg keyValues: Any?): VertexProperty<V> {
+        checkRemoved()
+        ElementHelper.validateProperty(key, value, elementGraph.allowNullPropertyValues)
+
+        val metaProperties = ElementHelper.asMap(keyValues)
+        return addVertexProperty(key, value, metaProperties, cardinality)
+    }
+
+    /**
      * Override the two-parameter property method to create VertexProperty objects.
      */
     override fun <V> property(key: String, value: V): VertexProperty<V> {
         checkRemoved()
-        ElementHelper.validateProperty(key, value)
+        ElementHelper.validateProperty(key, value, elementGraph.allowNullPropertyValues)
         return addVertexProperty(key, value)
     }
 
@@ -85,10 +102,21 @@ class TinkerVertex(
         checkRemoved()
         val properties = vertexProperties[key]
         return if (properties != null && properties.isNotEmpty()) {
-            properties.first().value() as V?
+            // Return the first non-removed property value
+            properties.firstOrNull { !it.isVertexPropertyRemoved() }?.value() as V?
         } else {
             null
         }
+    }
+
+    /**
+     * Get all values for a property key (for multi-properties).
+     */
+    fun <V> values(key: String): Iterator<V> {
+        checkRemoved()
+        @Suppress("UNCHECKED_CAST")
+        val properties = vertexProperties[key] as? List<TinkerVertexProperty<V>> ?: emptyList()
+        return properties.filter { !it.isVertexPropertyRemoved() }.map { it.value() }.iterator()
     }
 
     /**
@@ -99,16 +127,7 @@ class TinkerVertex(
         return vertexProperties.keys.toSet()
     }
 
-    /**
-     * Add a vertex property with specified cardinality and meta-properties.
-     */
-    fun <V> property(key: String, value: V, cardinality: VertexProperty.Cardinality, vararg keyValues: Any?): VertexProperty<V> {
-        checkRemoved()
-        ElementHelper.validateProperty(key, value)
 
-        val metaProperties = ElementHelper.asMap(keyValues)
-        return addVertexProperty(key, value, metaProperties, cardinality)
-    }
 
     @Suppress("UNCHECKED_CAST")
     override fun <V> properties(vararg propertyKeys: String): Iterator<VertexProperty<V>> {
@@ -143,6 +162,32 @@ class TinkerVertex(
     }
 
     /**
+     * Check if this vertex has a property with the given key.
+     */
+    fun hasProperty(key: String): Boolean {
+        checkRemoved()
+        val properties = vertexProperties[key]
+        return properties != null && properties.any { !it.isVertexPropertyRemoved() }
+    }
+
+    /**
+     * Count properties with the given key.
+     */
+    fun propertyCount(key: String): Int {
+        checkRemoved()
+        val properties = vertexProperties[key]
+        return properties?.count { !it.isVertexPropertyRemoved() } ?: 0
+    }
+
+    /**
+     * Get property cardinality for a given key.
+     */
+    fun getPropertyCardinality(key: String): VertexProperty.Cardinality {
+        checkRemoved()
+        return propertyCardinalities[key] ?: VertexProperty.Cardinality.SINGLE
+    }
+
+    /**
      * Add a vertex property with specified cardinality and meta-properties.
      */
     fun <V> addVertexProperty(
@@ -155,25 +200,28 @@ class TinkerVertex(
 
         val propertyList = vertexProperties.getOrPut(key) { mutableListOf() }
 
+        // Store cardinality for this key
+        propertyCardinalities[key] = cardinality
+
         // Handle cardinality
         when (cardinality) {
             VertexProperty.Cardinality.SINGLE -> {
                 // Remove existing properties with this key
-                // Clear the list directly instead of using removeVertexProperty
-                // to avoid removing the key from vertexProperties map
-                propertyList.forEach { prop ->
+                val toRemove = propertyList.filter { !it.isVertexPropertyRemoved() }
+                toRemove.forEach { prop ->
                     // Update vertex index for removed property
                     elementGraph.vertexIndex.autoUpdate(key, null, prop.value(), this)
                     // Mark property as removed
                     prop.markPropertyRemoved()
                 }
+                // Clear all properties for SINGLE cardinality
                 propertyList.clear()
             }
             VertexProperty.Cardinality.SET -> {
                 // Check for duplicate values in SET cardinality
-                val existingValues = propertyList.map { it.value() }.toSet()
+                val existingValues = propertyList.filter { !it.isVertexPropertyRemoved() }.map { it.value() }.toSet()
                 if (value in existingValues) {
-                    throw Vertex.Exceptions.multiplePropertiesExistForProvidedKey(key)
+                    throw VertexProperty.Exceptions.identicalMultiPropertiesNotSupported()
                 }
             }
             VertexProperty.Cardinality.LIST -> {
@@ -205,8 +253,10 @@ class TinkerVertex(
             val oldValue = vertexProperty.value()
             propertyList.remove(vertexProperty)
 
-            if (propertyList.isEmpty()) {
+            // Clean up empty property lists
+            if (propertyList.isEmpty() || propertyList.all { it.isVertexPropertyRemoved() }) {
                 vertexProperties.remove(key)
+                propertyCardinalities.remove(key)
             }
 
             // Update vertex index
@@ -218,6 +268,51 @@ class TinkerVertex(
     }
 
     /**
+     * Remove all properties with the given key.
+     */
+    fun removeProperties(key: String): Int {
+        checkRemoved()
+        val propertyList = vertexProperties[key] ?: return 0
+
+        var removedCount = 0
+        val toRemove = propertyList.filter { !it.isVertexPropertyRemoved() }
+
+        toRemove.forEach { prop ->
+            val oldValue = prop.value()
+            // Update vertex index
+            elementGraph.vertexIndex.autoUpdate(key, null, oldValue, this)
+            // Mark property as removed
+            prop.markPropertyRemoved()
+            removedCount++
+        }
+
+        // Remove the key entirely
+        vertexProperties.remove(key)
+        propertyCardinalities.remove(key)
+
+        return removedCount
+    }
+
+    /**
+     * Remove properties with specific key and value (useful for SET/LIST cardinalities).
+     */
+    fun <V> removeProperty(key: String, value: V): Boolean {
+        checkRemoved()
+        val propertyList = vertexProperties[key] ?: return false
+
+        val propertyToRemove = propertyList.firstOrNull {
+            !it.isVertexPropertyRemoved() && it.value() == value
+        }
+
+        if (propertyToRemove != null) {
+            removeVertexProperty(propertyToRemove)
+            return true
+        }
+
+        return false
+    }
+
+    /**
      * Get vertex property by key and value (for SET cardinality lookups).
      */
     fun <V> getVertexProperty(key: String, value: V): TinkerVertexProperty<V>? {
@@ -225,7 +320,34 @@ class TinkerVertex(
 
         @Suppress("UNCHECKED_CAST")
         val properties = vertexProperties[key] as? List<TinkerVertexProperty<V>>
-        return properties?.firstOrNull { it.value() == value }
+        return properties?.firstOrNull { !it.isVertexPropertyRemoved() && it.value() == value }
+    }
+
+    /**
+     * Get all vertex properties for a key.
+     */
+    fun <V> getVertexProperties(key: String): List<TinkerVertexProperty<V>> {
+        checkRemoved()
+
+        @Suppress("UNCHECKED_CAST")
+        val properties = vertexProperties[key] as? List<TinkerVertexProperty<V>> ?: emptyList()
+        return properties.filter { !it.isVertexPropertyRemoved() }
+    }
+
+    /**
+     * Get a specific vertex property by ID.
+     */
+    fun getVertexPropertyById(id: Any): TinkerVertexProperty<*>? {
+        checkRemoved()
+
+        for (propertyList in vertexProperties.values) {
+            for (prop in propertyList) {
+                if (!prop.isVertexPropertyRemoved() && prop.id() == id) {
+                    return prop
+                }
+            }
+        }
+        return null
     }
 
     /**
@@ -385,14 +507,58 @@ class TinkerVertex(
     internal override fun getProperties(): Map<String, Property<*>> {
         val result = mutableMapOf<String, Property<*>>()
         vertexProperties.forEach { (key, propertyList) ->
-            if (propertyList.isNotEmpty()) {
+            val activeProperties = propertyList.filter { !it.isVertexPropertyRemoved() }
+            if (activeProperties.isNotEmpty()) {
                 // For multiple properties with the same key, return the first one
                 // This matches the behavior of value() method
-                result[key] = propertyList.first()
+                result[key] = activeProperties.first()
             }
         }
         return result
     }
+
+    /**
+     * Get all property keys that have active properties.
+     */
+    fun getActivePropertyKeys(): Set<String> {
+        checkRemoved()
+        return vertexProperties.filterValues { propertyList ->
+            propertyList.any { !it.isVertexPropertyRemoved() }
+        }.keys.toSet()
+    }
+
+    /**
+     * Get property statistics for debugging and monitoring.
+     */
+    fun getPropertyStatistics(): Map<String, PropertyStats> {
+        checkRemoved()
+        val stats = mutableMapOf<String, PropertyStats>()
+
+        vertexProperties.forEach { (key, propertyList) ->
+            val activeCount = propertyList.count { !it.isVertexPropertyRemoved() }
+            val totalCount = propertyList.size
+            val hasMetaProperties = propertyList.any { !it.isVertexPropertyRemoved() && it.hasMetaProperties() }
+
+            stats[key] = PropertyStats(
+                activeCount = activeCount,
+                totalCount = totalCount,
+                hasMetaProperties = hasMetaProperties,
+                cardinality = getPropertyCardinality(key)
+            )
+        }
+
+        return stats
+    }
+
+    /**
+     * Data class for property statistics.
+     */
+    data class PropertyStats(
+        val activeCount: Int,
+        val totalCount: Int,
+        val hasMetaProperties: Boolean,
+        val cardinality: VertexProperty.Cardinality
+    )
 
     override fun toString(): String {
         return "v[$elementId]"

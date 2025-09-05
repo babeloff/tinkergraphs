@@ -1,0 +1,636 @@
+= Multi-Property and Meta-Property Support
+:toc:
+:toc-placement: preamble
+:sectlinks:
+:sectanchors:
+
+This document describes the advanced multi-property and meta-property support implemented in TinkerGraph, fulfilling *Prompt 2.2.1: Multi-property and Meta-property support* from the roadmap.
+
+== Overview
+
+TinkerGraph now provides comprehensive support for:
+
+* **Multi-properties**: Multiple property values with the same key using different cardinalities
+* **Meta-properties**: Properties on VertexProperty objects (properties of properties)
+* **Property cardinality enforcement**: SINGLE, LIST, and SET cardinality constraints
+* **Efficient storage and retrieval**: Optimized property management and querying
+* **Property lifecycle management**: Event listeners and property optimization
+
+== Property Cardinality
+
+TinkerGraph supports three cardinality types for vertex properties:
+
+=== SINGLE Cardinality
+
+The default cardinality where only one value per property key is allowed.
+
+[source,kotlin]
+----
+val vertex = graph.addVertex() as TinkerVertex
+vertex.property("name", "Alice", VertexProperty.Cardinality.SINGLE)
+vertex.property("name", "Bob", VertexProperty.Cardinality.SINGLE)  // Replaces "Alice"
+
+assertEquals("Bob", vertex.value("name"))  // Only "Bob" remains
+assertEquals(1, vertex.propertyCount("name"))
+----
+
+=== LIST Cardinality
+
+Allows multiple values with the same key, including duplicates.
+
+[source,kotlin]
+----
+val vertex = graph.addVertex() as TinkerVertex
+vertex.property("skill", "Java", VertexProperty.Cardinality.LIST)
+vertex.property("skill", "Kotlin", VertexProperty.Cardinality.LIST)
+vertex.property("skill", "Java", VertexProperty.Cardinality.LIST)  // Duplicate allowed
+
+assertEquals(3, vertex.propertyCount("skill"))
+val skills = vertex.values<String>("skill").asSequence().toList()
+// skills contains ["Java", "Kotlin", "Java"]
+----
+
+=== SET Cardinality
+
+Allows multiple unique values with the same key, rejecting duplicates.
+
+[source,kotlin]
+----
+val vertex = graph.addVertex() as TinkerVertex
+vertex.property("language", "English", VertexProperty.Cardinality.SET)
+vertex.property("language", "French", VertexProperty.Cardinality.SET)
+
+// This will throw an exception due to duplicate value
+assertFailsWith<RuntimeException> {
+    vertex.property("language", "English", VertexProperty.Cardinality.SET)
+}
+
+assertEquals(2, vertex.propertyCount("language"))
+----
+
+== Meta-Properties
+
+Meta-properties allow you to attach properties to VertexProperty objects themselves.
+
+=== Basic Meta-Properties
+
+[source,kotlin]
+----
+val vertex = graph.addVertex() as TinkerVertex
+val nameProperty = vertex.property(
+    "name", "Alice",
+    "createdBy", "admin",
+    "timestamp", System.currentTimeMillis(),
+    "confidence", 0.95
+) as TinkerVertexProperty
+
+// Access meta-properties
+assertEquals("admin", nameProperty.value<String>("createdBy"))
+assertEquals(0.95, nameProperty.value<Double>("confidence"))
+
+// Check meta-property existence
+assertTrue(nameProperty.hasMetaProperties())
+assertEquals(3, nameProperty.metaPropertyCount())
+----
+
+=== Meta-Properties with Cardinality
+
+Meta-properties work seamlessly with different cardinalities:
+
+[source,kotlin]
+----
+val vertex = graph.addVertex() as TinkerVertex
+
+// Multiple email addresses with different meta-properties
+val primaryEmail = vertex.property(
+    "email", "alice@example.com",
+    VertexProperty.Cardinality.SET,
+    "type", "primary",
+    "verified", true
+)
+
+val workEmail = vertex.property(
+    "email", "alice@company.com",
+    VertexProperty.Cardinality.SET,
+    "type", "work",
+    "verified", false
+)
+
+// Query by meta-property
+val queryEngine = graph.propertyQueryEngine()
+val verifiedEmails = queryEngine.queryVerticesByMetaProperty("email", "verified", true)
+----
+
+== Property Management API
+
+=== PropertyManager
+
+The `PropertyManager` class provides advanced property operations:
+
+[source,kotlin]
+----
+val manager = graph.propertyManager()
+val vertex = graph.addVertex() as TinkerVertex
+
+// Add property with full control
+val property = manager.addVertexProperty(
+    vertex = vertex,
+    key = "title",
+    value = "Senior Engineer",
+    cardinality = VertexProperty.Cardinality.SINGLE,
+    metaProperties = mapOf(
+        "department" to "Engineering",
+        "level" to "L5",
+        "startDate" to "2024-01-01"
+    )
+)
+
+// Update property value
+manager.updateVertexProperty(
+    vertex, "title", "Senior Engineer", "Principal Engineer"
+)
+
+// Remove properties
+manager.removeVertexProperties(vertex, "title")
+
+// Validate constraints
+val violations = manager.validatePropertyConstraints(vertex)
+violations.forEach { println("Constraint violation: ${it.violation}") }
+----
+
+=== Property Lifecycle Listeners
+
+Monitor property changes with lifecycle listeners:
+
+[source,kotlin]
+----
+val manager = graph.propertyManager()
+
+val listener = object : PropertyManager.PropertyLifecycleListener {
+    override fun onPropertyAdded(vertex: TinkerVertex, property: TinkerVertexProperty<*>) {
+        println("Property added: ${property.key()} = ${property.value()}")
+    }
+
+    override fun onPropertyRemoved(vertex: TinkerVertex, property: TinkerVertexProperty<*>) {
+        println("Property removed: ${property.key()} = ${property.value()}")
+    }
+}
+
+manager.addPropertyListener(listener)
+
+// All property operations will now trigger events
+val vertex = graph.addVertex() as TinkerVertex
+manager.addVertexProperty(vertex, "name", "Alice")  // Triggers onPropertyAdded
+----
+
+== Property Querying
+
+=== PropertyQueryEngine
+
+The `PropertyQueryEngine` provides powerful querying capabilities:
+
+[source,kotlin]
+----
+val queryEngine = graph.propertyQueryEngine()
+
+// Exact match queries
+val results = queryEngine.queryVertices(
+    PropertyQueryEngine.exact("type", "person")
+)
+
+// Range queries for numeric properties
+val ageRange = queryEngine.queryVerticesByRange(
+    key = "age",
+    minValue = 25,
+    maxValue = 35,
+    inclusive = true
+)
+
+// Complex composite queries
+val complexQuery = queryEngine.queryVertices(
+    listOf(
+        PropertyQueryEngine.exact("type", "person"),
+        PropertyQueryEngine.range("age", 25, null, true),
+        PropertyQueryEngine.exists("email")
+    )
+)
+----
+
+=== Query Criteria Types
+
+[cols="1,3,2"]
+|===
+|Criterion |Description |Example
+
+|ExactCriterion
+|Exact value match
+|`PropertyQueryEngine.exact("name", "Alice")`
+
+|RangeCriterion
+|Numeric range queries
+|`PropertyQueryEngine.range("age", 25, 35, true)`
+
+|ExistsCriterion
+|Property existence check
+|`PropertyQueryEngine.exists("email")`
+
+|NotExistsCriterion
+|Property non-existence check
+|`PropertyQueryEngine.notExists("deprecated")`
+
+|ContainsCriterion
+|String/Collection contains
+|`PropertyQueryEngine.contains("description", "important")`
+
+|RegexCriterion
+|Regular expression match
+|`PropertyQueryEngine.regex("email", ".*@company\\.com")`
+
+|CompositeCriterion
+|Logical combinations (AND, OR, NOT)
+|`PropertyQueryEngine.and(criterion1, criterion2)`
+|===
+
+=== Meta-Property Queries
+
+Query vertices by meta-property values:
+
+[source,kotlin]
+----
+val queryEngine = graph.propertyQueryEngine()
+
+// Find vertices with verified email addresses
+val verifiedUsers = queryEngine.queryVerticesByMetaProperty(
+    propertyKey = "email",
+    metaPropertyKey = "verified",
+    metaPropertyValue = true
+)
+
+// Find vertices with primary contact information
+val primaryContacts = queryEngine.queryVerticesByMetaProperty(
+    propertyKey = "phone",
+    metaPropertyKey = "type",
+    metaPropertyValue = "primary"
+)
+----
+
+== Property Statistics and Analysis
+
+=== Vertex-Level Statistics
+
+Get detailed property statistics for individual vertices:
+
+[source,kotlin]
+----
+val vertex = graph.addVertex() as TinkerVertex
+vertex.property("skill", "Java", VertexProperty.Cardinality.LIST)
+vertex.property("skill", "Kotlin", VertexProperty.Cardinality.LIST)
+
+val stats = vertex.getPropertyStatistics()
+val skillStats = stats["skill"]!!
+
+println("Active properties: ${skillStats.activeCount}")
+println("Total properties: ${skillStats.totalCount}")
+println("Has meta-properties: ${skillStats.hasMetaProperties}")
+println("Cardinality: ${skillStats.cardinality}")
+----
+
+=== Graph-Level Statistics
+
+Analyze properties across the entire graph:
+
+[source,kotlin]
+----
+val stats = graph.getPropertyStatistics()
+
+stats.forEach { (key, propertyStats) ->
+    println("Property: $key")
+    println("  Total properties: ${propertyStats.propertyCount}")
+    println("  Vertices with property: ${propertyStats.vertexCount}")
+    println("  Has meta-properties: ${propertyStats.hasMetaProperties}")
+    println("  Cardinality distribution: ${propertyStats.cardinalityDistribution}")
+}
+----
+
+=== Property Aggregations
+
+Perform aggregations on property values:
+
+[source,kotlin]
+----
+val queryEngine = graph.propertyQueryEngine()
+
+// Count total properties
+val totalAges = queryEngine.aggregateProperties("age", PropertyQueryEngine.PropertyAggregation.COUNT)
+
+// Get distinct values
+val uniqueTypes = queryEngine.aggregateProperties("type", PropertyQueryEngine.PropertyAggregation.DISTINCT_COUNT)
+
+// Numeric aggregations
+val minAge = queryEngine.aggregateProperties("age", PropertyQueryEngine.PropertyAggregation.MIN)
+val maxAge = queryEngine.aggregateProperties("age", PropertyQueryEngine.PropertyAggregation.MAX)
+val avgAge = queryEngine.aggregateProperties("age", PropertyQueryEngine.PropertyAggregation.AVERAGE)
+val sumSalary = queryEngine.aggregateProperties("salary", PropertyQueryEngine.PropertyAggregation.SUM)
+----
+
+== Performance Optimization
+
+=== Property Storage Optimization
+
+Clean up removed properties to optimize memory usage:
+
+[source,kotlin]
+----
+val manager = graph.propertyManager()
+val vertex = graph.addVertex() as TinkerVertex
+
+// Add and remove properties
+val prop1 = vertex.property("temp", "value1")
+val prop2 = vertex.property("temp", "value2")
+prop1.remove()
+
+// Optimize storage by cleaning up removed properties
+val result = manager.optimizePropertyStorage(vertex)
+println("Cleaned ${result.cleanedProperties} properties and ${result.cleanedKeys} keys")
+----
+
+=== Property Indexing
+
+TinkerGraph automatically maintains indices for faster property lookups:
+
+[source,kotlin]
+----
+// Create explicit indices for frequently queried properties
+graph.createIndex("name", TinkerVertex::class)
+graph.createIndex("email", TinkerVertex::class)
+
+// Query operations will now use indices for better performance
+val queryEngine = graph.propertyQueryEngine()
+val results = queryEngine.queryVertices(PropertyQueryEngine.exact("name", "Alice"))
+----
+
+== Error Handling and Validation
+
+=== Cardinality Constraint Violations
+
+[source,kotlin]
+----
+val vertex = graph.addVertex() as TinkerVertex
+
+// SET cardinality prevents duplicate values
+vertex.property("category", "work", VertexProperty.Cardinality.SET)
+
+assertFailsWith<RuntimeException> {
+    vertex.property("category", "work", VertexProperty.Cardinality.SET)  // Duplicate
+}
+----
+
+=== Property Constraint Validation
+
+[source,kotlin]
+----
+val manager = graph.propertyManager()
+val vertex = graph.addVertex() as TinkerVertex
+
+// Add properties that might violate constraints
+vertex.property("status", "active", VertexProperty.Cardinality.SET)
+vertex.property("status", "inactive", VertexProperty.Cardinality.SET)
+
+// Validate all constraints
+val violations = manager.validatePropertyConstraints(vertex)
+violations.forEach { violation ->
+    println("Constraint violation in '${violation.key}': ${violation.violation}")
+    println("Property count: ${violation.propertyCount}")
+}
+----
+
+=== Feature Support Checks
+
+[source,kotlin]
+----
+val features = graph.features()
+
+// Check if graph supports multi-properties
+if (features.vertex().supportsMultiProperties()) {
+    vertex.property("skill", "Java", VertexProperty.Cardinality.LIST)
+    vertex.property("skill", "Kotlin", VertexProperty.Cardinality.LIST)
+}
+
+// Check if graph supports meta-properties
+if (features.vertex().supportsMetaProperties()) {
+    vertex.property("email", "user@example.com", "verified", true)
+}
+----
+
+== Configuration
+
+=== Graph Configuration
+
+Configure multi-property behavior when creating the graph:
+
+[source,kotlin]
+----
+val config = mapOf(
+    TinkerGraph.GREMLIN_TINKERGRAPH_DEFAULT_VERTEX_PROPERTY_CARDINALITY to "LIST",
+    TinkerGraph.GREMLIN_TINKERGRAPH_ALLOW_NULL_PROPERTY_VALUES to true
+)
+
+val graph = TinkerGraph.open(config)
+
+// Default cardinality is now LIST instead of SINGLE
+val vertex = graph.addVertex() as TinkerVertex
+vertex.property("tag", "important")  // Uses LIST cardinality
+vertex.property("tag", "urgent")     // Adds second value
+----
+
+== Best Practices
+
+=== Choosing Cardinality
+
+[cols="1,2,3"]
+|===
+|Cardinality |Use When |Examples
+
+|SINGLE
+|Only one value per key is needed (most common)
+|name, age, email, status
+
+|LIST
+|Multiple values allowed, order matters, duplicates allowed
+|skills, tags, history entries
+
+|SET
+|Multiple unique values needed, order doesn't matter
+|languages, categories, unique identifiers
+|===
+
+=== Meta-Property Guidelines
+
+* Use meta-properties for contextual information about the property value
+* Common meta-properties: `createdDate`, `source`, `confidence`, `type`, `verified`
+* Keep meta-property structure consistent across similar properties
+* Consider performance impact of deeply nested meta-property queries
+
+=== Performance Tips
+
+* Use indices for frequently queried properties
+* Regularly optimize property storage to clean up removed properties
+* Use appropriate cardinality to avoid unnecessary constraint checking
+* Batch property operations when adding many properties
+
+=== Error Handling
+
+* Always check feature support before using multi-properties or meta-properties
+* Handle cardinality constraint violations gracefully
+* Use property validation to catch constraint violations early
+* Implement proper cleanup in property lifecycle listeners
+
+== Migration Guide
+
+=== From Single to Multi-Properties
+
+To migrate existing single-property code to use multi-properties:
+
+[source,kotlin]
+----
+// Old approach (single property)
+vertex.property("skill", "Java")
+val skill = vertex.value<String>("skill")
+
+// New approach (multi-property aware)
+vertex.property("skill", "Java", VertexProperty.Cardinality.LIST)
+vertex.property("skill", "Kotlin", VertexProperty.Cardinality.LIST)
+
+// Get first value (backwards compatible)
+val firstSkill = vertex.value<String>("skill")
+
+// Get all values (new capability)
+val allSkills = vertex.values<String>("skill").asSequence().toList()
+----
+
+=== Adding Meta-Properties
+
+To add meta-properties to existing properties:
+
+[source,kotlin]
+----
+// Existing property
+val nameProperty = vertex.property("name", "Alice") as TinkerVertexProperty
+
+// Add meta-properties
+nameProperty.property("source", "user_input")
+nameProperty.property("lastUpdated", System.currentTimeMillis())
+nameProperty.property("confidence", 0.95)
+
+// Or create with meta-properties from the start
+vertex.property("email", "alice@example.com",
+    "verified", true,
+    "type", "primary")
+----
+
+== Examples
+
+=== Complete User Profile Example
+
+[source,kotlin]
+----
+val graph = TinkerGraph.open()
+val user = graph.addVertex() as TinkerVertex
+
+// Basic properties with SINGLE cardinality
+user.property("name", "Alice Johnson", VertexProperty.Cardinality.SINGLE)
+user.property("age", 28, VertexProperty.Cardinality.SINGLE)
+user.property("userId", "alice123", VertexProperty.Cardinality.SINGLE)
+
+// Multiple skills with LIST cardinality (allows duplicates)
+user.property("skill", "Java", VertexProperty.Cardinality.LIST,
+    "level", "expert", "yearsExperience", 8)
+user.property("skill", "Kotlin", VertexProperty.Cardinality.LIST,
+    "level", "intermediate", "yearsExperience", 3)
+user.property("skill", "Python", VertexProperty.Cardinality.LIST,
+    "level", "beginner", "yearsExperience", 1)
+
+// Multiple emails with SET cardinality (unique values)
+user.property("email", "alice@personal.com", VertexProperty.Cardinality.SET,
+    "type", "personal", "verified", true, "primary", true)
+user.property("email", "alice@company.com", VertexProperty.Cardinality.SET,
+    "type", "work", "verified", true, "primary", false)
+
+// Query examples
+val queryEngine = graph.propertyQueryEngine()
+
+// Find users with Java skills
+val javaExperts = queryEngine.queryVerticesByMetaProperty("skill", "level", "expert")
+
+// Find users with verified emails
+val verifiedUsers = queryEngine.queryVerticesByMetaProperty("email", "verified", true)
+
+// Complex query: experienced Java developers with work emails
+val results = queryEngine.queryVertices(listOf(
+    PropertyQueryEngine.exists("skill"),
+    PropertyQueryEngine.exists("email")
+))
+----
+
+== Troubleshooting
+
+=== Common Issues
+
+[cols="2,3,3"]
+|===
+|Issue |Cause |Solution
+
+|"Multiple properties not supported"
+|Graph features disabled
+|Check `graph.features().vertex().supportsMultiProperties()`
+
+|"Meta-properties not supported"
+|Graph features disabled
+|Check `graph.features().vertex().supportsMetaProperties()`
+
+|"Identical multi-properties not supported"
+|SET cardinality duplicate
+|Use LIST cardinality or ensure unique values
+
+|Property not found after addition
+|Property was removed or overwritten
+|Check cardinality and property lifecycle
+
+|Performance issues with queries
+|Missing indices
+|Create indices for frequently queried properties
+|===
+
+=== Debug Tools
+
+Use property statistics to debug issues:
+
+[source,kotlin]
+----
+// Debug vertex properties
+val vertex = graph.addVertex() as TinkerVertex
+val stats = vertex.getPropertyStatistics()
+stats.forEach { (key, stat) ->
+    if (stat.activeCount != stat.totalCount) {
+        println("Warning: Property '$key' has ${stat.totalCount - stat.activeCount} removed properties")
+    }
+}
+
+// Debug graph-wide property usage
+val graphStats = graph.getPropertyStatistics()
+graphStats.forEach { (key, stat) ->
+    println("Property '$key': ${stat.propertyCount} total, ${stat.vertexCount} vertices")
+}
+----
+
+== Conclusion
+
+The multi-property and meta-property support in TinkerGraph provides powerful capabilities for modeling complex property relationships while maintaining performance and data integrity. The system offers:
+
+* **Flexible cardinality options** (SINGLE, LIST, SET) for different use cases
+* **Rich meta-property support** for contextual property information
+* **Advanced querying capabilities** with composite criteria and aggregations
+* **Comprehensive property management** with lifecycle monitoring and optimization
+* **Performance optimizations** through indexing and storage management
+
+This implementation brings TinkerGraph closer to full Apache TinkerPop compatibility while providing additional features for advanced graph modeling scenarios.

@@ -60,7 +60,7 @@ class TinkerVertexTest {
         // SET cardinality should not allow duplicates
         vertex.addVertexProperty("tag", "important", cardinality = VertexProperty.Cardinality.SET)
 
-        assertFailsWith<IllegalStateException> {
+        assertFailsWith<UnsupportedOperationException> {
             vertex.addVertexProperty("tag", "important", cardinality = VertexProperty.Cardinality.SET)
         }
     }

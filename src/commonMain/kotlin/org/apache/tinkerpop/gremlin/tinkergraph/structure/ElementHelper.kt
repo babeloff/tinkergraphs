@@ -223,15 +223,14 @@ object ElementHelper {
 
     /**
      * Validate a property value.
-     * @param value the value to validate
+     * @param value the property value to validate
      * @throws IllegalArgumentException if the value is invalid
      */
     fun validatePropertyValue(value: Any?) {
         // Most graph databases don't allow null values by default
         // This can be overridden by graph configuration
         if (value == null) {
-            // Note: This will be checked against graph configuration in actual usage
-            // For now, we'll allow nulls and let the graph implementation decide
+            throw IllegalArgumentException("Property value cannot be null")
         }
     }
 
@@ -244,6 +243,20 @@ object ElementHelper {
     fun validateProperty(key: String, value: Any?) {
         validatePropertyKey(key)
         validatePropertyValue(value)
+    }
+
+    /**
+     * Validate a property key-value pair with graph context.
+     * @param key the property key
+     * @param value the property value
+     * @param allowNullValues whether null values are allowed
+     * @throws IllegalArgumentException if the key or value is invalid
+     */
+    fun validateProperty(key: String, value: Any?, allowNullValues: Boolean) {
+        validatePropertyKey(key)
+        if (value == null && !allowNullValues) {
+            throw IllegalArgumentException("Property value cannot be null")
+        }
     }
 
     /**

@@ -72,6 +72,20 @@ class TinkerVertexProperty<V>(
     }
 
     /**
+     * Get all meta-property values for a given key.
+     */
+    fun <U> getMetaPropertyValues(key: String): List<U> {
+        checkNotRemoved()
+        @Suppress("UNCHECKED_CAST")
+        val property = elementProperties[key] as? Property<U>
+        return if (property?.isPresent() == true) {
+            listOf(property.value())
+        } else {
+            emptyList()
+        }
+    }
+
+    /**
      * Get the vertex that owns this property.
      */
     fun vertex(): TinkerVertex = vertex
