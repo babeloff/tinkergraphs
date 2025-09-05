@@ -44,6 +44,48 @@ class TinkerGraph private constructor(
     internal val edgeIndex: TinkerIndex<TinkerEdge> = TinkerIndex()
 
     /**
+     * Composite index for vertex properties to enable multi-property queries.
+     */
+    internal val vertexCompositeIndex: CompositeIndex<TinkerVertex> = CompositeIndex()
+
+    /**
+     * Composite index for edge properties to enable multi-property queries.
+     */
+    internal val edgeCompositeIndex: CompositeIndex<TinkerEdge> = CompositeIndex()
+
+    /**
+     * Range index for vertex properties to enable efficient range queries.
+     */
+    internal val vertexRangeIndex: RangeIndex<TinkerVertex> = RangeIndex()
+
+    /**
+     * Range index for edge properties to enable efficient range queries.
+     */
+    internal val edgeRangeIndex: RangeIndex<TinkerEdge> = RangeIndex()
+
+    /**
+     * Index optimizer for vertex queries.
+     */
+    internal val vertexIndexOptimizer: IndexOptimizer<TinkerVertex> =
+        IndexOptimizer(vertexIndex, vertexCompositeIndex, vertexRangeIndex)
+
+    /**
+     * Index optimizer for edge queries.
+     */
+    internal val edgeIndexOptimizer: IndexOptimizer<TinkerEdge> =
+        IndexOptimizer(edgeIndex, edgeCompositeIndex, edgeRangeIndex)
+
+    /**
+     * Index cache for vertex queries.
+     */
+    internal val vertexIndexCache: IndexCache<TinkerVertex> = IndexCache()
+
+    /**
+     * Index cache for edge queries.
+     */
+    internal val edgeIndexCache: IndexCache<TinkerEdge> = IndexCache()
+
+    /**
      * Whether to allow null property values.
      */
     internal val allowNullPropertyValues: Boolean =
@@ -166,6 +208,9 @@ class TinkerGraph private constructor(
 
         // Remove from vertex index
         vertexIndex.removeElement(vertex)
+        vertexCompositeIndex.removeElement(vertex)
+        vertexRangeIndex.removeElement(vertex)
+        vertexIndexCache.invalidateElement(vertex)
 
         // Remove from vertices map
         vertices.remove(vertex.id())
@@ -184,6 +229,9 @@ class TinkerGraph private constructor(
 
         // Remove from edge index
         edgeIndex.removeElement(edge)
+        edgeCompositeIndex.removeElement(edge)
+        edgeRangeIndex.removeElement(edge)
+        edgeIndexCache.invalidateElement(edge)
 
         // Remove from edges map
         edges.remove(edge.id())
@@ -224,10 +272,63 @@ class TinkerGraph private constructor(
             "Vertex", "TinkerVertex" -> {
                 vertexIndex.createKeyIndex(key)
                 vertexIndex.rebuildIndex(key, vertices.values)
+                vertexIndexCache.invalidateKey(key)
+                vertexIndexOptimizer.clearSelectivityCache()
             }
             "Edge", "TinkerEdge" -> {
                 edgeIndex.createKeyIndex(key)
                 edgeIndex.rebuildIndex(key, edges.values)
+                edgeIndexCache.invalidateKey(key)
+                edgeIndexOptimizer.clearSelectivityCache()
+            }
+            else -> throw IllegalArgumentException("Class is not indexable: ${elementClass.simpleName}")
+        }
+    }
+
+    /**
+     * Create a composite index for faster multi-property queries.
+     */
+    fun createCompositeIndex(keys: List<String>, elementClass: KClass<out Element>) {
+        when (elementClass.simpleName) {
+            "Vertex", "TinkerVertex" -> {
+                vertexCompositeIndex.createCompositeIndex(keys)
+                vertexCompositeIndex.rebuildCompositeIndex(keys, vertices.values)
+                vertexIndexCache.invalidateIndexType(IndexCache.IndexType.COMPOSITE)
+                vertexIndexOptimizer.clearSelectivityCache()
+            }
+            "Edge", "TinkerEdge" -> {
+                edgeCompositeIndex.createCompositeIndex(keys)
+                edgeCompositeIndex.rebuildCompositeIndex(keys, edges.values)
+                edgeIndexCache.invalidateIndexType(IndexCache.IndexType.COMPOSITE)
+                edgeIndexOptimizer.clearSelectivityCache()
+            }
+            else -> throw IllegalArgumentException("Class is not indexable: ${elementClass.simpleName}")
+        }
+    }
+
+    /**
+     * Create a composite index for faster multi-property queries (vararg convenience).
+     */
+    fun createCompositeIndex(elementClass: KClass<out Element>, vararg keys: String) {
+        createCompositeIndex(keys.toList(), elementClass)
+    }
+
+    /**
+     * Create a range index for faster range queries on comparable properties.
+     */
+    fun createRangeIndex(key: String, elementClass: KClass<out Element>) {
+        when (elementClass.simpleName) {
+            "Vertex", "TinkerVertex" -> {
+                vertexRangeIndex.createRangeIndex(key)
+                vertexRangeIndex.rebuildRangeIndex(key, vertices.values)
+                vertexIndexCache.invalidateKey(key)
+                vertexIndexOptimizer.clearSelectivityCache()
+            }
+            "Edge", "TinkerEdge" -> {
+                edgeRangeIndex.createRangeIndex(key)
+                edgeRangeIndex.rebuildRangeIndex(key, edges.values)
+                edgeIndexCache.invalidateKey(key)
+                edgeIndexOptimizer.clearSelectivityCache()
             }
             else -> throw IllegalArgumentException("Class is not indexable: ${elementClass.simpleName}")
         }
@@ -238,8 +339,61 @@ class TinkerGraph private constructor(
      */
     fun dropIndex(key: String, elementClass: KClass<out Element>) {
         when (elementClass.simpleName) {
-            "Vertex", "TinkerVertex" -> vertexIndex.dropKeyIndex(key)
-            "Edge", "TinkerEdge" -> edgeIndex.dropKeyIndex(key)
+            "Vertex", "TinkerVertex" -> {
+                vertexIndex.dropKeyIndex(key)
+                vertexIndexCache.invalidateKey(key)
+                vertexIndexOptimizer.clearSelectivityCache()
+            }
+            "Edge", "TinkerEdge" -> {
+                edgeIndex.dropKeyIndex(key)
+                edgeIndexCache.invalidateKey(key)
+                edgeIndexOptimizer.clearSelectivityCache()
+            }
+            else -> throw IllegalArgumentException("Class is not indexable: ${elementClass.simpleName}")
+        }
+    }
+
+    /**
+     * Drop a composite index.
+     */
+    fun dropCompositeIndex(keys: List<String>, elementClass: KClass<out Element>) {
+        when (elementClass.simpleName) {
+            "Vertex", "TinkerVertex" -> {
+                vertexCompositeIndex.dropCompositeIndex(keys)
+                vertexIndexCache.invalidateIndexType(IndexCache.IndexType.COMPOSITE)
+                vertexIndexOptimizer.clearSelectivityCache()
+            }
+            "Edge", "TinkerEdge" -> {
+                edgeCompositeIndex.dropCompositeIndex(keys)
+                edgeIndexCache.invalidateIndexType(IndexCache.IndexType.COMPOSITE)
+                edgeIndexOptimizer.clearSelectivityCache()
+            }
+            else -> throw IllegalArgumentException("Class is not indexable: ${elementClass.simpleName}")
+        }
+    }
+
+    /**
+     * Drop a composite index (vararg convenience).
+     */
+    fun dropCompositeIndex(elementClass: KClass<out Element>, vararg keys: String) {
+        dropCompositeIndex(keys.toList(), elementClass)
+    }
+
+    /**
+     * Drop a range index.
+     */
+    fun dropRangeIndex(key: String, elementClass: KClass<out Element>) {
+        when (elementClass.simpleName) {
+            "Vertex", "TinkerVertex" -> {
+                vertexRangeIndex.dropRangeIndex(key)
+                vertexIndexCache.invalidateKey(key)
+                vertexIndexOptimizer.clearSelectivityCache()
+            }
+            "Edge", "TinkerEdge" -> {
+                edgeRangeIndex.dropRangeIndex(key)
+                edgeIndexCache.invalidateKey(key)
+                edgeIndexOptimizer.clearSelectivityCache()
+            }
             else -> throw IllegalArgumentException("Class is not indexable: ${elementClass.simpleName}")
         }
     }
@@ -310,6 +464,73 @@ class TinkerGraph private constructor(
      */
     fun getPropertyStatistics(): Map<String, PropertyQueryEngine.GraphPropertyStats> {
         return propertyQueryEngine.getGraphPropertyStatistics()
+    }
+
+    /**
+     * Get comprehensive indexing statistics for the graph.
+     */
+    fun getIndexingStatistics(): Map<String, Any> {
+        return mapOf(
+            "vertexIndices" to mapOf(
+                "singleProperty" to vertexIndex.getStatistics(),
+                "composite" to vertexCompositeIndex.getStatistics(),
+                "range" to vertexRangeIndex.getStatistics(),
+                "cache" to vertexIndexCache.getStatistics(),
+                "optimizer" to vertexIndexOptimizer.getOptimizerStatistics()
+            ),
+            "edgeIndices" to mapOf(
+                "singleProperty" to edgeIndex.getStatistics(),
+                "composite" to edgeCompositeIndex.getStatistics(),
+                "range" to edgeRangeIndex.getStatistics(),
+                "cache" to edgeIndexCache.getStatistics(),
+                "optimizer" to edgeIndexOptimizer.getOptimizerStatistics()
+            )
+        )
+    }
+
+    /**
+     * Get index recommendations based on query patterns.
+     */
+    fun getIndexRecommendations(): Map<String, List<IndexOptimizer.IndexRecommendation>> {
+        return mapOf(
+            "vertices" to vertexIndexOptimizer.getIndexRecommendations(),
+            "edges" to edgeIndexOptimizer.getIndexRecommendations()
+        )
+    }
+
+    /**
+     * Optimize index caches by removing expired entries.
+     */
+    fun optimizeIndexCaches() {
+        vertexIndexCache.cleanupExpired()
+        edgeIndexCache.cleanupExpired()
+    }
+
+    /**
+     * Configure index cache settings.
+     */
+    fun configureIndexCache(
+        maxSize: Int = 1000,
+        maxAgeMs: Long = 300_000L
+    ) {
+        vertexIndexCache.setMaxSize(maxSize)
+        vertexIndexCache.setMaxAge(maxAgeMs)
+        edgeIndexCache.setMaxSize(maxSize)
+        edgeIndexCache.setMaxAge(maxAgeMs)
+    }
+
+    /**
+     * Get optimized query plan for vertex queries.
+     */
+    fun optimizeVertexQuery(criteria: List<PropertyQueryEngine.PropertyCriterion>): IndexOptimizer.QueryPlan {
+        return vertexIndexOptimizer.optimizeQuery(criteria)
+    }
+
+    /**
+     * Get optimized query plan for edge queries.
+     */
+    fun optimizeEdgeQuery(criteria: List<PropertyQueryEngine.PropertyCriterion>): IndexOptimizer.QueryPlan {
+        return edgeIndexOptimizer.optimizeQuery(criteria)
     }
 
     companion object {

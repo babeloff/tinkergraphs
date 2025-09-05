@@ -1,11 +1,11 @@
-= Prompt 2.2.1 Implementation Summary: Multi-property and Meta-property Support
+= Phase 2.2.1 Implementation Summary: Multi-property and Meta-property Support
 :toc:
 :toclevels: 3
 :sectanchors:
 
 == Overview
 
-This document summarizes the implementation of **Prompt 2.2.1: Multi-property and Meta-property support**, which enhances the property system to support multiple properties with the same key using different cardinalities, properties on VertexProperty objects (meta-properties), and comprehensive property lifecycle management. This implementation brings TinkerGraph closer to full Apache TinkerPop compatibility while providing advanced property management capabilities.
+This document summarizes the implementation of **Phase 2.2.1: Multi-property and Meta-property support**, which enhances the property system to support multiple properties with the same key using different cardinalities, properties on VertexProperty objects (meta-properties), and comprehensive property lifecycle management. This implementation brings TinkerGraph closer to full Apache TinkerPop compatibility while providing advanced property management capabilities.
 
 == Implementation Scope
 

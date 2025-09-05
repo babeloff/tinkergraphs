@@ -68,11 +68,17 @@ abstract class TinkerElement(
         val property = TinkerProperty(key, value, this)
         elementProperties[key] = property
 
-        // Update indices if this is a vertex
+        // Update all indices if this is a vertex
         if (this is TinkerVertex) {
             elementGraph.vertexIndex.autoUpdate(key, value, null, this)
+            elementGraph.vertexCompositeIndex.autoUpdate(key, this)
+            elementGraph.vertexRangeIndex.autoUpdate(key, value, null, this)
+            elementGraph.vertexIndexCache.invalidateKey(key)
         } else if (this is TinkerEdge) {
             elementGraph.edgeIndex.autoUpdate(key, value, null, this)
+            elementGraph.edgeCompositeIndex.autoUpdate(key, this)
+            elementGraph.edgeRangeIndex.autoUpdate(key, value, null, this)
+            elementGraph.edgeIndexCache.invalidateKey(key)
         }
 
         return property
@@ -86,12 +92,18 @@ abstract class TinkerElement(
         checkRemoved()
         val oldProperty = elementProperties.remove(key)
 
-        // Update indices if this is a vertex and property existed
+        // Update all indices if this is a vertex and property existed
         if (oldProperty != null && oldProperty.isPresent()) {
             if (this is TinkerVertex) {
                 elementGraph.vertexIndex.autoUpdate(key, null, oldProperty.value(), this)
+                elementGraph.vertexCompositeIndex.autoUpdate(key, this)
+                elementGraph.vertexRangeIndex.autoUpdate(key, null, oldProperty.value(), this)
+                elementGraph.vertexIndexCache.invalidateKey(key)
             } else if (this is TinkerEdge) {
                 elementGraph.edgeIndex.autoUpdate(key, null, oldProperty.value(), this)
+                elementGraph.edgeCompositeIndex.autoUpdate(key, this)
+                elementGraph.edgeRangeIndex.autoUpdate(key, null, oldProperty.value(), this)
+                elementGraph.edgeIndexCache.invalidateKey(key)
             }
         }
     }

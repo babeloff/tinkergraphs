@@ -10,17 +10,54 @@ class PropertyQueryEngine(private val graph: TinkerGraph) {
 
     /**
      * Query vertices by property criteria with support for multiple conditions.
+     * Uses optimized indices and caching for better performance.
      */
     fun queryVertices(criteria: List<PropertyCriterion>): Iterator<TinkerVertex> {
-        val allVertices = graph.vertices().asSequence().map { it as TinkerVertex }
+        // Try to use optimized query plan first
+        val queryPlan = graph.optimizeVertexQuery(criteria)
+        val cacheKey = criteria.joinToString("|") { it.toString() }
 
-        val filteredVertices = allVertices.filter { vertex ->
-            criteria.all { criterion ->
-                evaluateCriterion(vertex, criterion)
+        // Check cache first
+        val cached = graph.vertexIndexCache.get(
+            IndexCache.IndexType.COMPOSITE,
+            cacheKey,
+            mapOf("criteria" to criteria)
+        )
+        if (cached != null) {
+            return cached.iterator()
+        }
+
+        // Execute optimized query
+        val result = when (val strategy = queryPlan.primaryStrategy) {
+            is IndexOptimizer.CompositeIndexStrategy -> {
+                executeCompositeQuery(strategy, queryPlan.secondaryFilters)
+            }
+            is IndexOptimizer.RangeIndexStrategy -> {
+                executeRangeQuery(strategy, queryPlan.secondaryFilters)
+            }
+            is IndexOptimizer.SingleIndexStrategy -> {
+                executeSingleQuery(strategy, criteria)
+            }
+            else -> {
+                // Fall back to full scan
+                val allVertices = graph.vertices().asSequence().map { it as TinkerVertex }
+                allVertices.filter { vertex ->
+                    criteria.all { criterion ->
+                        evaluateCriterion(vertex, criterion)
+                    }
+                }.toSet()
             }
         }
 
-        return filteredVertices.iterator()
+        // Cache result
+        graph.vertexIndexCache.put(
+            IndexCache.IndexType.COMPOSITE,
+            cacheKey,
+            mapOf("criteria" to criteria),
+            result
+        )
+
+        return result.iterator()
     }
 
     /**
@@ -53,7 +90,7 @@ class PropertyQueryEngine(private val graph: TinkerGraph) {
     }
 
     /**
-     * Range query for numeric properties.
+     * Range query for numeric properties using optimized range index.
      */
     fun queryVerticesByRange(
         key: String,
@@ -61,8 +98,29 @@ class PropertyQueryEngine(private val graph: TinkerGraph) {
         maxValue: Number?,
         inclusive: Boolean = true
     ): Iterator<TinkerVertex> {
-        val criterion = RangeCriterion(key, minValue, maxValue, inclusive)
-        return queryVertices(criterion)
+        val cacheKey = "range_${key}_${minValue}_${maxValue}_$inclusive"
+
+        // Check cache first
+        val cached = graph.vertexIndexCache.get(IndexCache.IndexType.RANGE, cacheKey)
+        if (cached != null) {
+            return cached.iterator()
+        }
+
+        // Use range index if available
+        val result = if (graph.vertexRangeIndex.isRangeIndexed(key)) {
+            val minComparable = minValue as? Comparable<Any>
+            val maxComparable = maxValue as? Comparable<Any>
+            graph.vertexRangeIndex.rangeQuery(key, minComparable, maxComparable, inclusive, inclusive)
+        } else {
+            // Fall back to criterion-based query
+            val criterion = RangeCriterion(key, minValue, maxValue, inclusive)
+            queryVertices(listOf(criterion)).asSequence().toSet()
+        }
+
+        // Cache result
+        graph.vertexIndexCache.put(IndexCache.IndexType.RANGE, cacheKey, result)
+
+        return result.iterator()
     }
 
     /**
@@ -432,5 +490,81 @@ class PropertyQueryEngine(private val graph: TinkerGraph) {
         fun not(criterion: PropertyCriterion): CompositeCriterion {
             return CompositeCriterion(LogicalOperator.NOT, listOf(criterion))
         }
+    }
+
+    /**
+     * Execute query using composite index strategy.
+     */
+    private fun executeCompositeQuery(
+        strategy: IndexOptimizer.CompositeIndexStrategy,
+        secondaryFilters: List<PropertyCriterion>
+    ): Set<TinkerVertex> {
+        val keys = strategy.compositeKeys
+        val values = strategy.applicableCriteria.map { it.value }
+
+        val candidates = graph.vertexCompositeIndex.get(keys, values)
+
+        return if (secondaryFilters.isEmpty()) {
+            candidates
+        } else {
+            candidates.filter { vertex ->
+                secondaryFilters.all { criterion ->
+                    evaluateCriterion(vertex, criterion)
+                }
+            }.toSet()
+        }
+    }
+
+    /**
+     * Execute query using range index strategy.
+     */
+    private fun executeRangeQuery(
+        strategy: IndexOptimizer.RangeIndexStrategy,
+        secondaryFilters: List<PropertyCriterion>
+    ): Set<TinkerVertex> {
+        val criterion = strategy.criterion
+        val minComparable = criterion.minValue as? Comparable<Any>
+        val maxComparable = criterion.maxValue as? Comparable<Any>
+
+        val candidates = graph.vertexRangeIndex.rangeQuery(
+            criterion.key,
+            minComparable,
+            maxComparable,
+            criterion.inclusive,
+            criterion.inclusive
+        )
+
+        return if (secondaryFilters.isEmpty()) {
+            candidates
+        } else {
+            candidates.filter { vertex ->
+                secondaryFilters.all { filter ->
+                    evaluateCriterion(vertex, filter)
+                }
+            }.toSet()
+        }
+    }
+
+    /**
+     * Execute query using single property index strategy.
+     */
+    private fun executeSingleQuery(
+        strategy: IndexOptimizer.SingleIndexStrategy,
+        criteria: List<PropertyCriterion>
+    ): Set<TinkerVertex> {
+        val exactCriterion = criteria.filterIsInstance<ExactCriterion>()
+            .find { it.key == strategy.key }
+
+        val candidates = if (exactCriterion != null) {
+            graph.vertexIndex.get(strategy.key, exactCriterion.value)
+        } else {
+            graph.vertexIndex.getAllForKey(strategy.key)
+        }
+
+        return candidates.filter { vertex ->
+            criteria.all { criterion ->
+                evaluateCriterion(vertex, criterion)
+            }
+        }.toSet()
     }
 }
