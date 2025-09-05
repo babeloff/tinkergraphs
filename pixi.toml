@@ -5,21 +5,27 @@ name = "tinkergraphs"
 platforms = ["linux-64"]
 version = "0.1.0"
 
+# List all available Gradle tasks
 [tasks.gradle-tasks]
 cmd = "gradle tasks"
 
+# Run arbitrary Gradle commands (pass arguments after task name)
 [tasks.gradle]
 cmd = "gradle"
 
+# Build the entire TinkerGraph project (compile all targets and run tests)
 [tasks.build]
 cmd = "gradle build"
 
+# Compile Kotlin source code for JVM target
 [tasks.compile]
 cmd = "gradle compileKotlinJvm"
 
+# Run all test suites
 [tasks.test]
 cmd = "gradle test"
 
+# Clean build artifacts and generated files
 [tasks.clean]
 cmd = "gradle clean"
 
