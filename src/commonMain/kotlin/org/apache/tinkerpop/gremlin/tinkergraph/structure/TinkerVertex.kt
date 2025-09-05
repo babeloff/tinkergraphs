@@ -137,6 +137,17 @@ class TinkerVertex(
     fun <V> addVertexProperty(
         key: String,
         value: V,
+        cardinality: VertexProperty.Cardinality
+    ): TinkerVertexProperty<V> {
+        return addVertexProperty(key, value, emptyMap(), cardinality)
+    }
+
+    /**
+     * Add a vertex property with specified cardinality and meta-properties.
+     */
+    fun <V> addVertexProperty(
+        key: String,
+        value: V,
         metaProperties: Map<String, Any?> = emptyMap(),
         cardinality: VertexProperty.Cardinality = VertexProperty.Cardinality.SINGLE
     ): TinkerVertexProperty<V> {
@@ -148,8 +159,14 @@ class TinkerVertex(
         when (cardinality) {
             VertexProperty.Cardinality.SINGLE -> {
                 // Remove existing properties with this key
-                val existingProperties = propertyList.toList()
-                existingProperties.forEach { removeVertexProperty(it) }
+                // Clear the list directly instead of using removeVertexProperty
+                // to avoid removing the key from vertexProperties map
+                propertyList.forEach { prop ->
+                    // Update vertex index for removed property
+                    elementGraph.vertexIndex.autoUpdate(key, null, prop.value(), this)
+                    // Mark property as removed
+                    prop.markPropertyRemoved()
+                }
                 propertyList.clear()
             }
             VertexProperty.Cardinality.SET -> {
@@ -360,6 +377,21 @@ class TinkerVertex(
                 edgeMap[label]?.size ?: 0
             }
         }
+    }
+
+    /**
+     * Override getProperties to return vertex properties instead of element properties.
+     */
+    internal override fun getProperties(): Map<String, Property<*>> {
+        val result = mutableMapOf<String, Property<*>>()
+        vertexProperties.forEach { (key, propertyList) ->
+            if (propertyList.isNotEmpty()) {
+                // For multiple properties with the same key, return the first one
+                // This matches the behavior of value() method
+                result[key] = propertyList.first()
+            }
+        }
+        return result
     }
 
     override fun toString(): String {

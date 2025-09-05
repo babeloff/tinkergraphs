@@ -120,9 +120,7 @@ class TinkerVertexIterator(
             } else {
                 // Fall back to full scan with property filter
                 val propertyFilter: (Vertex) -> Boolean = { vertex ->
-                    vertex.property<Any?>(key).let { prop ->
-                        prop.isPresent() && prop.value() == value
-                    }
+                    vertex.value<Any?>(key) == value
                 }
                 return TinkerVertexIterator(
                     graph = graph,
@@ -158,9 +156,7 @@ class TinkerVertexIterator(
 
                 val remainingFilters = remainingProperties.map { (key, propValue) ->
                     { vertex: Vertex ->
-                        vertex.property<Any?>(key).let { prop ->
-                            prop.isPresent() && prop.value() == propValue
-                        }
+                        vertex.value<Any?>(key) == propValue
                     }
                 }
 
@@ -173,9 +169,7 @@ class TinkerVertexIterator(
                 // No indexed properties available, use full scan with all filters
                 val allFilters = properties.map { (key, propValue) ->
                     { vertex: Vertex ->
-                        vertex.property<Any?>(key).let { prop ->
-                            prop.isPresent() && prop.value() == propValue
-                        }
+                        vertex.value<Any?>(key) == propValue
                     }
                 }
 

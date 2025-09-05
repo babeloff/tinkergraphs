@@ -127,7 +127,7 @@ abstract class TinkerElement(
      * Get the internal properties map for iterator support.
      * This method is used by the TinkerGraph iterators for efficient property access.
      */
-    internal fun getProperties(): Map<String, Property<*>> {
+    internal open fun getProperties(): Map<String, Property<*>> {
         return elementProperties
     }
 
@@ -177,17 +177,20 @@ abstract class TinkerElement(
         private val propertyElement: Element
     ) : Property<V> {
 
+        private var removed: Boolean = false
+
         override fun key(): String = propertyKey
 
         override fun value(): V = propertyValue
 
-        override fun isPresent(): Boolean = true
+        override fun isPresent(): Boolean = !removed
 
         override fun element(): Element = propertyElement
 
         override fun remove() {
             if (propertyElement is TinkerElement) {
                 propertyElement.removeProperty(propertyKey)
+                removed = true
             } else {
                 throw Property.Exceptions.propertyRemovalNotSupported()
             }

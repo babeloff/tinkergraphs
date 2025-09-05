@@ -210,8 +210,14 @@ class TinkerGraph private constructor(
      */
     fun createIndex(key: String, elementClass: Class<out Element>) {
         when (elementClass.simpleName) {
-            "Vertex", "TinkerVertex" -> vertexIndex.createKeyIndex(key)
-            "Edge", "TinkerEdge" -> edgeIndex.createKeyIndex(key)
+            "Vertex", "TinkerVertex" -> {
+                vertexIndex.createKeyIndex(key)
+                vertexIndex.rebuildIndex(key, vertices.values)
+            }
+            "Edge", "TinkerEdge" -> {
+                edgeIndex.createKeyIndex(key)
+                edgeIndex.rebuildIndex(key, edges.values)
+            }
             else -> throw IllegalArgumentException("Class is not indexable: ${elementClass.simpleName}")
         }
     }

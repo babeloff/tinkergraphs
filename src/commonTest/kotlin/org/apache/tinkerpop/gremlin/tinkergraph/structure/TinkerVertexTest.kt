@@ -68,8 +68,8 @@ class TinkerVertexTest {
     @Test
     fun testSingleCardinality() {
         // SINGLE cardinality should replace existing values
-        vertex.addVertexProperty("status", "active", cardinality = VertexProperty.Cardinality.SINGLE)
-        vertex.addVertexProperty("status", "inactive", cardinality = VertexProperty.Cardinality.SINGLE)
+        vertex.addVertexProperty("status", "active", emptyMap(), VertexProperty.Cardinality.SINGLE)
+        vertex.addVertexProperty("status", "inactive", emptyMap(), VertexProperty.Cardinality.SINGLE)
 
         val statusProps = vertex.properties<String>("status").asSequence().toList()
         assertEquals(1, statusProps.size)
