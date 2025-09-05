@@ -5,6 +5,23 @@ name = "tinkergraphs"
 platforms = ["linux-64"]
 version = "0.1.0"
 
-[tasks]
+[tasks.gradle-tasks]
+cmd = "gradle tasks"
+
+[tasks.gradle]
+cmd = "gradle"
+
+[tasks.build]
+cmd = "gradle build"
+
+[tasks.compile]
+cmd = "gradle compileKotlinJvm"
+
+[tasks.test]
+cmd = "gradle test"
+
+[tasks.clean]
+cmd = "gradle clean"
 
 [dependencies]
+gradle = "9.0.*"
