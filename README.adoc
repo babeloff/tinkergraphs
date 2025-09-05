@@ -261,8 +261,8 @@ val results = graph.vertices()
 * Comprehensive test coverage
 
 === 🚧 Phase 2: Advanced Features (In Progress)
-* Advanced graph traversal iterators
-* Graph algorithms (BFS, DFS, shortest path)
+* Advanced graph traversal iterators ✅
+* Graph algorithms (BFS, DFS, shortest path, connected components, cycle detection) ✅
 * Enhanced property management
 * Composite indexing
 

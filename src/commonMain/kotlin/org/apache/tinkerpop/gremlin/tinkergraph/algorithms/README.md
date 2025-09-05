@@ -1,0 +1,243 @@
+# TinkerGraph Algorithms
+
+This package provides a comprehensive set of graph algorithms implemented as extension functions on the `Graph` interface. All algorithms are designed to work efficiently with TinkerGraph's structure and iterator implementations, supporting multiplatform deployment (JVM, JavaScript, and Native).
+
+## Overview
+
+The algorithms are implemented following established computer science principles and optimized for the TinkerGraph data structure. Each algorithm includes comprehensive documentation with references to authoritative sources.
+
+## Available Algorithms
+
+### Graph Traversal
+
+#### Breadth-First Search (BFS)
+```kotlin
+fun Graph.breadthFirstSearch(startVertex: Vertex): Sequence<Vertex>
+```
+
+Performs a breadth-first search traversal starting from the given vertex. BFS explores vertices level by level, visiting all vertices at distance k before visiting any vertices at distance k+1.
+
+**Use Cases:**
+- Finding shortest paths in unweighted graphs
+- Level-order traversal
+- Finding connected components
+- Web crawling strategies
+
+**Time Complexity:** O(V + E) where V is vertices and E is edges  
+**Space Complexity:** O(V)
+
+**Reference:** [Breadth-first search on Wikipedia](https://en.wikipedia.org/wiki/Breadth-first_search)
+
+#### Depth-First Search (DFS)
+```kotlin
+fun Graph.depthFirstSearch(startVertex: Vertex): Sequence<Vertex>
+```
+
+Performs a depth-first search traversal starting from the given vertex. DFS explores as far as possible along each branch before backtracking.
+
+**Use Cases:**
+- Topological sorting
+- Detecting cycles
+- Maze solving
+- Finding strongly connected components
+
+**Time Complexity:** O(V + E)  
+**Space Complexity:** O(V)
+
+**Reference:** [Depth-first search on Wikipedia](https://en.wikipedia.org/wiki/Depth-first_search)
+
+### Pathfinding
+
+#### Shortest Path
+```kotlin
+fun Graph.shortestPath(from: Vertex, to: Vertex): List<Vertex>?
+```
+
+Finds the shortest path between two vertices using BFS. Returns the path as a list of vertices, or null if no path exists.
+
+**Note:** This implementation finds the shortest path in terms of number of edges (unweighted shortest path). For weighted graphs, consider implementing Dijkstra's algorithm.
+
+**Time Complexity:** O(V + E)  
+**Space Complexity:** O(V)
+
+**Reference:** [Shortest path problem on Wikipedia](https://en.wikipedia.org/wiki/Shortest_path_problem)
+
+#### Vertices at Distance
+```kotlin
+fun Graph.verticesAtDistance(startVertex: Vertex, distance: Int): Set<Vertex>
+```
+
+Returns all vertices at exactly the specified distance from the start vertex.
+
+**Time Complexity:** O(V + E)  
+**Space Complexity:** O(V)
+
+### Connectivity Analysis
+
+#### Connected Components
+```kotlin
+fun Graph.connectedComponents(): List<Set<Vertex>>
+```
+
+Finds all connected components in the graph. A connected component is a maximal set of vertices such that there is a path between every pair of vertices.
+
+**Use Cases:**
+- Network analysis
+- Image segmentation
+- Social network analysis
+- Graph partitioning
+
+**Time Complexity:** O(V + E)  
+**Space Complexity:** O(V)
+
+**Reference:** [Connected component on Wikipedia](https://en.wikipedia.org/wiki/Connected_component)
+
+#### Graph Connectivity
+```kotlin
+fun Graph.isConnected(): Boolean
+```
+
+Checks if the graph is connected (i.e., has only one connected component).
+
+**Time Complexity:** O(V + E)  
+**Space Complexity:** O(V)
+
+### Cycle Detection
+
+#### Has Cycle
+```kotlin
+fun Graph.hasCycle(): Boolean
+```
+
+Detects if the graph contains any cycles. Uses DFS with parent tracking to detect back edges in undirected graphs.
+
+**Use Cases:**
+- Deadlock detection
+- Dependency analysis
+- Circuit detection
+- Scheduling problems
+
+**Time Complexity:** O(V + E)  
+**Space Complexity:** O(V)
+
+**Reference:** [Cycle detection on Wikipedia](https://en.wikipedia.org/wiki/Cycle_(graph_theory))
+
+### Graph Metrics
+
+#### Graph Diameter
+```kotlin
+fun Graph.diameter(): Int
+```
+
+Calculates the diameter of the graph (longest shortest path between any two vertices). Returns -1 if the graph is not connected.
+
+**Warning:** This operation can be expensive for large graphs as it requires computing shortest paths between all pairs of vertices.
+
+**Use Cases:**
+- Network analysis
+- Graph characterization
+- Performance metrics
+
+**Time Complexity:** O(V³) for dense graphs, O(V² + VE) for sparse graphs  
+**Space Complexity:** O(V)
+
+**Reference:** [Distance in graphs on Wikipedia](https://en.wikipedia.org/wiki/Distance_(graph_theory))
+
+## Usage Examples
+
+### Basic Traversal
+```kotlin
+val graph = TinkerGraph.open()
+val v1 = graph.addVertex("name", "Alice")
+val v2 = graph.addVertex("name", "Bob")
+val v3 = graph.addVertex("name", "Charlie")
+
+v1.addEdge("knows", v2)
+v2.addEdge("knows", v3)
+
+// BFS traversal
+val bfsResult = graph.breadthFirstSearch(v1).toList()
+// Result: [Alice, Bob, Charlie]
+
+// Find shortest path
+val path = graph.shortestPath(v1, v3)
+// Result: [Alice, Bob, Charlie]
+```
+
+### Connectivity Analysis
+```kotlin
+// Check if graph is connected
+val connected = graph.isConnected()
+
+// Find all connected components
+val components = graph.connectedComponents()
+components.forEach { component ->
+    println("Component with ${component.size} vertices")
+}
+```
+
+### Cycle Detection
+```kotlin
+// Add a cycle
+v3.addEdge("knows", v1)
+
+// Check for cycles
+val hasCycle = graph.hasCycle() // true
+```
+
+## Implementation Notes
+
+### Performance Considerations
+
+1. **Memory Usage**: All algorithms use O(V) additional space for tracking visited vertices
+2. **Iterator Efficiency**: Leverages TinkerGraph's optimized iterator implementations
+3. **Lazy Evaluation**: BFS and DFS return sequences for memory-efficient processing
+4. **Multiplatform**: All algorithms work across JVM, JavaScript, and Native platforms
+
+### Graph Type Assumptions
+
+The algorithms assume undirected graphs when using `Direction.BOTH`. For directed graph algorithms:
+- Use `Direction.OUT` for outgoing edges only
+- Use `Direction.IN` for incoming edges only
+- Modify the algorithms as needed for directed graph semantics
+
+### Error Handling
+
+- Algorithms handle empty graphs gracefully
+- Invalid parameters (e.g., negative distances) return appropriate defaults
+- Null vertices are handled according to TinkerGraph conventions
+
+## Future Enhancements
+
+Potential additions to this algorithm suite:
+
+1. **Weighted Graph Algorithms**
+   - Dijkstra's shortest path
+   - Bellman-Ford algorithm
+   - Minimum spanning tree (Kruskal's, Prim's)
+
+2. **Advanced Graph Algorithms**
+   - Strongly connected components
+   - Topological sorting
+   - Maximum flow algorithms
+   - Graph coloring
+
+3. **Centrality Measures**
+   - Betweenness centrality
+   - Closeness centrality
+   - PageRank algorithm
+
+4. **Community Detection**
+   - Modularity optimization
+   - Label propagation
+   - Louvain method
+
+## Testing
+
+All algorithms include comprehensive test coverage with:
+- Edge cases (empty graphs, single vertices)
+- Various graph topologies (trees, cycles, disconnected graphs)
+- Performance verification
+- Correctness validation against known results
+
+See `GraphAlgorithmsTest.kt` for detailed test cases and usage examples.
