@@ -91,7 +91,26 @@ class TinkerVertex(
     override fun <V> property(key: String, value: V): VertexProperty<V> {
         checkRemoved()
         ElementHelper.validateProperty(key, value, elementGraph.allowNullPropertyValues)
+
         return addVertexProperty(key, value)
+    }
+
+    /**
+     * Override Element.property(key) getter to look in vertex properties instead of element properties.
+     */
+    override fun <V> property(key: String): Property<V> {
+        checkRemoved()
+
+        val properties = vertexProperties[key]
+        if (properties != null && properties.isNotEmpty()) {
+            val activeProperties = properties.filter { !it.isVertexPropertyRemoved() }
+            if (activeProperties.isNotEmpty()) {
+                @Suppress("UNCHECKED_CAST")
+                return activeProperties.first() as Property<V>
+            }
+        }
+
+        return Property.empty()
     }
 
     /**

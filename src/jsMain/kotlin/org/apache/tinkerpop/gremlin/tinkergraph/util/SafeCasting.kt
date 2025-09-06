@@ -24,37 +24,47 @@ actual object SafeCasting {
      * Uses structural typing checks instead of unsafe casting.
      */
     actual fun asTinkerVertex(element: Any?): TinkerVertex? {
-        return when {
-            element == null -> null
-            element is TinkerVertex -> element
-            element is Vertex -> {
-                // Check if it's already a TinkerVertex by checking its class name
-                val className = element::class.simpleName
-                if (className == "TinkerVertex") {
-                    // It's already a TinkerVertex, just return it as is
-                    element as? TinkerVertex
-                } else {
-                    // It's a different Vertex implementation, can't safely cast
-                    null
-                }
-            }
-            else -> {
-                // Check if it has vertex-like structure using safe property access
-                try {
-                    val dynamic = element.asDynamic()
-                    val hasId = js("'id' in dynamic && typeof dynamic.id !== 'undefined'") as Boolean
-                    val hasLabel = js("'label' in dynamic && typeof dynamic.label !== 'undefined'") as Boolean
-
-                    if (hasId && hasLabel) {
-                        // Try to treat it as a TinkerVertex
+        return try {
+            when {
+                element == null -> null
+                element is TinkerVertex -> element
+                element is Vertex -> {
+                    // Check if it's already a TinkerVertex by checking its class name
+                    try {
+                        val className = element::class.simpleName
+                        if (className == "TinkerVertex") {
+                            // It's already a TinkerVertex, just return it as is
+                            element as? TinkerVertex
+                        } else {
+                            // It's a different Vertex implementation, can't safely cast
+                            null
+                        }
+                    } catch (e: Exception) {
+                        // Fallback: try direct cast if class name check fails
                         element as? TinkerVertex
-                    } else {
+                    }
+                }
+                else -> {
+                    // Check if it has vertex-like structure using safe property access
+                    try {
+                        val dynamic = element.asDynamic()
+                        val hasId = js("'id' in dynamic && typeof dynamic.id !== 'undefined'") as? Boolean ?: false
+                        val hasLabel = js("'label' in dynamic && typeof dynamic.label !== 'undefined'") as? Boolean ?: false
+
+                        if (hasId && hasLabel) {
+                            // Try to treat it as a TinkerVertex
+                            element as? TinkerVertex
+                        } else {
+                            null
+                        }
+                    } catch (e: Exception) {
                         null
                     }
-                } catch (e: Exception) {
-                    null
                 }
             }
+        } catch (e: Exception) {
+            console.warn("asTinkerVertex failed for element: $element, error: ${e.message}")
+            null
         }
     }
 
@@ -62,34 +72,44 @@ actual object SafeCasting {
      * Safely cast an Element to TinkerEdge.
      */
     actual fun asTinkerEdge(element: Any?): TinkerEdge? {
-        return when {
-            element == null -> null
-            element is TinkerEdge -> element
-            element is Edge -> {
-                val className = element::class.simpleName
-                if (className == "TinkerEdge") {
-                    element as? TinkerEdge
-                } else {
-                    null
-                }
-            }
-            else -> {
-                try {
-                    val dynamic = element.asDynamic()
-                    val hasId = js("'id' in dynamic && typeof dynamic.id !== 'undefined'") as Boolean
-                    val hasLabel = js("'label' in dynamic && typeof dynamic.label !== 'undefined'") as Boolean
-                    val hasInVertex = js("'inVertex' in dynamic && typeof dynamic.inVertex !== 'undefined'") as Boolean
-                    val hasOutVertex = js("'outVertex' in dynamic && typeof dynamic.outVertex !== 'undefined'") as Boolean
-
-                    if (hasId && hasLabel && hasInVertex && hasOutVertex) {
+        return try {
+            when {
+                element == null -> null
+                element is TinkerEdge -> element
+                element is Edge -> {
+                    try {
+                        val className = element::class.simpleName
+                        if (className == "TinkerEdge") {
+                            element as? TinkerEdge
+                        } else {
+                            null
+                        }
+                    } catch (e: Exception) {
+                        // Fallback: try direct cast if class name check fails
                         element as? TinkerEdge
-                    } else {
+                    }
+                }
+                else -> {
+                    try {
+                        val dynamic = element.asDynamic()
+                        val hasId = js("'id' in dynamic && typeof dynamic.id !== 'undefined'") as? Boolean ?: false
+                        val hasLabel = js("'label' in dynamic && typeof dynamic.label !== 'undefined'") as? Boolean ?: false
+                        val hasInVertex = js("'inVertex' in dynamic && typeof dynamic.inVertex !== 'undefined'") as? Boolean ?: false
+                        val hasOutVertex = js("'outVertex' in dynamic && typeof dynamic.outVertex !== 'undefined'") as? Boolean ?: false
+
+                        if (hasId && hasLabel && hasInVertex && hasOutVertex) {
+                            element as? TinkerEdge
+                        } else {
+                            null
+                        }
+                    } catch (e: Exception) {
                         null
                     }
-                } catch (e: Exception) {
-                    null
                 }
             }
+        } catch (e: Exception) {
+            console.warn("asTinkerEdge failed for element: $element, error: ${e.message}")
+            null
         }
     }
 
@@ -156,14 +176,22 @@ actual object SafeCasting {
      * Safely cast the result of addVertex() to TinkerVertex.
      */
     actual fun safeCastVertex(vertex: Vertex): TinkerVertex {
-        return asTinkerVertex(vertex) ?: throw IllegalStateException("Expected TinkerVertex but got ${vertex::class.simpleName}")
+        return try {
+            asTinkerVertex(vertex) ?: throw IllegalStateException("Expected TinkerVertex but got ${vertex::class.simpleName}")
+        } catch (e: Exception) {
+            throw IllegalStateException("Failed to cast vertex: ${e.message}", e)
+        }
     }
 
     /**
      * Safely cast the result of addEdge() to TinkerEdge.
      */
     actual fun safeCastEdge(edge: Edge): TinkerEdge {
-        return asTinkerEdge(edge) ?: throw IllegalStateException("Expected TinkerEdge but got ${edge::class.simpleName}")
+        return try {
+            asTinkerEdge(edge) ?: throw IllegalStateException("Expected TinkerEdge but got ${edge::class.simpleName}")
+        } catch (e: Exception) {
+            throw IllegalStateException("Failed to cast edge: ${e.message}", e)
+        }
     }
 
     /**
@@ -248,12 +276,26 @@ actual object SafeCasting {
         return when (value) {
             null -> null
             is String -> JSComparableWrapper(value)
-            is Number -> JSComparableWrapper(value.toDouble())
+            is Number -> {
+                try {
+                    JSComparableWrapper(value.toDouble())
+                } catch (e: Exception) {
+                    // Handle case where Number conversion fails in JS
+                    JSComparableWrapper(value.toString())
+                }
+            }
             is Boolean -> JSComparableWrapper(value)
             else -> {
                 // Try to convert to string for comparison in JavaScript
                 try {
-                    JSComparableWrapper(value.toString())
+                    val stringValue = value.toString()
+                    // Check if it looks like a number and convert if so
+                    val numValue = stringValue.toDoubleOrNull()
+                    if (numValue != null) {
+                        JSComparableWrapper(numValue)
+                    } else {
+                        JSComparableWrapper(stringValue)
+                    }
                 } catch (e: Exception) {
                     null
                 }
@@ -275,34 +317,100 @@ actual object SafeCasting {
 
         private fun compareValues(a: Any, b: Any): Int {
             return try {
+                // Handle JavaScript's dynamic typing more carefully
                 when {
-                    a is Number && b is Number -> {
-                        a.toDouble().compareTo(b.toDouble())
+                    isNumeric(a) && isNumeric(b) -> {
+                        val numA = toSafeDouble(a)
+                        val numB = toSafeDouble(b)
+                        when {
+                            numA == null && numB == null -> 0
+                            numA == null -> -1
+                            numB == null -> 1
+                            else -> numA.compareTo(numB)
+                        }
                     }
-                    a is String && b is String -> {
-                        a.compareTo(b)
-                    }
-                    a is Boolean && b is Boolean -> {
-                        a.compareTo(b)
-                    }
+                    a is String && b is String -> a.compareTo(b)
+                    a is Boolean && b is Boolean -> a.compareTo(b)
                     else -> {
-                        // Fall back to string comparison
-                        a.toString().compareTo(b.toString())
+                        // Fall back to string comparison with null safety
+                        val strA = a.toString()
+                        val strB = b.toString()
+                        strA.compareTo(strB)
                     }
                 }
             } catch (e: Exception) {
+                // Log the exception for debugging but don't let it propagate
+                console.warn("Comparison failed between $a and $b: ${e.message}")
                 0 // Return equal if comparison fails
             }
         }
 
-        override fun toString(): String = value.toString()
-        override fun equals(other: Any?): Boolean {
-            return when (other) {
-                is JSComparableWrapper -> value == other.value
-                else -> value == other
+        private fun isNumeric(value: Any): Boolean {
+            return try {
+                when (value) {
+                    is Number -> true
+                    is String -> value.toDoubleOrNull() != null
+                    else -> false
+                }
+            } catch (e: Exception) {
+                false
             }
         }
-        override fun hashCode(): Int = value.hashCode()
+
+        private fun toSafeDouble(value: Any): Double? {
+            return try {
+                when (value) {
+                    is Number -> value.toDouble()
+                    is String -> value.toDoubleOrNull()
+                    else -> null
+                }
+            } catch (e: Exception) {
+                null
+            }
+        }
+
+        override fun toString(): String = try {
+            value.toString()
+        } catch (e: Exception) {
+            "JSComparableWrapper(error)"
+        }
+
+        override fun equals(other: Any?): Boolean {
+            return try {
+                when (other) {
+                    is JSComparableWrapper -> safeEquals(value, other.value)
+                    else -> safeEquals(value, other)
+                }
+            } catch (e: Exception) {
+                false
+            }
+        }
+
+        private fun safeEquals(a: Any?, b: Any?): Boolean {
+            return try {
+                when {
+                    a === b -> true
+                    a == null || b == null -> a == b
+                    isNumeric(a) && isNumeric(b) -> {
+                        val numA = toSafeDouble(a)
+                        val numB = toSafeDouble(b)
+                        numA != null && numB != null && numA == numB
+                    }
+                    else -> a == b
+                }
+            } catch (e: Exception) {
+                false
+            }
+        }
+
+        override fun hashCode(): Int = try {
+            when {
+                isNumeric(value) -> toSafeDouble(value)?.hashCode() ?: 0
+                else -> value.hashCode()
+            }
+        } catch (e: Exception) {
+            0
+        }
     }
 
     /**
@@ -396,6 +504,62 @@ actual object SafeCasting {
             }
         } catch (e: Exception) {
             false
+        }
+    }
+
+    /**
+     * Safe equality comparison that handles JavaScript type coercion properly.
+     */
+    fun safeEquals(a: Any?, b: Any?): Boolean {
+        return try {
+            when {
+                a === b -> true
+                a == null || b == null -> a == b
+                // Handle numeric comparisons in JavaScript
+                isNumericValue(a) && isNumericValue(b) -> {
+                    val numA = toNumericValue(a)
+                    val numB = toNumericValue(b)
+                    numA != null && numB != null && numA == numB
+                }
+                // Handle string comparisons
+                a is String && b is String -> a == b
+                // Handle boolean comparisons
+                a is Boolean && b is Boolean -> a == b
+                // Fall back to standard equality
+                else -> a == b
+            }
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /**
+     * Check if a value can be treated as numeric in JavaScript.
+     */
+    private fun isNumericValue(value: Any?): Boolean {
+        return try {
+            when (value) {
+                is Number -> true
+                is String -> value.toDoubleOrNull() != null
+                else -> false
+            }
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /**
+     * Convert a value to a numeric value if possible.
+     */
+    private fun toNumericValue(value: Any?): Double? {
+        return try {
+            when (value) {
+                is Number -> value.toDouble()
+                is String -> value.toDoubleOrNull()
+                else -> null
+            }
+        } catch (e: Exception) {
+            null
         }
     }
 }

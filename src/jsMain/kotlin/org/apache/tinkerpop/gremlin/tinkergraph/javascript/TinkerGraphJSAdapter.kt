@@ -90,28 +90,52 @@ class TinkerGraphJSAdapter(
      * Find vertices by property value.
      */
     fun findVerticesByProperty(key: String, value: Any): Array<TinkerVertex> {
-        return vertices().filter { vertex ->
-            try {
-                val property = vertex.property<Any>(key)
-                property.isPresent() && property.value() == value
-            } catch (e: Exception) {
-                false
-            }
-        }.toTypedArray()
+        return try {
+            vertices().filter { vertex ->
+                try {
+                    val property = vertex.property<Any>(key)
+                    if (property.isPresent()) {
+                        val propValue = property.value()
+                        // Use simple equality comparison for debugging
+                        propValue == value
+                    } else {
+                        false
+                    }
+                } catch (e: Exception) {
+                    console.warn("Error checking property '$key' on vertex: ${e.message}")
+                    false
+                }
+            }.toTypedArray()
+        } catch (e: Exception) {
+            console.error("Error in findVerticesByProperty: ${e.message}")
+            emptyArray()
+        }
     }
 
     /**
      * Find edges by property value.
      */
     fun findEdgesByProperty(key: String, value: Any): Array<TinkerEdge> {
-        return edges().filter { edge ->
-            try {
-                val property = edge.property<Any>(key)
-                property.isPresent() && property.value() == value
-            } catch (e: Exception) {
-                false
-            }
-        }.toTypedArray()
+        return try {
+            edges().filter { edge ->
+                try {
+                    val property = edge.property<Any>(key)
+                    if (property.isPresent()) {
+                        val propValue = property.value()
+                        // Use simple equality comparison for debugging
+                        propValue == value
+                    } else {
+                        false
+                    }
+                } catch (e: Exception) {
+                    console.warn("Error checking property '$key' on edge: ${e.message}")
+                    false
+                }
+            }.toTypedArray()
+        } catch (e: Exception) {
+            console.error("Error in findEdgesByProperty: ${e.message}")
+            emptyArray()
+        }
     }
 
     /**
@@ -386,9 +410,23 @@ class TinkerGraphJSAdapter(
         try {
             val keys = js("Object.keys(properties)").unsafeCast<Array<String>>()
             keys.forEach { key ->
-                val value = properties[key]
-                if (value != null && value != undefined) {
-                    element.property(key, value)
+                try {
+                    val value = properties[key]
+                    if (value != null && value != undefined) {
+                        // Convert JavaScript values to more stable types
+                        val safeValue = when {
+                            js("typeof value === 'number'").unsafeCast<Boolean>() -> {
+                                val num = value.unsafeCast<Double>()
+                                if (num.isFinite()) num else value.toString()
+                            }
+                            js("typeof value === 'string'").unsafeCast<Boolean>() -> value.unsafeCast<String>()
+                            js("typeof value === 'boolean'").unsafeCast<Boolean>() -> value.unsafeCast<Boolean>()
+                            else -> value.toString()
+                        }
+                        element.property(key, safeValue)
+                    }
+                } catch (e: Exception) {
+                    console.warn("Error adding property '$key': ${e.message}")
                 }
             }
         } catch (e: Exception) {

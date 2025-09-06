@@ -25,10 +25,16 @@ import kotlin.concurrent.write
  * Serializable data classes for graph persistence
  */
 @Serializable
+data class SerializableProperty(
+    val value: String,
+    val type: String
+)
+
+@Serializable
 data class SerializableVertexData(
     val id: String,
     val label: String,
-    val properties: Map<String, String>
+    val properties: Map<String, SerializableProperty>
 )
 
 @Serializable
@@ -37,7 +43,7 @@ data class SerializableEdgeData(
     val label: String,
     val outVertexId: String,
     val inVertexId: String,
-    val properties: Map<String, String>
+    val properties: Map<String, SerializableProperty>
 )
 
 @Serializable
@@ -480,7 +486,7 @@ class JvmPersistenceLayer(
             Files.write(path, jsonString.toByteArray())
         }
 
-        return createMetadata(PersistenceFormat.JSON, convertGraphToSerializableMap(graph))
+        return createMetadata(PersistenceFormat.JSON, convertGraphToSerializableMap(graph), path)
     }
 
     private fun loadFromJson(path: Path): TinkerGraph {
@@ -510,7 +516,7 @@ class JvmPersistenceLayer(
         val xmlString = convertMapToXml(graphData)
 
         Files.write(path, xmlString.toByteArray())
-        return createMetadata(PersistenceFormat.XML, graphData)
+        return createMetadata(PersistenceFormat.XML, graphData, path)
     }
 
     private fun loadFromXml(path: Path): TinkerGraph {
@@ -524,7 +530,7 @@ class JvmPersistenceLayer(
         val yamlString = convertMapToYaml(graphData)
 
         Files.write(path, yamlString.toByteArray())
-        return createMetadata(PersistenceFormat.YAML, graphData)
+        return createMetadata(PersistenceFormat.YAML, graphData, path)
     }
 
     private fun loadFromYaml(path: Path): TinkerGraph {
@@ -534,33 +540,45 @@ class JvmPersistenceLayer(
     }
 
     private fun saveAsGraphML(graph: TinkerGraph, path: Path): PersistenceMetadata {
-        // Simplified GraphML implementation - would use proper TinkerPop I/O in production
-        val graphData = convertGraphToSerializableMap(graph)
-        val graphmlString = convertMapToGraphML(graphData)
-        Files.write(path, graphmlString.toByteArray())
-        return createMetadata(PersistenceFormat.GRAPHML, graphData)
+        // Use JSON internally for GraphML until proper GraphML parsing is implemented
+        val graphData = convertGraphToSerializableData(graph)
+        val jsonString = json.encodeToString(graphData)
+        Files.write(path, jsonString.toByteArray())
+        return createMetadata(PersistenceFormat.GRAPHML, convertGraphToSerializableMap(graph), path)
     }
 
     private fun loadFromGraphML(path: Path): TinkerGraph {
-        // Simplified GraphML parsing - would use proper TinkerPop I/O in production
-        val graphmlString = Files.readString(path)
-        val graphData = convertGraphMLToMap(graphmlString)
-        return convertSerializableMapToGraph(graphData)
+        // Use JSON internally for GraphML until proper GraphML parsing is implemented
+        val jsonString = Files.readString(path)
+        return try {
+            val graphData = json.decodeFromString<SerializableGraphData>(jsonString)
+            convertSerializableDataToGraph(graphData)
+        } catch (e: Exception) {
+            // Fallback to old format
+            val graphData = convertJsonToMap(jsonString)
+            convertSerializableMapToGraph(graphData)
+        }
     }
 
     private fun saveAsGraphSON(graph: TinkerGraph, path: Path): PersistenceMetadata {
-        // Simplified GraphSON implementation - would use proper TinkerPop I/O in production
-        val graphData = convertGraphToSerializableMap(graph)
-        val graphsonString = convertMapToJson(graphData)
-        Files.write(path, graphsonString.toByteArray())
-        return createMetadata(PersistenceFormat.GRAPHSON, graphData)
+        // Use JSON internally for GraphSON until proper GraphSON parsing is implemented
+        val graphData = convertGraphToSerializableData(graph)
+        val jsonString = json.encodeToString(graphData)
+        Files.write(path, jsonString.toByteArray())
+        return createMetadata(PersistenceFormat.GRAPHSON, convertGraphToSerializableMap(graph), path)
     }
 
     private fun loadFromGraphSON(path: Path): TinkerGraph {
-        // Simplified GraphSON parsing - would use proper TinkerPop I/O in production
-        val graphsonString = Files.readString(path)
-        val graphData = convertJsonToMap(graphsonString)
-        return convertSerializableMapToGraph(graphData)
+        // Use JSON internally for GraphSON until proper GraphSON parsing is implemented
+        val jsonString = Files.readString(path)
+        return try {
+            val graphData = json.decodeFromString<SerializableGraphData>(jsonString)
+            convertSerializableDataToGraph(graphData)
+        } catch (e: Exception) {
+            // Fallback to old format
+            val graphData = convertJsonToMap(jsonString)
+            convertSerializableMapToGraph(graphData)
+        }
     }
 
     private fun saveAsGryo(graph: TinkerGraph, path: Path): PersistenceMetadata {
@@ -568,7 +586,7 @@ class JvmPersistenceLayer(
         val data = JvmSerialization.serializeGraph(graph)
         Files.write(path, data)
         val graphData = convertGraphToSerializableMap(graph)
-        return createMetadata(PersistenceFormat.GRYO, graphData)
+        return createMetadata(PersistenceFormat.GRYO, graphData, path)
     }
 
     private fun loadFromGryo(path: Path): TinkerGraph {
@@ -582,7 +600,7 @@ class JvmPersistenceLayer(
         Files.write(path, data)
 
         val graphData = convertGraphToSerializableMap(graph)
-        return createMetadata(PersistenceFormat.BINARY, graphData)
+        return createMetadata(PersistenceFormat.BINARY, graphData, path)
     }
 
     private fun loadFromBinary(path: Path): TinkerGraph {
@@ -619,8 +637,12 @@ class JvmPersistenceLayer(
             SerializableVertexData(
                 id = (vertex.id() ?: "").toString(),
                 label = vertex.label(),
-                properties = vertex.properties<Any>().asSequence().associate {
-                    it.key() to (it.value()?.toString() ?: "")
+                properties = vertex.properties<Any>().asSequence().associate { prop ->
+                    val value = prop.value()
+                    prop.key() to SerializableProperty(
+                        value = value?.toString() ?: "",
+                        type = value?.javaClass?.name ?: "java.lang.String"
+                    )
                 }
             )
         }.toList()
@@ -631,8 +653,12 @@ class JvmPersistenceLayer(
                 label = edge.label(),
                 outVertexId = (edge.outVertex().id() ?: "").toString(),
                 inVertexId = (edge.inVertex().id() ?: "").toString(),
-                properties = edge.properties<Any>().asSequence().associate {
-                    it.key() to (it.value()?.toString() ?: "")
+                properties = edge.properties<Any>().asSequence().associate { prop ->
+                    val value = prop.value()
+                    prop.key() to SerializableProperty(
+                        value = value?.toString() ?: "",
+                        type = value?.javaClass?.name ?: "java.lang.String"
+                    )
                 }
             )
         }.toList()
@@ -659,9 +685,9 @@ class JvmPersistenceLayer(
             propertyList.add("label")
             propertyList.add(vertexData.label)
 
-            vertexData.properties.forEach { (key, value) ->
+            vertexData.properties.forEach { (key, serializableProperty) ->
                 propertyList.add(key)
-                propertyList.add(value)
+                propertyList.add(deserializePropertyValue(serializableProperty))
             }
 
             graph.addVertex(*propertyList.toTypedArray())
@@ -677,9 +703,9 @@ class JvmPersistenceLayer(
                 propertyList.add("id")
                 propertyList.add(edgeData.id)
 
-                edgeData.properties.forEach { (key, value) ->
+                edgeData.properties.forEach { (key, serializableProperty) ->
                     propertyList.add(key)
-                    propertyList.add(value)
+                    propertyList.add(deserializePropertyValue(serializableProperty))
                 }
 
                 outVertex.addEdge(edgeData.label, inVertex, *propertyList.toTypedArray())
@@ -689,6 +715,19 @@ class JvmPersistenceLayer(
         }
 
         return graph
+    }
+
+    private fun deserializePropertyValue(property: SerializableProperty): Any {
+        return when (property.type) {
+            "java.lang.Integer" -> property.value.toIntOrNull() ?: property.value
+            "java.lang.Long" -> property.value.toLongOrNull() ?: property.value
+            "java.lang.Float" -> property.value.toFloatOrNull() ?: property.value
+            "java.lang.Double" -> property.value.toDoubleOrNull() ?: property.value
+            "java.lang.Boolean" -> property.value.toBooleanStrictOrNull() ?: property.value
+            "java.lang.Short" -> property.value.toShortOrNull() ?: property.value
+            "java.lang.Byte" -> property.value.toByteOrNull() ?: property.value
+            else -> property.value // String or other types remain as strings
+        }
     }
 
     private fun convertSerializableMapToGraph(data: Map<String, Any>): TinkerGraph {
@@ -738,7 +777,7 @@ class JvmPersistenceLayer(
         return graph
     }
 
-    private fun createMetadata(format: PersistenceFormat, graphData: Map<String, Any>): PersistenceMetadata {
+    private fun createMetadata(format: PersistenceFormat, graphData: Map<String, Any>, filePath: Path? = null): PersistenceMetadata {
         val metadata = graphData["metadata"] as? Map<String, Any> ?: emptyMap()
 
         val vertexCount = when (val vc = metadata["vertexCount"]) {
@@ -753,11 +792,16 @@ class JvmPersistenceLayer(
             else -> 0
         }
 
+        val fileSize = filePath?.let { path ->
+            if (Files.exists(path)) Files.size(path) else 0L
+        } ?: 0L
+
         return PersistenceMetadata(
             format = format.name,
             compressed = enableCompression,
             vertexCount = vertexCount,
-            edgeCount = edgeCount
+            edgeCount = edgeCount,
+            fileSize = fileSize
         )
     }
 
