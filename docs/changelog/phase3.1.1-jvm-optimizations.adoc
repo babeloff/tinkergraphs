@@ -91,7 +91,8 @@ This implementation delivers comprehensive JVM-specific optimizations that provi
 
 === Key Methods and Features
 
-```kotlin
+[source,kotlin]
+----
 // Stream conversion and processing
 val personVertices = JavaCollectionsSupport.vertexStream(graph.vertices())
     .filter { vertex -> /* conditions */ }
@@ -112,7 +113,7 @@ val processor = JavaCollectionsSupport.BatchProcessor()
 processor.processVerticesInBatches(vertices, 50) { batch ->
     // Process batch of vertices
 }
-```
+----
 
 ==== ThreadSafeGraphWrapper
 - **ReentrantReadWriteLock**: Fair locking for concurrent access without thread starvation
@@ -157,7 +158,8 @@ processor.processVerticesInBatches(vertices, 50) { batch ->
 
 === Usage Examples
 
-```kotlin
+[source,kotlin]
+----
 val concurrentOps = ConcurrentGraphOperations(graph)
 
 // Concurrent read operations with timeout
@@ -188,7 +190,7 @@ try {
 } catch (e: Exception) {
     concurrentOps.rollbackTransaction()
 }
-```
+----
 
 ==== Concurrent Graph Traversal
 - **Parallel Processing**: Process graph traversals using multiple worker threads
@@ -217,7 +219,8 @@ try {
 === Serialization Capabilities
 
 ==== Graph-Level Operations
-```kotlin
+[source,kotlin]
+----
 // Serialize entire graph to byte array
 val serializedData = JvmSerialization.serializeGraph(graph)
 
@@ -231,10 +234,11 @@ val restoredGraph = JvmSerialization.deserializeGraphFromFile("graph.ser")
 val stats = JvmSerialization.getSerializationStats(graph)
 val sizeEstimate = stats["estimatedSizeBytes"] as Long
 val compressionRecommended = stats["compressionRecommended"] as Boolean
-```
+----
 
 ==== Element-Level Operations
-```kotlin
+[source,kotlin]
+----
 // Serialize individual vertex with properties and relationships
 val vertexData = JvmSerialization.serializeVertex(vertex)
 val restoredVertex = JvmSerialization.deserializeVertex(vertexData, graph)
@@ -242,7 +246,7 @@ val restoredVertex = JvmSerialization.deserializeVertex(vertexData, graph)
 // Serialize individual edge with source/target information
 val edgeData = JvmSerialization.serializeEdge(edge)
 val restoredEdge = JvmSerialization.deserializeEdge(edgeData, graph)
-```
+----
 
 ==== Statistics and Optimization
 - **Size Estimation**: Predict serialized size before serialization to guide compression decisions
@@ -269,7 +273,8 @@ val restoredEdge = JvmSerialization.deserializeEdge(edgeData, graph)
 === Storage Operations
 
 ==== Basic Operations
-```kotlin
+[source,kotlin]
+----
 val storage = MemoryMappedStorage(
     baseDirectory = "/data/graphs",
     maxFileSize = 1024L * 1024L * 1024L, // 1GB per file
@@ -284,10 +289,11 @@ val edgePosition = storage.storeEdge(edge)
 // Retrieve elements by ID with efficient lookup
 val retrievedVertex = storage.retrieveVertex(vertexId)
 val retrievedEdge = storage.retrieveEdge(edgeId)
-```
+----
 
 ==== Graph-Level Operations
-```kotlin
+[source,kotlin]
+----
 // Store entire graph with comprehensive statistics
 val storeStats = storage.storeGraph(graph)
 println("Stored ${storeStats["verticesStored"]} vertices")
@@ -296,10 +302,11 @@ println("Total storage time: ${storeStats["durationMs"]}ms")
 
 // Load entire graph with relationship reconstruction
 val loadedGraph = storage.loadGraph()
-```
+----
 
 ==== Indexing and Querying
-```kotlin
+[source,kotlin]
+----
 // Create property index for fast lookups
 storage.createPropertyIndex("category", StorageEntry.ElementType.VERTEX)
 storage.createPropertyIndex("weight", StorageEntry.ElementType.EDGE)
@@ -311,7 +318,7 @@ val importantVertices = storage.queryByProperty(
 val heavyEdges = storage.queryByProperty(
     "weight", 100.0, StorageEntry.ElementType.EDGE
 )
-```
+----
 
 === Storage Management
 
@@ -326,7 +333,8 @@ val heavyEdges = storage.queryByProperty(
 - **Statistics**: Comprehensive storage usage and performance metrics for monitoring and optimization
 - **Resource Cleanup**: Proper file handle and memory management with automatic resource disposal
 
-```kotlin
+[source,kotlin]
+----
 // Storage compaction with detailed statistics
 val compactionStats = storage.compact()
 println("Reclaimed ${compactionStats["totalReclaimedBytes"]} bytes")
@@ -336,7 +344,7 @@ val stats = storage.getStorageStatistics()
 println("Total files: ${stats["totalFiles"]}")
 println("Total size: ${stats["totalSizeMB"]} MB")
 println("Average file size: ${stats["averageFileSizeBytes"]} bytes")
-```
+----
 
 == 5. Testing and Validation
 
@@ -386,7 +394,8 @@ The test suite includes performance benchmarks that validate:
 
 ==== Test Examples
 
-```kotlin
+[source,kotlin]
+----
 @Test
 fun `test concurrent vertex creation`() {
     val concurrentOps = ConcurrentGraphOperations(graph)
@@ -415,7 +424,7 @@ fun `test memory mapped storage with real data`() {
     assertEquals(50, storeStats["verticesStored"])
     assertTrue((storage.getStorageStatistics()["totalSizeBytes"] as Long) > 0)
 }
-```
+----
 
 == 6. Configuration and Integration
 
@@ -435,7 +444,8 @@ The implementation requires no new external dependencies, leveraging existing ca
 === Usage Patterns
 
 ==== Enterprise Applications
-```kotlin
+[source,kotlin]
+----
 // Production-ready concurrent graph operations
 val graph = TinkerGraph.open()
 val concurrentOps = ConcurrentGraphOperations(graph)
@@ -448,10 +458,11 @@ val vertices = concurrentOps.createVerticesBatch(
     batchSize = 100,
     maxConcurrency = 8
 )
-```
+----
 
 ==== Large Graph Processing
-```kotlin
+[source,kotlin]
+----
 // Memory-mapped storage for datasets exceeding available RAM
 val storage = MemoryMappedStorage(
     baseDirectory = "/data/large-graphs",
@@ -465,10 +476,11 @@ storage.createPropertyIndex("importance", StorageEntry.ElementType.EDGE)
 
 // Efficient querying using indices
 val importantNodes = storage.queryByProperty("category", "critical")
-```
+----
 
 ==== Java Ecosystem Integration
-```kotlin
+[source,kotlin]
+----
 // Stream processing with familiar Java 8+ APIs
 val filteredVertices = JavaCollectionsSupport.vertexStream(graph.vertices())
     .filter(vertex -> isImportant(vertex))
@@ -478,7 +490,7 @@ val filteredVertices = JavaCollectionsSupport.vertexStream(graph.vertices())
 // Integration with existing Java collections
 val vertexMap = JavaCollectionsSupport.createVertexMap(graph.vertices())
 val edgesByLabel = JavaCollectionsSupport.groupEdgesByProperty(graph.edges(), "label")
-```
+----
 
 == 7. Performance Characteristics
 
@@ -557,7 +569,8 @@ Features can be adopted incrementally:
 === Migration Path
 
 ==== From Basic TinkerGraph
-```kotlin
+[source,kotlin]
+----
 // Before: Standard TinkerGraph usage
 val graph = TinkerGraph.open()
 val vertices = graph.vertices().asSequence().toList()
@@ -566,10 +579,11 @@ val vertices = graph.vertices().asSequence().toList()
 val graph = TinkerGraph.open()
 val concurrentOps = ConcurrentGraphOperations(graph) // Optional concurrent support
 val vertices = JavaCollectionsSupport.verticesToList(graph.vertices()) // Optional Collections support
-```
+----
 
 ==== Progressive Enhancement
-```kotlin
+[source,kotlin]
+----
 // Level 1: Basic usage (unchanged)
 val graph = TinkerGraph.open()
 graph.addVertex("name", "Alice")
@@ -586,7 +600,7 @@ val vertices = JavaCollectionsSupport.vertexStream(graph.vertices())
 // Level 4: Add large graph support
 val storage = MemoryMappedStorage("/data/graphs")
 storage.storeGraph(graph)
-```
+----
 
 == 9. Benefits and Impact
 

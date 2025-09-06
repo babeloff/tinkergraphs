@@ -250,7 +250,7 @@ This document tracks all source materials, references, and inspirations used in 
 
 All files derived from or inspired by the referenced materials will include appropriate copyright notices:
 
-```
+----
 /*
  * Based on Apache TinkerPop TinkerGraph implementation
  * Original work: Copyright (c) Apache Software Foundation
@@ -260,7 +260,7 @@ All files derived from or inspired by the referenced materials will include appr
  *
  * Licensed under the Apache License, Version 2.0
  */
-```
+----
 
 === Documentation Attribution
 

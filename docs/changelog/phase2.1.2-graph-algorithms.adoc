@@ -178,13 +178,13 @@ Each algorithm includes comprehensive documentation with:
 * **Clean Separation**: Algorithm code is isolated in separate package
 
 === Project Structure Enhancements
-```
+----
 src/commonMain/kotlin/org/apache/tinkerpop/gremlin/tinkergraph/
 ├── algorithms/
 │   ├── GraphAlgorithms.kt          # Main algorithm implementations
 │   └── README.md                   # Algorithm documentation
 └── structure/                      # Existing core structure (unchanged)
-```
+----
 
 === Build System Integration
 * **Multiplatform Build**: Algorithms compile for all target platforms (JVM, JS, Native)

@@ -233,14 +233,14 @@ Each algorithm includes references to authoritative sources:
 === Project Architecture Enhancement
 
 ==== Clean Separation
-```
+----
 src/commonMain/kotlin/org/apache/tinkerpop/gremlin/tinkergraph/
 ├── algorithms/
 │   ├── GraphAlgorithms.kt                    # Basic algorithms (Phase 2.1.2)
 │   ├── AdvancedGraphAlgorithms.kt           # Advanced algorithms (Phase 2.1.3)
 │   └── README.md                            # Algorithm package documentation
 └── structure/                               # Core TinkerGraph structure (unchanged)
-```
+----
 
 ==== Backward Compatibility
 * **Zero Breaking Changes**: All existing functionality preserved

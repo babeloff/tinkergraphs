@@ -141,7 +141,8 @@ This document summarizes the implementation of **Phase 2.2.1: Multi-property and
 === Cardinality Implementation Details
 
 ==== SINGLE Cardinality Enforcement
-```kotlin
+[source,kotlin]
+----
 VertexProperty.Cardinality.SINGLE -> {
     val toRemove = propertyList.filter { !it.isVertexPropertyRemoved() }
     toRemove.forEach { prop ->
@@ -150,24 +151,26 @@ VertexProperty.Cardinality.SINGLE -> {
     }
     propertyList.clear()
 }
-```
+----
 
 ==== SET Cardinality Duplicate Detection
-```kotlin
+[source,kotlin]
+----
 VertexProperty.Cardinality.SET -> {
     val existingValues = propertyList.filter { !it.isVertexPropertyRemoved() }.map { it.value() }.toSet()
     if (value in existingValues) {
         throw VertexProperty.Exceptions.identicalMultiPropertiesNotSupported()
     }
 }
-```
+----
 
 ==== LIST Cardinality Implementation
-```kotlin
+[source,kotlin]
+----
 VertexProperty.Cardinality.LIST -> {
     // LIST allows duplicates, no special handling needed
 }
-```
+----
 
 === Query Engine Architecture
 
@@ -288,7 +291,7 @@ The implementation includes **27 detailed test cases** in two test suites:
 === TinkerGraph Architecture Enhancement
 
 ==== Clean Architecture Extension
-```
+----
 src/commonMain/kotlin/org/apache/tinkerpop/gremlin/tinkergraph/
 ├── structure/
 │   ├── TinkerVertex.kt                      # Enhanced with multi-property support
@@ -299,7 +302,7 @@ src/commonMain/kotlin/org/apache/tinkerpop/gremlin/tinkergraph/
 └── tests/
     ├── MultiPropertyTest.kt                # Comprehensive multi-property tests
     └── PropertyQueryEngineTest.kt          # Advanced querying tests
-```
+----
 
 ==== Backward Compatibility Assurance
 * **Zero Breaking Changes**: All existing functionality preserved and enhanced

@@ -142,14 +142,15 @@ This implementation provides efficient, memory-optimized iterators for TinkerGra
 
 All iterators use Kotlin sequences for lazy evaluation:
 
-```kotlin
+[source,kotlin]
+----
 private fun createBaseSequence(): Sequence<TinkerVertex> {
     return sourceSequence
         .filter { vertex -> !vertex.isRemoved() }
         .filter { vertex -> matchesLabelFilter(vertex) }
         .filter { vertex -> matchesPropertyFilters(vertex) }
 }
-```
+----
 
 **Benefits:**
 - No intermediate collections created
@@ -161,7 +162,8 @@ private fun createBaseSequence(): Sequence<TinkerVertex> {
 
 Property-based queries automatically use indices when available:
 
-```kotlin
+[source,kotlin]
+----
 // Check if we have an index for this property key
 if (graph.vertexIndex.getIndexedKeys().contains(key)) {
     // Use index for efficient lookup
@@ -171,7 +173,7 @@ if (graph.vertexIndex.getIndexedKeys().contains(key)) {
         vertexIds = indexedVertices.map { it.id() }.toTypedArray()
     )
 }
-```
+----
 
 **Benefits:**
 - O(1) property lookups for indexed keys
@@ -182,7 +184,8 @@ if (graph.vertexIndex.getIndexedKeys().contains(key)) {
 
 Edge iterators support comprehensive filtering:
 
-```kotlin
+[source,kotlin]
+----
 return when (direction) {
     Direction.OUT -> vertex.getOutEdges().asSequence()
     Direction.IN -> vertex.getInEdges().asSequence()
@@ -190,7 +193,7 @@ return when (direction) {
         (vertex.getOutEdges() + vertex.getInEdges()).asSequence()
     }
 }
-```
+----
 
 **Benefits:**
 - Efficient vertex-centric queries
@@ -202,18 +205,20 @@ return when (direction) {
 Iterators process elements on-demand without creating intermediate collections:
 
 **Before (Collection-based):**
-```kotlin
+[source,kotlin]
+----
 val edges = mutableSetOf<TinkerEdge>()
 // ... collect all edges first
 return edges.iterator()
-```
+----
 
 **After (Sequence-based):**
-```kotlin
+[source,kotlin]
+----
 return sourceSequence
     .filter { /* conditions */ }
     .iterator()
-```
+----
 
 **Benefits:**
 - Constant memory usage regardless of result size
@@ -281,7 +286,7 @@ With Phase 2.1.1 completed, the project is ready for:
 2. **Phase 2.2:** Advanced property management features
 3. **Phase 3:** Platform-specific implementations
 
-## Success Criteria Achieved
+== Success Criteria Achieved
 
 ✅ **Lazy evaluation with no unnecessary intermediate collections**
 ✅ **Property-based filtering using existing TinkerIndex**

@@ -59,7 +59,8 @@ Created comprehensive logging utility (`LoggingConfig.kt`) with:
 
 === Logging Examples
 
-```kotlin
+[source,kotlin]
+----
 // Automatic logging in TinkerGraph operations
 val graph = TinkerGraph.open()
 val vertex = graph.addVertex("name", "Alice", "age", 30)
@@ -75,7 +76,7 @@ val result = LoggingConfig.measureTime("bulk-operations") {
 // Graph statistics
 LoggingConfig.logGraphStats(vertexCount, edgeCount, "initialization")
 // Logs: "Graph stats after 'initialization': vertices=1000, edges=0"
-```
+----
 
 == 2. KDoc Documentation System
 
@@ -99,14 +100,14 @@ LoggingConfig.logGraphStats(vertexCount, edgeCount, "initialization")
 - **Cross-references** between related classes and methods
 
 === Generated Documentation Structure
-```
+----
 build/dokka/html/
 ├── index.html                                    # Main API index
 ├── tinkergraphs/
 │   ├── org.apache.tinkerpop.gremlin.structure/   # Core interfaces
 │   ├── org.apache.tinkerpop.gremlin.tinkergraph.structure/  # Implementation classes
 │   └── org.apache.tinkerpop.gremlin.tinkergraph.util/      # Utility classes
-```
+----
 
 == 3. AsciiDoctor Documentation System
 
@@ -126,21 +127,23 @@ build/dokka/html/
 === Build System Integration
 
 ==== Pixi Tasks
-```bash
+[source,bash]
+----
 pixi run docs-setup     # Install required gems
 pixi run docs-check     # Verify tool availability
 pixi run docs-adoc      # Generate HTML documentation
 pixi run docs-pdf       # Generate PDF documentation
 pixi run docs-slides    # Generate presentation slides
 pixi run docs-all       # Generate all formats
-```
+----
 
 ==== Gradle Integration
-```bash
+[source,bash]
+----
 gradle generateDocs     # Generate both KDoc and AsciiDoc documentation
 gradle buildAsciiDoc    # Generate AsciiDoc formats only
 gradle dokkaHtml        # Generate KDoc HTML only
-```
+----
 
 === Documentation Pipeline
 1. **Source**: AsciiDoc files in `/docs` directory
@@ -177,7 +180,8 @@ Comprehensive test coverage including:
 === Build Configuration
 
 ==== Dependencies (build.gradle.kts)
-```kotlin
+[source,kotlin]
+----
 commonMain {
     dependencies {
         implementation("io.github.oshai:kotlin-logging:7.0.0")
@@ -189,10 +193,11 @@ jvmMain {
         implementation("ch.qos.logback:logback-classic:1.4.14")
     }
 }
-```
+----
 
 ==== Documentation Tasks
-```kotlin
+[source,kotlin]
+----
 tasks.register("generateDocs") {
     dependsOn("dokkaHtml", "buildAsciiDoc")
 }
@@ -204,12 +209,13 @@ tasks.register<Exec>("buildAsciiDoc") {
         asciidoctor-revealjs docs/roadmap.adoc -o build/docs/roadmap-slides.html
     """.trimIndent())
 }
-```
+----
 
 === Usage Examples
 
 ==== Basic Logging
-```kotlin
+[source,kotlin]
+----
 class MyGraphClass {
     companion object {
         private val logger = LoggingConfig.getLogger<MyGraphClass>()
@@ -220,20 +226,22 @@ class MyGraphClass {
         // ... implementation
     }
 }
-```
+----
 
 ==== Performance Monitoring
-```kotlin
+[source,kotlin]
+----
 val results = LoggingConfig.measureTime("complex-query") {
     graph.vertices("name", "Alice")
         .asSequence()
         .filter { it.value<Int>("age") > 25 }
         .toList()
 }
-```
+----
 
 ==== Documentation Generation
-```bash
+[source,bash]
+----
 # Generate all documentation
 pixi run docs
 
@@ -242,7 +250,7 @@ pixi run docs-pdf
 
 # Check tool availability
 pixi run docs-check
-```
+----
 
 == 6. Benefits and Impact
 
