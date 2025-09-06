@@ -12,31 +12,42 @@ import org.apache.tinkerpop.gremlin.structure.Graph
 /**
  * JavaScript-specific implementation of SafeCasting utility.
  * Provides safer type casting for the JavaScript runtime where reflection is limited.
+ *
+ * This implementation avoids using unsafeCast which can cause ClassCastExceptions
+ * in the JavaScript runtime, and instead relies on structural checks and safer
+ * type coercion patterns.
  */
 actual object SafeCasting {
 
     /**
      * Safely cast an Element to TinkerVertex.
-     * In JavaScript, we rely on structural typing and duck typing.
+     * Uses structural typing checks instead of unsafe casting.
      */
     actual fun asTinkerVertex(element: Any?): TinkerVertex? {
         return when {
             element == null -> null
             element is TinkerVertex -> element
             element is Vertex -> {
-                // In JavaScript, use unsafeCast for better compatibility
-                try {
-                    element.unsafeCast<TinkerVertex>()
-                } catch (e: Exception) {
+                // Check if it's already a TinkerVertex by checking its class name
+                val className = element::class.simpleName
+                if (className == "TinkerVertex") {
+                    // It's already a TinkerVertex, just return it as is
+                    element as? TinkerVertex
+                } else {
+                    // It's a different Vertex implementation, can't safely cast
                     null
                 }
             }
             else -> {
-                // Try to check if it has vertex-like properties
+                // Check if it has vertex-like structure using safe property access
                 try {
                     val dynamic = element.asDynamic()
-                    if (dynamic.id != null && dynamic.label != null) {
-                        element.unsafeCast<TinkerVertex>()
+                    val hasId = js("'id' in dynamic && typeof dynamic.id !== 'undefined'") as Boolean
+                    val hasLabel = js("'label' in dynamic && typeof dynamic.label !== 'undefined'") as Boolean
+
+                    if (hasId && hasLabel) {
+                        // Try to treat it as a TinkerVertex
+                        element as? TinkerVertex
                     } else {
                         null
                     }
@@ -55,17 +66,23 @@ actual object SafeCasting {
             element == null -> null
             element is TinkerEdge -> element
             element is Edge -> {
-                try {
-                    element.unsafeCast<TinkerEdge>()
-                } catch (e: Exception) {
+                val className = element::class.simpleName
+                if (className == "TinkerEdge") {
+                    element as? TinkerEdge
+                } else {
                     null
                 }
             }
             else -> {
                 try {
                     val dynamic = element.asDynamic()
-                    if (dynamic.id != null && dynamic.label != null && dynamic.inVertex != null && dynamic.outVertex != null) {
-                        element.unsafeCast<TinkerEdge>()
+                    val hasId = js("'id' in dynamic && typeof dynamic.id !== 'undefined'") as Boolean
+                    val hasLabel = js("'label' in dynamic && typeof dynamic.label !== 'undefined'") as Boolean
+                    val hasInVertex = js("'inVertex' in dynamic && typeof dynamic.inVertex !== 'undefined'") as Boolean
+                    val hasOutVertex = js("'outVertex' in dynamic && typeof dynamic.outVertex !== 'undefined'") as Boolean
+
+                    if (hasId && hasLabel && hasInVertex && hasOutVertex) {
+                        element as? TinkerEdge
                     } else {
                         null
                     }
@@ -112,9 +129,10 @@ actual object SafeCasting {
             property == null -> null
             property is TinkerVertexProperty<*> -> property
             else -> {
-                try {
-                    property.unsafeCast<TinkerVertexProperty<*>>()
-                } catch (e: Exception) {
+                val className = property::class.simpleName
+                if (className == "TinkerVertexProperty") {
+                    property as? TinkerVertexProperty<*>
+                } else {
                     null
                 }
             }
@@ -125,23 +143,27 @@ actual object SafeCasting {
      * Safely cast a VertexProperty to TinkerVertexProperty with type check.
      */
     actual fun <V> safeCastVertexProperty(property: org.apache.tinkerpop.gremlin.structure.VertexProperty<V>): TinkerVertexProperty<V> {
-        @Suppress("UNCHECKED_CAST")
-        return asTinkerVertexProperty(property)?.unsafeCast<TinkerVertexProperty<V>>()
-            ?: throw IllegalStateException("Expected TinkerVertexProperty but got different type")
+        val tinkerProperty = asTinkerVertexProperty(property)
+        if (tinkerProperty != null) {
+            @Suppress("UNCHECKED_CAST")
+            return tinkerProperty as TinkerVertexProperty<V>
+        } else {
+            throw IllegalStateException("Expected TinkerVertexProperty but got ${property::class.simpleName}")
+        }
     }
 
     /**
      * Safely cast the result of addVertex() to TinkerVertex.
      */
     actual fun safeCastVertex(vertex: Vertex): TinkerVertex {
-        return asTinkerVertex(vertex) ?: throw IllegalStateException("Expected TinkerVertex but got different type")
+        return asTinkerVertex(vertex) ?: throw IllegalStateException("Expected TinkerVertex but got ${vertex::class.simpleName}")
     }
 
     /**
      * Safely cast the result of addEdge() to TinkerEdge.
      */
     actual fun safeCastEdge(edge: Edge): TinkerEdge {
-        return asTinkerEdge(edge) ?: throw IllegalStateException("Expected TinkerEdge but got different type")
+        return asTinkerEdge(edge) ?: throw IllegalStateException("Expected TinkerEdge but got ${edge::class.simpleName}")
     }
 
     /**
@@ -162,7 +184,13 @@ actual object SafeCasting {
      * Find first TinkerVertex in sequence by predicate.
      */
     actual fun findTinkerVertex(sequence: Sequence<*>, predicate: (TinkerVertex) -> Boolean): TinkerVertex? {
-        return sequence.mapNotNull { asTinkerVertex(it) }.firstOrNull(predicate)
+        return sequence.mapNotNull { asTinkerVertex(it) }.firstOrNull { vertex ->
+            try {
+                predicate(vertex)
+            } catch (e: Exception) {
+                false
+            }
+        }
     }
 
     /**
@@ -171,7 +199,8 @@ actual object SafeCasting {
     actual fun findVertexByName(sequence: Sequence<*>, name: String): TinkerVertex? {
         return findTinkerVertex(sequence) {
             try {
-                it.value<String>("name") == name
+                val nameValue = it.value<String>("name")
+                nameValue == name
             } catch (e: Exception) {
                 false
             }
@@ -186,17 +215,21 @@ actual object SafeCasting {
             graph == null -> null
             graph is TinkerGraph -> graph
             graph is Graph -> {
-                try {
-                    graph.unsafeCast<TinkerGraph>()
-                } catch (e: Exception) {
+                val className = graph::class.simpleName
+                if (className == "TinkerGraph") {
+                    graph as? TinkerGraph
+                } else {
                     null
                 }
             }
             else -> {
                 try {
                     val dynamic = graph.asDynamic()
-                    if (dynamic.vertices != null && dynamic.edges != null) {
-                        graph.unsafeCast<TinkerGraph>()
+                    val hasVertices = js("'vertices' in dynamic && typeof dynamic.vertices === 'function'") as Boolean
+                    val hasEdges = js("'edges' in dynamic && typeof dynamic.edges === 'function'") as Boolean
+
+                    if (hasVertices && hasEdges) {
+                        graph as? TinkerGraph
                     } else {
                         null
                     }
@@ -214,18 +247,13 @@ actual object SafeCasting {
     actual fun asComparable(value: Any?): Comparable<Any>? {
         return when (value) {
             null -> null
-            is String -> value.unsafeCast<Comparable<Any>>()
-            is Number -> {
-                // In JavaScript, all numbers are doubles
-                val doubleValue = value.toDouble()
-                doubleValue.unsafeCast<Comparable<Any>>()
-            }
-            is Boolean -> value.unsafeCast<Comparable<Any>>()
+            is String -> JSComparableWrapper(value)
+            is Number -> JSComparableWrapper(value.toDouble())
+            is Boolean -> JSComparableWrapper(value)
             else -> {
                 // Try to convert to string for comparison in JavaScript
                 try {
-                    val stringValue = value.toString()
-                    stringValue.unsafeCast<Comparable<Any>>()
+                    JSComparableWrapper(value.toString())
                 } catch (e: Exception) {
                     null
                 }
@@ -234,11 +262,62 @@ actual object SafeCasting {
     }
 
     /**
+     * JavaScript-specific wrapper for making values comparable.
+     * This avoids casting issues by implementing comparison logic directly.
+     */
+    private class JSComparableWrapper(private val value: Any) : Comparable<Any> {
+        override fun compareTo(other: Any): Int {
+            return when {
+                other is JSComparableWrapper -> compareValues(value, other.value)
+                else -> compareValues(value, other)
+            }
+        }
+
+        private fun compareValues(a: Any, b: Any): Int {
+            return try {
+                when {
+                    a is Number && b is Number -> {
+                        a.toDouble().compareTo(b.toDouble())
+                    }
+                    a is String && b is String -> {
+                        a.compareTo(b)
+                    }
+                    a is Boolean && b is Boolean -> {
+                        a.compareTo(b)
+                    }
+                    else -> {
+                        // Fall back to string comparison
+                        a.toString().compareTo(b.toString())
+                    }
+                }
+            } catch (e: Exception) {
+                0 // Return equal if comparison fails
+            }
+        }
+
+        override fun toString(): String = value.toString()
+        override fun equals(other: Any?): Boolean {
+            return when (other) {
+                is JSComparableWrapper -> value == other.value
+                else -> value == other
+            }
+        }
+        override fun hashCode(): Int = value.hashCode()
+    }
+
+    /**
      * JavaScript-specific helper to safely access dynamic properties.
      */
     fun safeDynamicAccess(obj: Any?, property: String): Any? {
         return try {
-            obj?.asDynamic()?.get(property)
+            if (obj == null) return null
+            val dynamic = obj.asDynamic()
+            val hasProperty = js("property in dynamic") as Boolean
+            if (hasProperty) {
+                js("dynamic[property]")
+            } else {
+                null
+            }
         } catch (e: Exception) {
             null
         }
@@ -249,8 +328,9 @@ actual object SafeCasting {
      */
     fun hasDynamicProperty(obj: Any?, property: String): Boolean {
         return try {
-            val dynamic = obj?.asDynamic()
-            js("property in dynamic").unsafeCast<Boolean>()
+            if (obj == null) return false
+            val dynamic = obj.asDynamic()
+            js("property in dynamic && typeof dynamic[property] !== 'undefined'") as Boolean
         } catch (e: Exception) {
             false
         }
@@ -264,12 +344,18 @@ actual object SafeCasting {
         return try {
             val numA = when (a) {
                 is Number -> a.toDouble()
-                is String -> a.toDouble()
+                is String -> {
+                    val parsed = a.toDoubleOrNull()
+                    parsed ?: return a.compareTo(b.toString())
+                }
                 else -> return 0
             }
             val numB = when (b) {
                 is Number -> b.toDouble()
-                is String -> b.toDouble()
+                is String -> {
+                    val parsed = b.toDoubleOrNull()
+                    parsed ?: return a.toString().compareTo(b)
+                }
                 else -> return 0
             }
             numA.compareTo(numB)
@@ -283,8 +369,31 @@ actual object SafeCasting {
      */
     fun safeStringOperation(value: Any?, operation: (String) -> Boolean): Boolean {
         return try {
-            val stringValue = value?.toString() ?: return false
-            operation(stringValue)
+            when (value) {
+                null -> false
+                is String -> operation(value)
+                else -> {
+                    val stringValue = value.toString()
+                    operation(stringValue)
+                }
+            }
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /**
+     * Safe type checking for JavaScript runtime.
+     */
+    fun isInstanceOf(obj: Any?, expectedType: String): Boolean {
+        return try {
+            when (expectedType) {
+                "TinkerVertex" -> obj is TinkerVertex
+                "TinkerEdge" -> obj is TinkerEdge
+                "TinkerGraph" -> obj is TinkerGraph
+                "TinkerVertexProperty" -> obj is TinkerVertexProperty<*>
+                else -> obj?.let { it::class.simpleName == expectedType } ?: false
+            }
         } catch (e: Exception) {
             false
         }

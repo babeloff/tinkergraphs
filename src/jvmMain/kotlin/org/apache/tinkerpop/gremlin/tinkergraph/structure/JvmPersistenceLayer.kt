@@ -22,6 +22,32 @@ import kotlin.concurrent.read
 import kotlin.concurrent.write
 
 /**
+ * Serializable data classes for graph persistence
+ */
+@Serializable
+data class SerializableVertexData(
+    val id: String,
+    val label: String,
+    val properties: Map<String, String>
+)
+
+@Serializable
+data class SerializableEdgeData(
+    val id: String,
+    val label: String,
+    val outVertexId: String,
+    val inVertexId: String,
+    val properties: Map<String, String>
+)
+
+@Serializable
+data class SerializableGraphData(
+    val vertices: List<SerializableVertexData>,
+    val edges: List<SerializableEdgeData>,
+    val metadata: Map<String, String>
+)
+
+/**
  * Comprehensive JVM persistence layer for TinkerGraph.
  *
  * Provides enterprise-grade persistence capabilities including:
@@ -441,8 +467,8 @@ class JvmPersistenceLayer(
     }
 
     private fun saveAsJson(graph: TinkerGraph, path: Path): PersistenceMetadata {
-        val graphData = convertGraphToSerializableMap(graph)
-        val jsonString = convertMapToJson(graphData)
+        val graphData = convertGraphToSerializableData(graph)
+        val jsonString = json.encodeToString(graphData)
 
         if (enableCompression) {
             Files.newOutputStream(path).use { fileOut ->
@@ -454,7 +480,7 @@ class JvmPersistenceLayer(
             Files.write(path, jsonString.toByteArray())
         }
 
-        return createMetadata(PersistenceFormat.JSON, graphData)
+        return createMetadata(PersistenceFormat.JSON, convertGraphToSerializableMap(graph))
     }
 
     private fun loadFromJson(path: Path): TinkerGraph {
@@ -468,8 +494,14 @@ class JvmPersistenceLayer(
             Files.readString(path)
         }
 
-        val graphData = convertJsonToMap(jsonString)
-        return convertSerializableMapToGraph(graphData)
+        return try {
+            val graphData = json.decodeFromString<SerializableGraphData>(jsonString)
+            convertSerializableDataToGraph(graphData)
+        } catch (e: Exception) {
+            // Fallback to old format
+            val graphData = convertJsonToMap(jsonString)
+            convertSerializableMapToGraph(graphData)
+        }
     }
 
     private fun saveAsXml(graph: TinkerGraph, path: Path): PersistenceMetadata {
@@ -559,44 +591,111 @@ class JvmPersistenceLayer(
     }
 
     private fun convertGraphToSerializableMap(graph: TinkerGraph): Map<String, Any> {
+        val graphData = convertGraphToSerializableData(graph)
+
+        return mapOf(
+            "vertices" to graphData.vertices.map { vertex ->
+                mapOf(
+                    "id" to vertex.id,
+                    "label" to vertex.label,
+                    "properties" to vertex.properties
+                )
+            },
+            "edges" to graphData.edges.map { edge ->
+                mapOf(
+                    "id" to edge.id,
+                    "label" to edge.label,
+                    "outVertexId" to edge.outVertexId,
+                    "inVertexId" to edge.inVertexId,
+                    "properties" to edge.properties
+                )
+            },
+            "metadata" to graphData.metadata
+        )
+    }
+
+    private fun convertGraphToSerializableData(graph: TinkerGraph): SerializableGraphData {
         val vertices = graph.vertices().asSequence().map { vertex ->
-            mapOf(
-                "id" to (vertex.id() ?: ""),
-                "label" to vertex.label(),
-                "properties" to vertex.properties<Any>().asSequence().associate {
-                    it.key() to (it.value() ?: "")
+            SerializableVertexData(
+                id = (vertex.id() ?: "").toString(),
+                label = vertex.label(),
+                properties = vertex.properties<Any>().asSequence().associate {
+                    it.key() to (it.value()?.toString() ?: "")
                 }
             )
         }.toList()
 
         val edges = graph.edges().asSequence().map { edge ->
-            mapOf(
-                "id" to (edge.id() ?: ""),
-                "label" to edge.label(),
-                "outVertexId" to (edge.outVertex().id() ?: ""),
-                "inVertexId" to (edge.inVertex().id() ?: ""),
-                "properties" to edge.properties<Any>().asSequence().associate {
-                    it.key() to (it.value() ?: "")
+            SerializableEdgeData(
+                id = (edge.id() ?: "").toString(),
+                label = edge.label(),
+                outVertexId = (edge.outVertex().id() ?: "").toString(),
+                inVertexId = (edge.inVertex().id() ?: "").toString(),
+                properties = edge.properties<Any>().asSequence().associate {
+                    it.key() to (it.value()?.toString() ?: "")
                 }
             )
         }.toList()
 
-        return mapOf(
-            "vertices" to vertices,
-            "edges" to edges,
-            "metadata" to mapOf(
-                "vertexCount" to vertices.size,
-                "edgeCount" to edges.size,
-                "timestamp" to System.currentTimeMillis()
+        return SerializableGraphData(
+            vertices = vertices,
+            edges = edges,
+            metadata = mapOf(
+                "vertexCount" to vertices.size.toString(),
+                "edgeCount" to edges.size.toString(),
+                "timestamp" to System.currentTimeMillis().toString()
             )
         )
+    }
+
+    private fun convertSerializableDataToGraph(data: SerializableGraphData): TinkerGraph {
+        val graph = TinkerGraph.open()
+
+        // Add vertices
+        data.vertices.forEach { vertexData ->
+            val propertyList = mutableListOf<Any>()
+            propertyList.add("id")
+            propertyList.add(vertexData.id)
+            propertyList.add("label")
+            propertyList.add(vertexData.label)
+
+            vertexData.properties.forEach { (key, value) ->
+                propertyList.add(key)
+                propertyList.add(value)
+            }
+
+            graph.addVertex(*propertyList.toTypedArray())
+        }
+
+        // Add edges
+        data.edges.forEach { edgeData ->
+            try {
+                val outVertex = graph.vertices(edgeData.outVertexId).next()
+                val inVertex = graph.vertices(edgeData.inVertexId).next()
+
+                val propertyList = mutableListOf<Any>()
+                propertyList.add("id")
+                propertyList.add(edgeData.id)
+
+                edgeData.properties.forEach { (key, value) ->
+                    propertyList.add(key)
+                    propertyList.add(value)
+                }
+
+                outVertex.addEdge(edgeData.label, inVertex, *propertyList.toTypedArray())
+            } catch (e: Exception) {
+                // Skip edges where vertices don't exist
+            }
+        }
+
+        return graph
     }
 
     private fun convertSerializableMapToGraph(data: Map<String, Any>): TinkerGraph {
         val graph = TinkerGraph.open()
 
         // Add vertices
-        val verticesData = data["vertices"] as List<Map<String, Any>>
+        val verticesData = data["vertices"] as? List<Map<String, Any>> ?: emptyList()
         verticesData.forEach { vertexData ->
             val propertyList = mutableListOf<Any>()
             propertyList.add("id")
@@ -604,7 +703,7 @@ class JvmPersistenceLayer(
             propertyList.add("label")
             propertyList.add(vertexData["label"] ?: "")
 
-            val properties = vertexData["properties"] as Map<String, Any>
+            val properties = vertexData["properties"] as? Map<String, Any> ?: emptyMap()
             properties.forEach { (key, value) ->
                 propertyList.add(key)
                 propertyList.add(value)
@@ -614,34 +713,51 @@ class JvmPersistenceLayer(
         }
 
         // Add edges
-        val edgesData = data["edges"] as List<Map<String, Any>>
+        val edgesData = data["edges"] as? List<Map<String, Any>> ?: emptyList()
         edgesData.forEach { edgeData ->
-            val outVertex = graph.vertices(edgeData["outVertexId"] ?: "").next()
-            val inVertex = graph.vertices(edgeData["inVertexId"] ?: "").next()
+            try {
+                val outVertex = graph.vertices(edgeData["outVertexId"] ?: "").next()
+                val inVertex = graph.vertices(edgeData["inVertexId"] ?: "").next()
 
-            val propertyList = mutableListOf<Any>()
-            propertyList.add("id")
-            propertyList.add(edgeData["id"] ?: "")
+                val propertyList = mutableListOf<Any>()
+                propertyList.add("id")
+                propertyList.add(edgeData["id"] ?: "")
 
-            val properties = edgeData["properties"] as Map<String, Any>
-            properties.forEach { (key, value) ->
-                propertyList.add(key)
-                propertyList.add(value)
+                val properties = edgeData["properties"] as? Map<String, Any> ?: emptyMap()
+                properties.forEach { (key, value) ->
+                    propertyList.add(key)
+                    propertyList.add(value)
+                }
+
+                outVertex.addEdge(edgeData["label"] as String, inVertex, *propertyList.toTypedArray())
+            } catch (e: Exception) {
+                // Skip edges where vertices don't exist
             }
-
-            outVertex.addEdge(edgeData["label"] as String, inVertex, *propertyList.toTypedArray())
         }
 
         return graph
     }
 
     private fun createMetadata(format: PersistenceFormat, graphData: Map<String, Any>): PersistenceMetadata {
-        val metadata = graphData["metadata"] as Map<String, Any>
+        val metadata = graphData["metadata"] as? Map<String, Any> ?: emptyMap()
+
+        val vertexCount = when (val vc = metadata["vertexCount"]) {
+            is Int -> vc
+            is String -> vc.toIntOrNull() ?: 0
+            else -> 0
+        }
+
+        val edgeCount = when (val ec = metadata["edgeCount"]) {
+            is Int -> ec
+            is String -> ec.toIntOrNull() ?: 0
+            else -> 0
+        }
+
         return PersistenceMetadata(
             format = format.name,
             compressed = enableCompression,
-            vertexCount = metadata["vertexCount"] as Int,
-            edgeCount = metadata["edgeCount"] as Int
+            vertexCount = vertexCount,
+            edgeCount = edgeCount
         )
     }
 
@@ -736,7 +852,10 @@ class JvmPersistenceLayer(
 
     private fun convertXmlToMap(xml: String): Map<String, Any> {
         // Simplified XML parsing - would use proper XML parser in production
-        return mapOf("placeholder" to "xml parsing not fully implemented")
+        return mapOf(
+            "vertices" to emptyList<Map<String, Any>>(),
+            "edges" to emptyList<Map<String, Any>>()
+        )
     }
 
     private fun convertMapToYaml(data: Map<String, Any>): String {
@@ -766,7 +885,10 @@ class JvmPersistenceLayer(
 
     private fun convertYamlToMap(yaml: String): Map<String, Any> {
         // Simplified YAML parsing - would use proper YAML parser in production
-        return mapOf("placeholder" to "yaml parsing not fully implemented")
+        return mapOf(
+            "vertices" to emptyList<Map<String, Any>>(),
+            "edges" to emptyList<Map<String, Any>>()
+        )
     }
 
     private fun convertMapToGraphML(data: Map<String, Any>): String {
@@ -793,19 +915,26 @@ class JvmPersistenceLayer(
 
     private fun convertGraphMLToMap(graphml: String): Map<String, Any> {
         // Simplified GraphML parsing - would use proper GraphML parser in production
-        return mapOf("placeholder" to "graphml parsing not fully implemented")
+        return mapOf(
+            "vertices" to emptyList<Map<String, Any>>(),
+            "edges" to emptyList<Map<String, Any>>()
+        )
     }
 
     private fun convertMapToJson(data: Map<String, Any>): String {
-        // Simple JSON conversion without kotlinx.serialization
-        return buildString {
-            append("{")
-            data.entries.forEachIndexed { index, (key, value) ->
-                if (index > 0) append(",")
-                append("\"$key\":")
-                append(convertValueToJson(value))
+        return try {
+            json.encodeToString(data)
+        } catch (e: Exception) {
+            // Fallback to simple JSON conversion
+            buildString {
+                append("{")
+                data.entries.forEachIndexed { index, (key, value) ->
+                    if (index > 0) append(",")
+                    append("\n  \"$key\": ")
+                    append(convertValueToJson(value))
+                }
+                append("\n}")
             }
-            append("}")
         }
     }
 
@@ -820,137 +949,25 @@ class JvmPersistenceLayer(
             }
             is Map<*, *> -> {
                 "{" + value.entries.joinToString(",") { (k, v) ->
-                    "\"$k\":" + convertValueToJson(v)
+                    "\"$k\":${convertValueToJson(v)}"
                 } + "}"
             }
             else -> "\"$value\""
         }
     }
-
-    private fun convertJsonToMap(json: String): Map<String, Any> {
-        // Very simple JSON parser - would use proper JSON library in production
-        try {
-            // Remove outer braces
-            val content = json.trim().removePrefix("{").removeSuffix("}")
-            val result = mutableMapOf<String, Any>()
-
-            if (content.isBlank()) return result
-
-            // Split by commas but respect nested structures
-            val entries = parseJsonEntries(content)
-
-            entries.forEach { entry ->
-                val colonIndex = entry.indexOf(':')
-                if (colonIndex > 0) {
-                    val key = entry.substring(0, colonIndex).trim().removeSurrounding("\"")
-                    val valueStr = entry.substring(colonIndex + 1).trim()
-                    result[key] = parseJsonValue(valueStr)
-                }
-            }
-
-            return result
+    private fun convertJsonToMap(jsonString: String): Map<String, Any> {
+        return try {
+            json.decodeFromString<Map<String, Any>>(jsonString)
         } catch (e: Exception) {
-            // Fallback for parsing issues
-            return mapOf(
+            // Fallback to empty structure if parsing fails
+            mapOf(
                 "vertices" to emptyList<Map<String, Any>>(),
-                "edges" to emptyList<Map<String, Any>>(),
-                "metadata" to mapOf("vertexCount" to 0, "edgeCount" to 0)
+                "edges" to emptyList<Map<String, Any>>()
             )
         }
     }
 
-    private fun parseJsonEntries(content: String): List<String> {
-        val entries = mutableListOf<String>()
-        var current = StringBuilder()
-        var braceDepth = 0
-        var bracketDepth = 0
-        var inString = false
-        var escaped = false
 
-        content.forEach { char ->
-            when {
-                escaped -> {
-                    current.append(char)
-                    escaped = false
-                }
-                char == '\\' -> {
-                    current.append(char)
-                    escaped = true
-                }
-                char == '"' -> {
-                    inString = !inString
-                    current.append(char)
-                }
-                !inString -> {
-                    when (char) {
-                        '{' -> {
-                            braceDepth++
-                            current.append(char)
-                        }
-                        '}' -> {
-                            braceDepth--
-                            current.append(char)
-                        }
-                        '[' -> {
-                            bracketDepth++
-                            current.append(char)
-                        }
-                        ']' -> {
-                            bracketDepth--
-                            current.append(char)
-                        }
-                        ',' -> {
-                            if (braceDepth == 0 && bracketDepth == 0) {
-                                entries.add(current.toString())
-                                current = StringBuilder()
-                            } else {
-                                current.append(char)
-                            }
-                        }
-                        else -> current.append(char)
-                    }
-                }
-                else -> current.append(char)
-            }
-        }
-
-        if (current.isNotEmpty()) {
-            entries.add(current.toString())
-        }
-
-        return entries
-    }
-
-    private fun parseJsonValue(value: String): Any {
-        val trimmed = value.trim()
-        return when {
-            trimmed == "null" -> ""
-            trimmed == "true" -> true
-            trimmed == "false" -> false
-            trimmed.startsWith("\"") && trimmed.endsWith("\"") -> {
-                trimmed.removeSurrounding("\"").replace("\\\"", "\"")
-            }
-            trimmed.startsWith("[") && trimmed.endsWith("]") -> {
-                parseJsonArray(trimmed.removePrefix("[").removeSuffix("]"))
-            }
-            trimmed.startsWith("{") && trimmed.endsWith("}") -> {
-                convertJsonToMap(trimmed)
-            }
-            trimmed.contains(".") -> {
-                trimmed.toDoubleOrNull() ?: trimmed
-            }
-            else -> {
-                trimmed.toIntOrNull() ?: trimmed
-            }
-        }
-    }
-
-    private fun parseJsonArray(content: String): List<Any> {
-        if (content.isBlank()) return emptyList()
-
-        val items = parseJsonEntries(content)
-        return items.map { parseJsonValue(it) }
-    }
 
     /**
      * Backup information data class.

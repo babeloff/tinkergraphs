@@ -1,0 +1,362 @@
+package org.apache.tinkerpop.gremlin.tinkergraph
+
+import org.apache.tinkerpop.gremlin.tinkergraph.javascript.*
+import org.apache.tinkerpop.gremlin.tinkergraph.structure.*
+import org.apache.tinkerpop.gremlin.structure.*
+import kotlin.test.*
+
+/**
+ * Comprehensive test suite for JavaScript platform-specific implementations.
+ *
+ * Tests the major components implemented in Prompt 3.2.1:
+ * - JavaScript-friendly APIs and adapters
+ * - Environment detection
+ * - Basic graph operations in JavaScript context
+ */
+class JavaScriptPlatformTest {
+
+    private lateinit var jsAdapter: TinkerGraphJSAdapter
+    private lateinit var graph: TinkerGraph
+
+    @BeforeTest
+    fun setUp() {
+        jsAdapter = TinkerGraphJSAdapter.open()
+        graph = jsAdapter.getGraph()
+    }
+
+    // ===== JavaScript Adapter Tests =====
+
+    @Test
+    fun testJavaScriptAdapterBasicOperations() {
+        console.log("Testing JavaScript adapter basic operations")
+
+        // Test vertex creation
+        val vertex1 = jsAdapter.addVertex("person")
+        assertNotNull(vertex1)
+        assertEquals("person", vertex1.label())
+        console.log("Vertex creation: OK")
+
+        // Test vertex with properties
+        val props = js("{}")
+        props.name = "John"
+        props.age = 30
+        val vertex2 = jsAdapter.addVertex("person", props)
+        assertNotNull(vertex2)
+        assertEquals("John", vertex2.property<String>("name").value())
+        assertEquals(30, vertex2.property<Int>("age").value())
+        console.log("Vertex creation with properties: OK")
+
+        // Test edge creation
+        val edge = jsAdapter.addEdge(vertex1, "knows", vertex2)
+        assertNotNull(edge)
+        assertEquals("knows", edge.label())
+        assertEquals(vertex1.id(), edge.outVertex().id())
+        assertEquals(vertex2.id(), edge.inVertex().id())
+        console.log("Edge creation: OK")
+
+        // Test finding vertices and edges
+        val allVertices = jsAdapter.vertices()
+        assertEquals(2, allVertices.size)
+        console.log("Vertex retrieval: Found ${allVertices.size} vertices")
+
+        val allEdges = jsAdapter.edges()
+        assertEquals(1, allEdges.size)
+        console.log("Edge retrieval: Found ${allEdges.size} edges")
+    }
+
+    @Test
+    fun testJavaScriptAdapterPropertyQueries() {
+        console.log("Testing JavaScript adapter property queries")
+
+        // Set up test data
+        val vertex1 = jsAdapter.addVertex("person")
+        vertex1.property("name", "Alice")
+        vertex1.property("age", 25)
+
+        val vertex2 = jsAdapter.addVertex("person")
+        vertex2.property("name", "Bob")
+        vertex2.property("age", 30)
+
+        val edge = jsAdapter.addEdge(vertex1, "knows", vertex2)
+        edge.property("since", 2020)
+
+        // Test vertex property queries
+        val aliceVertices = jsAdapter.findVerticesByProperty("name", "Alice")
+        assertEquals(1, aliceVertices.size)
+        assertEquals("Alice", aliceVertices[0].property<String>("name").value())
+        console.log("Vertex property query: Found Alice")
+
+        val ageVertices = jsAdapter.findVerticesByProperty("age", 25)
+        assertEquals(1, ageVertices.size)
+        console.log("Vertex property query by age: OK")
+
+        // Test edge property queries
+        val recentEdges = jsAdapter.findEdgesByProperty("since", 2020)
+        assertEquals(1, recentEdges.size)
+        console.log("Edge property query: Found recent edge")
+    }
+
+    @Test
+    fun testJavaScriptAdapterJSONSerialization() {
+        console.log("Testing JavaScript adapter JSON serialization")
+
+        // Create test graph
+        val vertex1 = jsAdapter.addVertex("person")
+        vertex1.property("name", "Alice")
+        vertex1.property("age", 30)
+
+        val vertex2 = jsAdapter.addVertex("person")
+        vertex2.property("name", "Bob")
+        vertex2.property("age", 25)
+
+        val edge = jsAdapter.addEdge(vertex1, "knows", vertex2)
+        edge.property("since", 2020)
+        edge.property("strength", 0.8)
+
+        // Test JSON export
+        val jsonString = jsAdapter.toJSON()
+        assertNotNull(jsonString)
+        assertTrue(jsonString.isNotEmpty())
+        console.log("JSON serialization completed, length: ${jsonString.length}")
+
+        // Verify JSON contains expected data
+        val jsonData = JSON.parse(jsonString)
+        assertNotNull(jsonData.vertices)
+        assertNotNull(jsonData.edges)
+        console.log("JSON structure validation: OK")
+    }
+
+    @Test
+    fun testJavaScriptAdapterStatistics() {
+        console.log("Testing JavaScript adapter statistics")
+
+        // Create test data
+        val vertex1 = jsAdapter.addVertex("person")
+        val vertex2 = jsAdapter.addVertex("company")
+        val edge = jsAdapter.addEdge(vertex1, "worksAt", vertex2)
+
+        // Get statistics
+        val stats = jsAdapter.getStatistics()
+        assertNotNull(stats)
+        assertEquals(2, stats.vertexCount)
+        assertEquals(1, stats.edgeCount)
+        console.log("Statistics: ${stats.vertexCount} vertices, ${stats.edgeCount} edges")
+    }
+
+    @Test
+    fun testJavaScriptAdapterElementRetrieval() {
+        console.log("Testing JavaScript adapter element retrieval")
+
+        // Create test elements
+        val vertex = jsAdapter.addVertex("test")
+        val vertexId = vertex.id()
+
+        val vertex2 = jsAdapter.addVertex("test2")
+        val edge = jsAdapter.addEdge(vertex, "connects", vertex2)
+        val edgeId = edge.id()
+
+        // Test vertex retrieval by ID
+        val retrievedVertex = jsAdapter.getVertex(vertexId)
+        assertNotNull(retrievedVertex)
+        assertEquals(vertexId, retrievedVertex.id())
+        console.log("Vertex retrieval by ID: OK")
+
+        // Test edge retrieval by ID
+        val retrievedEdge = jsAdapter.getEdge(edgeId)
+        assertNotNull(retrievedEdge)
+        assertEquals(edgeId, retrievedEdge.id())
+        console.log("Edge retrieval by ID: OK")
+
+        // Test non-existent element retrieval
+        val nonExistent = jsAdapter.getVertex("nonexistent")
+        assertNull(nonExistent)
+        console.log("Non-existent element handling: OK")
+    }
+
+    // ===== JavaScript Wrapper Tests =====
+
+    @Test
+    fun testJSVertexWrapper() {
+        console.log("Testing JS Vertex wrapper")
+
+        val vertex = jsAdapter.addVertex("person")
+        val jsVertex = JSVertex(vertex)
+
+        // Test basic properties
+        assertEquals(vertex.id(), jsVertex.getId())
+        assertEquals("person", jsVertex.getLabel())
+
+        // Test property operations
+        jsVertex.setProperty("name", "Alice")
+        assertEquals("Alice", jsVertex.getProperty("name"))
+
+        jsVertex.setProperty("age", 30)
+        assertEquals(30, jsVertex.getProperty("age"))
+
+        // Test properties object
+        val props = jsVertex.getProperties()
+        assertNotNull(props)
+        assertEquals("Alice", props.name)
+        assertEquals(30, props.age)
+        console.log("JS Vertex wrapper: OK")
+    }
+
+    @Test
+    fun testJSEdgeWrapper() {
+        console.log("Testing JS Edge wrapper")
+
+        val vertex1 = jsAdapter.addVertex("person")
+        val vertex2 = jsAdapter.addVertex("person")
+        val edge = jsAdapter.addEdge(vertex1, "knows", vertex2)
+        val jsEdge = JSEdge(edge)
+
+        // Test basic properties
+        assertEquals(edge.id(), jsEdge.getId())
+        assertEquals("knows", jsEdge.getLabel())
+
+        // Test vertex access
+        assertEquals(vertex1.id(), jsEdge.getOutVertex().getId())
+        assertEquals(vertex2.id(), jsEdge.getInVertex().getId())
+
+        // Test property operations
+        jsEdge.setProperty("since", 2020)
+        assertEquals(2020, jsEdge.getProperty("since"))
+
+        // Test properties object
+        val props = jsEdge.getProperties()
+        assertNotNull(props)
+        assertEquals(2020, props.since)
+        console.log("JS Edge wrapper: OK")
+    }
+
+    // ===== Environment Detection Tests =====
+
+    @Test
+    fun testEnvironmentDetection() {
+        console.log("Testing environment detection")
+
+        val isJS = TinkerGraphJSAdapter.isJavaScriptEnvironment()
+        console.log("JavaScript environment detected: $isJS")
+
+        val hasLocalStorage = TinkerGraphJSAdapter.hasLocalStorage()
+        console.log("LocalStorage available: $hasLocalStorage")
+
+        val hasIndexedDB = TinkerGraphJSAdapter.hasIndexedDB()
+        console.log("IndexedDB available: $hasIndexedDB")
+
+        // These tests will vary based on the runtime environment
+        // In Node.js test environment, localStorage and IndexedDB may not be available
+    }
+
+    // ===== Integration Tests =====
+
+    @Test
+    fun testGraphClearOperation() {
+        console.log("Testing graph clear operation")
+
+        // Add test data
+        val vertex1 = jsAdapter.addVertex("test")
+        val vertex2 = jsAdapter.addVertex("test")
+        jsAdapter.addEdge(vertex1, "connects", vertex2)
+
+        val statsBefore = jsAdapter.getStatistics()
+        assertEquals(2, statsBefore.vertexCount)
+        assertEquals(1, statsBefore.edgeCount)
+
+        // Clear graph
+        jsAdapter.clear()
+
+        val statsAfter = jsAdapter.getStatistics()
+        assertEquals(0, statsAfter.vertexCount)
+        assertEquals(0, statsAfter.edgeCount)
+        console.log("Graph clear operation: OK")
+    }
+
+    @Test
+    fun testAsyncOperations() {
+        console.log("Testing async operations")
+
+        val savePromise = jsAdapter.saveAsync()
+        assertNotNull(savePromise)
+        console.log("Async save operation created: OK")
+
+        // Note: In a real implementation, we would await the promise
+        // For testing, we just verify the promise was created
+    }
+
+    @Test
+    fun testErrorHandling() {
+        console.log("Testing error handling")
+
+        try {
+            // Test property access on non-existent property
+            val vertex = jsAdapter.addVertex("test")
+            val jsVertex = JSVertex(vertex)
+            val nonExistentProp = jsVertex.getProperty("nonexistent")
+            assertNull(nonExistentProp)
+            console.log("Non-existent property handling: OK")
+
+        } catch (e: Exception) {
+            console.log("Error handling test error (expected): ${e.message}")
+        }
+    }
+
+    @Test
+    fun testPlatformSpecificOperations() {
+        console.log("Testing platform-specific operations")
+
+        // Test JavaScript-specific dynamic property assignment
+        val vertex = jsAdapter.addVertex("dynamic")
+        val props = js("{}")
+        props.dynamicProp = "dynamic value"
+        props.numberProp = 42
+        props.booleanProp = true
+
+        // This tests that our adapter can handle dynamic JavaScript objects
+        val vertexWithDynamicProps = jsAdapter.addVertex("test", props)
+        assertNotNull(vertexWithDynamicProps)
+        console.log("Dynamic property assignment: OK")
+    }
+
+    // ===== Performance Tests =====
+
+    @Test
+    fun testPerformance() {
+        console.log("Testing performance characteristics")
+
+        val startTime = kotlin.js.Date()
+
+        // Create a moderately sized graph
+        val vertices = mutableListOf<TinkerVertex>()
+        for (i in 1..100) {
+            val vertex = jsAdapter.addVertex("node_$i")
+            vertex.property("index", i)
+            vertex.property("name", "Node $i")
+            vertices.add(vertex)
+        }
+
+        // Create some edges
+        for (i in 0 until vertices.size - 1) {
+            jsAdapter.addEdge(vertices[i], "connects", vertices[i + 1])
+        }
+
+        val endTime = kotlin.js.Date()
+        val duration = endTime.getTime() - startTime.getTime()
+
+        val stats = jsAdapter.getStatistics()
+        console.log("Performance test: Created ${stats.vertexCount} vertices and ${stats.edgeCount} edges in ${duration}ms")
+
+        assertTrue(stats.vertexCount >= 100)
+        assertTrue(stats.edgeCount >= 99)
+    }
+
+    @AfterTest
+    fun tearDown() {
+        try {
+            jsAdapter.clear()
+            graph.close()
+        } catch (e: Exception) {
+            console.log("Cleanup error: ${e.message}")
+        }
+    }
+}
