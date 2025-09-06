@@ -64,4 +64,12 @@ actual object Platform {
             // Busy wait
         }
     }
+
+    actual fun timeDifference(start: Long, end: Long): Long {
+        return end - start
+    }
+
+    actual fun timeComparison(duration: Long, threshold: Long): Boolean {
+        return duration > threshold
+    }
 }

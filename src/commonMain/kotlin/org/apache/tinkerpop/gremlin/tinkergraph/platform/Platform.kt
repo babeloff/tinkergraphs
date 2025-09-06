@@ -33,4 +33,14 @@ expect object Platform {
      * Sleep for the specified number of milliseconds.
      */
     fun sleep(millis: Long)
+
+    /**
+     * Helper method to safely calculate time differences across platforms.
+     */
+    fun timeDifference(start: Long, end: Long): Long
+
+    /**
+     * Helper method to safely compare time values across platforms.
+     */
+    fun timeComparison(duration: Long, threshold: Long): Boolean
 }

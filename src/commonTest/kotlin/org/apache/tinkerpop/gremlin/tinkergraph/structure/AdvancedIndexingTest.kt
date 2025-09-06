@@ -3,6 +3,7 @@ package org.apache.tinkerpop.gremlin.tinkergraph.structure
 import org.apache.tinkerpop.gremlin.structure.Vertex
 import org.apache.tinkerpop.gremlin.structure.VertexProperty
 import org.apache.tinkerpop.gremlin.tinkergraph.platform.Platform
+import org.apache.tinkerpop.gremlin.tinkergraph.util.SafeCasting
 import kotlin.test.*
 
 /**
@@ -26,35 +27,35 @@ class AdvancedIndexingTest {
 
     private fun setupTestData() {
         // Create test vertices with various properties
-        val alice = graph.addVertex() as TinkerVertex
+        val alice = SafeCasting.safeCastVertex(graph.addVertex())
         alice.property("name", "Alice")
         alice.property("age", 25)
         alice.property("city", "New York")
         alice.property("salary", 75000)
         alice.property("department", "Engineering")
 
-        val bob = graph.addVertex() as TinkerVertex
+        val bob = SafeCasting.safeCastVertex(graph.addVertex())
         bob.property("name", "Bob")
         bob.property("age", 30)
         bob.property("city", "San Francisco")
         bob.property("salary", 95000)
         bob.property("department", "Engineering")
 
-        val charlie = graph.addVertex() as TinkerVertex
+        val charlie = SafeCasting.safeCastVertex(graph.addVertex())
         charlie.property("name", "Charlie")
         charlie.property("age", 35)
         charlie.property("city", "New York")
         charlie.property("salary", 85000)
         charlie.property("department", "Marketing")
 
-        val diana = graph.addVertex() as TinkerVertex
+        val diana = SafeCasting.safeCastVertex(graph.addVertex())
         diana.property("name", "Diana")
         diana.property("age", 28)
         diana.property("city", "Chicago")
         diana.property("salary", 70000)
         diana.property("department", "Marketing")
 
-        val eve = graph.addVertex() as TinkerVertex
+        val eve = SafeCasting.safeCastVertex(graph.addVertex())
         eve.property("name", "Eve")
         eve.property("age", 32)
         eve.property("city", "San Francisco")
@@ -149,10 +150,12 @@ class AdvancedIndexingTest {
         val youngPeople = RangeIndex.safeRangeQuery(graph.vertexRangeIndex, "age", 20, 30, true, false)
         println("Young people found (age [20, 30]): ${youngPeople.size}")
         youngPeople.forEach { vertex ->
-            val v = vertex as TinkerVertex
-            val name = v.value<String>("name")
-            val age = v.value<Int>("age")
-            println("  Found: $name, Age: $age")
+            val v = SafeCasting.asTinkerVertex(vertex)
+            if (v != null) {
+                val name = v.value<String>("name")
+                val age = v.value<Int>("age")
+                println("  Found: $name, Age: $age")
+            }
         }
         assertEquals(2, youngPeople.size)
         val youngNames = youngPeople.map { it.value<String>("name") }.sortedBy { it }
@@ -298,20 +301,24 @@ class AdvancedIndexingTest {
         println("=== DIAGNOSTIC TEST ===")
 
         // Verify setup data exists
+        // Test direct queries vs. index queries
         val allVertices = graph.vertices().asSequence().toList()
-        println("Total vertices in graph: ${allVertices.size}")
+        println("Total vertices: ${allVertices.size}")
 
         allVertices.forEach { vertex ->
-            val v = vertex as TinkerVertex
-            val name = v.value<String>("name")
-            val dept = v.value<String>("department")
-            println("Vertex: $name, Department: $dept, Keys: ${v.keys()}")
+            val v = SafeCasting.asTinkerVertex(vertex)
+            if (v != null) {
+                val name = v.value<String>("name")
+                val dept = v.value<String>("department")
+                val age = v.value<Int>("age")
+                println("  Vertex: $name, Department: $dept, Age: $age")
+            }
         }
 
         // Test direct property access
         val engineersCount = allVertices.count { vertex ->
-            val v = vertex as TinkerVertex
-            v.value<String>("department") == "Engineering"
+            val v = SafeCasting.asTinkerVertex(vertex)
+            v?.value<String>("department") == "Engineering"
         }
         println("Engineers found via direct access: $engineersCount")
 
@@ -348,11 +355,13 @@ class AdvancedIndexingTest {
         val allVertices = graph.vertices().asSequence().toList()
         println("Total vertices: ${allVertices.size}")
         allVertices.forEach { vertex ->
-            val v = vertex as TinkerVertex
-            val name = v.value<String>("name")
-            val dept = v.value<String>("department")
-            val age = v.value<Int>("age")
-            println("  Vertex: $name, Department: $dept, Age: $age")
+            val v = SafeCasting.asTinkerVertex(vertex)
+            if (v != null) {
+                val name = v.value<String>("name")
+                val dept = v.value<String>("department")
+                val age = v.value<Int>("age")
+                println("  Vertex: $name, Department: $dept, Age: $age")
+            }
         }
 
         // Test query WITHOUT indices first
@@ -375,8 +384,10 @@ class AdvancedIndexingTest {
         ).asSequence().toList()
         println("Engineers found POST-index: ${engineers.size}")
         engineers.forEach { vertex ->
-            val v = vertex as TinkerVertex
-            println("  Found engineer: ${v.value<String>("name")}")
+            val v = SafeCasting.asTinkerVertex(vertex)
+            if (v != null) {
+                println("  Found engineer: ${v.value<String>("name")}")
+            }
         }
 
         assertEquals(3, engineers.size)
@@ -385,10 +396,12 @@ class AdvancedIndexingTest {
         val youngPeople = queryEngine.queryVerticesByRange("age", 20, 30, true).asSequence().toList()
         println("Young people found (age 20-30): ${youngPeople.size}")
         youngPeople.forEach { vertex ->
-            val v = vertex as TinkerVertex
-            val name = v.value<String>("name")
-            val age = v.value<Int>("age")
-            println("  Found young person: $name, Age: $age")
+            val v = SafeCasting.asTinkerVertex(vertex)
+            if (v != null) {
+                val name = v.value<String>("name")
+                val age = v.value<Int>("age")
+                println("  Found young person: $name, Age: $age")
+            }
         }
         assertEquals(2, youngPeople.size)
 
@@ -472,8 +485,8 @@ class AdvancedIndexingTest {
     @Test
     fun testEdgeIndexing() {
         // Create some edges
-        val alice = graph.vertices().next() as TinkerVertex
-        val bob = graph.vertices().next() as TinkerVertex
+        val alice = SafeCasting.asTinkerVertex(graph.vertices().next())!!
+        val bob = SafeCasting.asTinkerVertex(graph.vertices().next())!!
 
         val edge1 = alice.addEdge("knows", bob)
         edge1.property("since", 2020)
@@ -504,7 +517,7 @@ class AdvancedIndexingTest {
     fun testLargeDatasetPerformance() {
         // Create a larger dataset
         repeat(100) { i ->
-            val vertex = graph.addVertex() as TinkerVertex
+            val vertex = SafeCasting.safeCastVertex(graph.addVertex())
             vertex.property("id", i)
             vertex.property("category", "category_${i % 10}")
             vertex.property("value", i * 10)
@@ -541,9 +554,7 @@ class AdvancedIndexingTest {
         graph.createRangeIndex("salary", Vertex::class)
         graph.createCompositeIndex(listOf("department", "city"), Vertex::class)
 
-        val alice = graph.vertices().asSequence()
-            .map { it as TinkerVertex }
-            .find { it.value<String>("name") == "Alice" }!!
+        val alice = SafeCasting.findVertexByName(graph.vertices().asSequence(), "Alice")!!
 
         // Update Alice's properties
         alice.property("department", "Management")

@@ -1,6 +1,7 @@
 package org.apache.tinkerpop.gremlin.tinkergraph.structure
 
 import org.apache.tinkerpop.gremlin.structure.Vertex
+import org.apache.tinkerpop.gremlin.tinkergraph.util.SafeCasting
 import kotlin.test.*
 
 /**
@@ -25,7 +26,7 @@ class IndexDebugTest {
         println("=== Testing Basic Property and Index ===")
 
         // Step 1: Create vertex and add property
-        val alice = graph.addVertex() as TinkerVertex
+        val alice = SafeCasting.safeCastVertex(graph.addVertex())
         alice.property("department", "Engineering")
         alice.property("name", "Alice")
 
@@ -69,7 +70,7 @@ class IndexDebugTest {
         assertEquals(1, engineersAfterIndex.size, "Should find 1 engineer with index")
 
         // Step 7: Verify the vertex is the same
-        val foundVertex = engineersAfterIndex.first() as TinkerVertex
+        val foundVertex = SafeCasting.asTinkerVertex(engineersAfterIndex.first())!!
         println("  Found vertex name: ${foundVertex.value<String>("name")}")
         assertEquals("Alice", foundVertex.value<String>("name"))
     }
@@ -79,15 +80,15 @@ class IndexDebugTest {
         println("\n=== Testing Multiple Vertices and Index ===")
 
         // Create test data (exactly like AdvancedIndexingTest)
-        val alice = graph.addVertex() as TinkerVertex
+        val alice = SafeCasting.safeCastVertex(graph.addVertex())
         alice.property("name", "Alice")
         alice.property("department", "Engineering")
 
-        val bob = graph.addVertex() as TinkerVertex
+        val bob = SafeCasting.safeCastVertex(graph.addVertex())
         bob.property("name", "Bob")
         bob.property("department", "Engineering")
 
-        val charlie = graph.addVertex() as TinkerVertex
+        val charlie = SafeCasting.safeCastVertex(graph.addVertex())
         charlie.property("name", "Charlie")
         charlie.property("department", "Marketing")
 
@@ -115,8 +116,10 @@ class IndexDebugTest {
         println("Engineers after index: ${engineersAfterIndex.size}")
 
         engineersAfterIndex.forEach { vertex ->
-            val v = vertex as TinkerVertex
-            println("  Found: ${v.value<String>("name")}")
+            val v = SafeCasting.asTinkerVertex(vertex)
+            if (v != null) {
+                println("  Found: ${v.value<String>("name")}")
+            }
         }
 
         assertEquals(2, engineersAfterIndex.size, "Should find 2 engineers")
@@ -127,7 +130,7 @@ class IndexDebugTest {
         println("\n=== Testing Index Internals ===")
 
         // Create vertex with property
-        val vertex = graph.addVertex() as TinkerVertex
+        val vertex = SafeCasting.safeCastVertex(graph.addVertex())
         vertex.property("testKey", "testValue")
 
         // Check vertex index before creating index
@@ -157,7 +160,7 @@ class IndexDebugTest {
 
         // Create vertices with properties
         val vertices = (1..3).map { i ->
-            val vertex = graph.addVertex() as TinkerVertex
+            val vertex = SafeCasting.safeCastVertex(graph.addVertex())
             vertex.property("number", i)
             vertex.property("category", if (i % 2 == 0) "even" else "odd")
             vertex
@@ -166,7 +169,7 @@ class IndexDebugTest {
         println("Created ${vertices.size} vertices")
 
         // Manually test the rebuild process
-        val allVertices = graph.vertices().asSequence().map { it as TinkerVertex }.toList()
+        val allVertices = graph.vertices().asSequence().mapNotNull { SafeCasting.asTinkerVertex(it) }.toList()
         println("Total vertices in graph: ${allVertices.size}")
 
         // Check each vertex's properties

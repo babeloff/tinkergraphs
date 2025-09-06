@@ -1,5 +1,6 @@
 package org.apache.tinkerpop.gremlin.tinkergraph.structure
 
+import org.apache.tinkerpop.gremlin.tinkergraph.util.SafeCasting
 import kotlin.test.*
 
 /**
@@ -23,7 +24,7 @@ class PropertyDiagnosticTest {
     @Test
     fun testBasicPropertySetting() {
         // Test 1: Create vertex and add properties one by one
-        val vertex = graph.addVertex() as TinkerVertex
+        val vertex = SafeCasting.safeCastVertex(graph.addVertex())
 
         // Add properties
         vertex.property("name", "Alice")
@@ -46,7 +47,7 @@ class PropertyDiagnosticTest {
     @Test
     fun testVertexWithInitialProperties() {
         // Test 2: Create vertex with initial properties
-        val vertex = graph.addVertex("name", "Bob", "age", 30) as TinkerVertex
+        val vertex = SafeCasting.safeCastVertex(graph.addVertex("name", "Bob", "age", 30))
 
         // Verify initial properties
         assertEquals("Bob", vertex.value<String>("name"))
@@ -60,15 +61,15 @@ class PropertyDiagnosticTest {
     @Test
     fun testPropertyQuery() {
         // Test 3: Create multiple vertices and query by property
-        val alice = graph.addVertex() as TinkerVertex
+        val alice = SafeCasting.safeCastVertex(graph.addVertex())
         alice.property("name", "Alice")
         alice.property("department", "Engineering")
 
-        val bob = graph.addVertex() as TinkerVertex
+        val bob = SafeCasting.safeCastVertex(graph.addVertex())
         bob.property("name", "Bob")
         bob.property("department", "Engineering")
 
-        val charlie = graph.addVertex() as TinkerVertex
+        val charlie = SafeCasting.safeCastVertex(graph.addVertex())
         charlie.property("name", "Charlie")
         charlie.property("department", "Marketing")
 
@@ -77,21 +78,20 @@ class PropertyDiagnosticTest {
         assertEquals(3, allVertices.size)
 
         // Verify each vertex has properties
-        val aliceFromGraph = allVertices.find { (it as TinkerVertex).value<String>("name") == "Alice" } as TinkerVertex?
+        val aliceFromGraph = SafeCasting.findVertexByName(allVertices.asSequence(), "Alice")
         assertNotNull(aliceFromGraph)
         assertEquals("Engineering", aliceFromGraph.value<String>("department"))
 
         // Count engineering department
-        val engineers = allVertices.filter {
-            (it as TinkerVertex).value<String>("department") == "Engineering"
-        }
+        val engineers = allVertices.mapNotNull { SafeCasting.asTinkerVertex(it) }
+            .filter { it.value<String>("department") == "Engineering" }
         assertEquals(2, engineers.size)
     }
 
     @Test
     fun testVertexProperties() {
         // Test 4: Test getVertexProperties method specifically
-        val vertex = graph.addVertex() as TinkerVertex
+        val vertex = SafeCasting.safeCastVertex(graph.addVertex())
         vertex.property("name", "Diana")
         vertex.property("age", 28)
 
@@ -112,7 +112,7 @@ class PropertyDiagnosticTest {
     @Test
     fun testPropertyUpdateSingleCardinality() {
         // Test 5: Test property updates with SINGLE cardinality
-        val vertex = graph.addVertex() as TinkerVertex
+        val vertex = SafeCasting.safeCastVertex(graph.addVertex())
 
         // Set initial property
         vertex.property("status", "active")
@@ -132,35 +132,35 @@ class PropertyDiagnosticTest {
         // Test 6: Test PropertyQueryEngine with exact same setup as failing AdvancedIndexingTest
 
         // Create test vertices with various properties (same as AdvancedIndexingTest)
-        val alice = graph.addVertex() as TinkerVertex
+        val alice = SafeCasting.safeCastVertex(graph.addVertex())
         alice.property("name", "Alice")
         alice.property("age", 25)
         alice.property("city", "New York")
         alice.property("salary", 75000)
         alice.property("department", "Engineering")
 
-        val bob = graph.addVertex() as TinkerVertex
+        val bob = SafeCasting.safeCastVertex(graph.addVertex())
         bob.property("name", "Bob")
         bob.property("age", 30)
         bob.property("city", "San Francisco")
         bob.property("salary", 95000)
         bob.property("department", "Engineering")
 
-        val eve = graph.addVertex() as TinkerVertex
+        val eve = SafeCasting.safeCastVertex(graph.addVertex())
         eve.property("name", "Eve")
         eve.property("age", 32)
         eve.property("city", "San Francisco")
         eve.property("salary", 105000)
         eve.property("department", "Engineering")
 
-        val charlie = graph.addVertex() as TinkerVertex
+        val charlie = SafeCasting.safeCastVertex(graph.addVertex())
         charlie.property("name", "Charlie")
         charlie.property("age", 35)
         charlie.property("city", "New York")
         charlie.property("salary", 85000)
         charlie.property("department", "Marketing")
 
-        val diana = graph.addVertex() as TinkerVertex
+        val diana = SafeCasting.safeCastVertex(graph.addVertex())
         diana.property("name", "Diana")
         diana.property("age", 28)
         diana.property("city", "Chicago")
@@ -185,10 +185,12 @@ class PropertyDiagnosticTest {
         println("Verifying properties after index creation:")
         val allVerticesAfterIndex = graph.vertices().asSequence().toList()
         allVerticesAfterIndex.forEach { vertex ->
-            val v = vertex as TinkerVertex
-            val name = v.value<String>("name")
-            val dept = v.value<String>("department")
-            println("  Vertex: $name, Department: $dept")
+            val v = SafeCasting.asTinkerVertex(vertex)
+            if (v != null) {
+                val name = v.value<String>("name")
+                val dept = v.value<String>("department")
+                println("  Vertex: $name, Department: $dept")
+            }
         }
 
         // Test PropertyQueryEngine exact match
@@ -213,10 +215,12 @@ class PropertyDiagnosticTest {
             println("ERROR: Expected 3 engineers but found ${engineers.size}")
             println("All vertices in graph:")
             graph.vertices().asSequence().forEach { vertex ->
-                val v = vertex as TinkerVertex
-                println("  ID: ${v.id()}, Keys: ${v.keys()}")
-                v.keys().forEach { key ->
-                    println("    $key: ${v.value<Any>(key)}")
+                val v = SafeCasting.asTinkerVertex(vertex)
+                if (v != null) {
+                    println("  ID: ${v.id()}, Keys: ${v.keys()}")
+                    v.keys().forEach { key ->
+                        println("    $key: ${v.value<Any>(key)}")
+                    }
                 }
             }
         }

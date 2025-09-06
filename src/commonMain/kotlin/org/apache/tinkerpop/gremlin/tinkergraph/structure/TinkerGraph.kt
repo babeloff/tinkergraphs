@@ -4,6 +4,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import org.apache.tinkerpop.gremlin.structure.*
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.iterators.TinkerVertexIterator
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.iterators.TinkerEdgeIterator
+import org.apache.tinkerpop.gremlin.tinkergraph.util.SafeCasting
 import kotlin.reflect.KClass
 
 /**
@@ -259,8 +260,8 @@ class TinkerGraph private constructor(
      */
     internal fun removeEdge(edge: TinkerEdge) {
         // Remove from vertex adjacency lists
-        (edge.outVertex() as TinkerVertex).removeOutEdge(edge)
-        (edge.inVertex() as TinkerVertex).removeInEdge(edge)
+        SafeCasting.asTinkerVertex(edge.outVertex())?.removeOutEdge(edge)
+        SafeCasting.asTinkerVertex(edge.inVertex())?.removeInEdge(edge)
 
         // Remove from edge index
         edgeIndex.removeElement(edge)

@@ -6,6 +6,7 @@ import org.apache.tinkerpop.gremlin.structure.Vertex
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerEdge
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerVertex
+import org.apache.tinkerpop.gremlin.tinkergraph.util.SafeCasting
 
 /**
  * A memory-efficient iterator for TinkerGraph edges that supports lazy evaluation,
@@ -132,7 +133,7 @@ class TinkerEdgeIterator(
             vararg edgeLabels: String
         ): TinkerEdgeIterator {
             return TinkerEdgeIterator(
-                graph = vertex.graph() as TinkerGraph,
+                graph = SafeCasting.asTinkerGraph(vertex.graph()) ?: throw IllegalStateException("Expected TinkerGraph"),
                 direction = direction,
                 edgeLabels = edgeLabels.toSet(),
                 sourceVertex = vertex

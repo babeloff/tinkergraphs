@@ -8,6 +8,7 @@ import org.apache.tinkerpop.gremlin.structure.VertexProperty
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerVertex
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerEdge
+import org.apache.tinkerpop.gremlin.tinkergraph.util.SafeCasting
 
 /**
  * Comprehensive tests for TinkerGraph traversal iterators.
@@ -165,7 +166,7 @@ class TinkerIteratorTest {
     @Test
     fun testTinkerEdgeIteratorFromVertex() {
         // Test outgoing edges
-        val outIterator = TinkerEdgeIterator.fromVertex(v1 as TinkerVertex, Direction.OUT)
+        val outIterator = TinkerEdgeIterator.fromVertex(SafeCasting.safeCastVertex(v1), Direction.OUT)
         val outEdges = mutableListOf<Edge>()
 
         while (outIterator.hasNext()) {
@@ -177,7 +178,7 @@ class TinkerIteratorTest {
         assertTrue(outEdges.contains(e3))
 
         // Test incoming edges
-        val inIterator = TinkerEdgeIterator.fromVertex(v2 as TinkerVertex, Direction.IN)
+        val inIterator = TinkerEdgeIterator.fromVertex(SafeCasting.safeCastVertex(v2), Direction.IN)
         val inEdges = mutableListOf<Edge>()
 
         while (inIterator.hasNext()) {
@@ -312,7 +313,7 @@ class TinkerIteratorTest {
 
     @Test
     fun testTinkerVertexTraversingIteratorOut() {
-        val iterator = TinkerVertexTraversingIterator.outVertices(v1 as TinkerVertex)
+        val iterator = TinkerVertexTraversingIterator.outVertices(SafeCasting.safeCastVertex(v1))
         val vertices = mutableListOf<Vertex>()
 
         while (iterator.hasNext()) {
@@ -328,7 +329,7 @@ class TinkerIteratorTest {
 
     @Test
     fun testTinkerVertexTraversingIteratorIn() {
-        val iterator = TinkerVertexTraversingIterator.inVertices(v2 as TinkerVertex)
+        val iterator = TinkerVertexTraversingIterator.inVertices(SafeCasting.safeCastVertex(v2))
         val vertices = mutableListOf<Vertex>()
 
         while (iterator.hasNext()) {
@@ -341,7 +342,7 @@ class TinkerIteratorTest {
 
     @Test
     fun testTinkerVertexTraversingIteratorBoth() {
-        val iterator = TinkerVertexTraversingIterator.bothVertices(v2 as TinkerVertex)
+        val iterator = TinkerVertexTraversingIterator.bothVertices(SafeCasting.safeCastVertex(v2))
         val vertices = mutableListOf<Vertex>()
 
         while (iterator.hasNext()) {
@@ -357,7 +358,7 @@ class TinkerIteratorTest {
 
     @Test
     fun testTinkerVertexTraversingIteratorWithLabels() {
-        val iterator = TinkerVertexTraversingIterator.outVertices(v1 as TinkerVertex, "knows")
+        val iterator = TinkerVertexTraversingIterator.outVertices(SafeCasting.safeCastVertex(v1), "knows")
         val vertices = mutableListOf<Vertex>()
 
         while (iterator.hasNext()) {

@@ -167,7 +167,7 @@ class PropertyQueryEngine(private val graph: TinkerGraph) {
      * Find vertices with duplicate property values (useful for SET cardinality validation).
      */
     fun findVerticesWithDuplicateProperties(key: String): Iterator<TinkerVertex> {
-        val allVertices = graph.vertices().asSequence().map { it as TinkerVertex }
+        val allVertices = graph.vertices().asSequence().mapNotNull { SafeCasting.asTinkerVertex(it) }
 
         val filteredVertices = allVertices.filter { vertex ->
             val properties = vertex.getVertexProperties<Any>(key)
@@ -185,7 +185,7 @@ class PropertyQueryEngine(private val graph: TinkerGraph) {
         key: String,
         aggregation: PropertyAggregation
     ): Any? {
-        val allVertices = graph.vertices().asSequence().map { it as TinkerVertex }
+        val allVertices = graph.vertices().asSequence().mapNotNull { SafeCasting.asTinkerVertex(it) }
         val allValues = allVertices.flatMap { vertex ->
             vertex.getVertexProperties<Any>(key).map { it.value() }
         }.toList()
@@ -217,7 +217,7 @@ class PropertyQueryEngine(private val graph: TinkerGraph) {
      */
     fun getGraphPropertyStatistics(): Map<String, GraphPropertyStats> {
         val stats = mutableMapOf<String, GraphPropertyStats>()
-        val allVertices = graph.vertices().asSequence().map { it as TinkerVertex }.toList()
+        val allVertices = graph.vertices().asSequence().mapNotNull { SafeCasting.asTinkerVertex(it) }.toList()
 
         // Collect all property keys
         val allKeys = allVertices.flatMap { it.getActivePropertyKeys() }.toSet()

@@ -1,7 +1,7 @@
 package org.apache.tinkerpop.gremlin.tinkergraph.structure
 
 import org.apache.tinkerpop.gremlin.structure.VertexProperty
-import org.apache.tinkerpop.gremlin.tinkergraph.structure.PropertyQueryEngine.PropertyCriterion
+import org.apache.tinkerpop.gremlin.tinkergraph.util.SafeCasting
 import kotlin.test.*
 
 /**
@@ -16,7 +16,7 @@ class MultiPropertyTest {
     @BeforeTest
     fun setup() {
         graph = TinkerGraph.open()
-        vertex = graph.addVertex() as TinkerVertex
+        vertex = SafeCasting.safeCastVertex(graph.addVertex())
     }
 
     @AfterTest
@@ -123,7 +123,7 @@ class MultiPropertyTest {
     @Test
     fun testBasicMetaProperties() {
         // Create vertex property with meta-properties
-        val nameProperty = vertex.property("name", "Alice", "createdBy", "admin", "timestamp", 1234567890L) as TinkerVertexProperty
+        val nameProperty = SafeCasting.safeCastVertexProperty(vertex.property("name", "Alice", "createdBy", "admin", "timestamp", 1234567890L))
 
         assertTrue(nameProperty.hasMetaProperties())
         assertEquals(2, nameProperty.metaPropertyCount())
@@ -142,11 +142,12 @@ class MultiPropertyTest {
 
         // Add additional meta-property
         prop.property("lastUpdated", "2024-01-01")
-        assertEquals(3, (prop as TinkerVertexProperty).metaPropertyCount())
+        val tinkerProp = SafeCasting.asTinkerVertexProperty(prop)
+        assertEquals(3, tinkerProp?.metaPropertyCount())
 
         // Remove meta-property
         prop.property<String>("source").remove()
-        assertEquals(2, (prop as TinkerVertexProperty).metaPropertyCount())
+        assertEquals(2, tinkerProp?.metaPropertyCount())
         assertFalse(prop.property<String>("source").isPresent())
     }
 
@@ -224,11 +225,11 @@ class MultiPropertyTest {
     @Test
     fun testBasicPropertyQuery() {
         // Setup test data
-        val v1 = graph.addVertex() as TinkerVertex
+        val v1 = SafeCasting.safeCastVertex(graph.addVertex())
         v1.property("name", "Alice")
         v1.property("age", 25)
 
-        val v2 = graph.addVertex() as TinkerVertex
+        val v2 = SafeCasting.safeCastVertex(graph.addVertex())
         v2.property("name", "Bob")
         v2.property("age", 30)
 
@@ -247,7 +248,7 @@ class MultiPropertyTest {
     fun testRangePropertyQuery() {
         // Setup test data with numeric properties
         val vertices = (1..5).map { i ->
-            val v = graph.addVertex() as TinkerVertex
+            val v = SafeCasting.safeCastVertex(graph.addVertex())
             v.property("score", i * 10)
             v
         }
@@ -266,7 +267,7 @@ class MultiPropertyTest {
     @Test
     fun testMetaPropertyQuery() {
         // Setup vertex with properties that have meta-properties
-        val v = graph.addVertex() as TinkerVertex
+        val v = SafeCasting.safeCastVertex(graph.addVertex())
         v.property("email", "test@example.com", "type", "primary")
         v.property("email", "backup@example.com", VertexProperty.Cardinality.SET, "type", "backup")
 
@@ -283,12 +284,12 @@ class MultiPropertyTest {
     @Test
     fun testCompositePropertyQuery() {
         // Setup test data
-        val v1 = graph.addVertex() as TinkerVertex
+        val v1 = SafeCasting.safeCastVertex(graph.addVertex())
         v1.property("name", "Alice")
         v1.property("age", 25)
         v1.property("active", true)
 
-        val v2 = graph.addVertex() as TinkerVertex
+        val v2 = SafeCasting.safeCastVertex(graph.addVertex())
         v2.property("name", "Bob")
         v2.property("age", 30)
         v2.property("active", false)
@@ -331,15 +332,15 @@ class MultiPropertyTest {
     @Test
     fun testGraphPropertyStatistics() {
         // Setup multiple vertices with various properties
-        val v1 = graph.addVertex() as TinkerVertex
+        val v1 = SafeCasting.safeCastVertex(graph.addVertex())
         v1.property("type", "person")
         v1.property("name", "Alice")
 
-        val v2 = graph.addVertex() as TinkerVertex
+        val v2 = SafeCasting.safeCastVertex(graph.addVertex())
         v2.property("type", "person")
         v2.property("name", "Bob")
 
-        val v3 = graph.addVertex() as TinkerVertex
+        val v3 = SafeCasting.safeCastVertex(graph.addVertex())
         v3.property("type", "company")
 
         val stats = graph.getPropertyStatistics()
@@ -412,7 +413,8 @@ class MultiPropertyTest {
 
         // Test feature checks in vertex property operations
         val prop = vertex.property("test", "value", "meta", "metaValue")
-        assertTrue((prop as TinkerVertexProperty).hasMetaProperties())
+        val tinkerProp = SafeCasting.asTinkerVertexProperty(prop)
+        assertTrue(tinkerProp?.hasMetaProperties() == true)
     }
 
     // Property Removal Tests

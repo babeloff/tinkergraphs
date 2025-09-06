@@ -1,6 +1,7 @@
 package org.apache.tinkerpop.gremlin.tinkergraph.structure
 
 import org.apache.tinkerpop.gremlin.structure.*
+import org.apache.tinkerpop.gremlin.tinkergraph.util.SafeCasting
 import kotlin.test.*
 
 /**
@@ -14,7 +15,7 @@ class TinkerVertexTest {
     @BeforeTest
     fun setUp() {
         graph = TinkerGraph.open()
-        vertex = graph.addVertex("name", "test") as TinkerVertex
+        vertex = SafeCasting.safeCastVertex(graph.addVertex("name", "test"))
     }
 
     @Test
@@ -92,7 +93,7 @@ class TinkerVertexTest {
 
     @Test
     fun testEdgeAddition() {
-        val vertex2 = graph.addVertex("name", "vertex2") as TinkerVertex
+        val vertex2 = SafeCasting.safeCastVertex(graph.addVertex("name", "vertex2"))
 
         val edge = vertex.addEdge("knows", vertex2, "since", 2020)
 
@@ -105,8 +106,8 @@ class TinkerVertexTest {
 
     @Test
     fun testEdgeTraversal() {
-        val vertex2 = graph.addVertex("name", "vertex2") as TinkerVertex
-        val vertex3 = graph.addVertex("name", "vertex3") as TinkerVertex
+        val vertex2 = SafeCasting.safeCastVertex(graph.addVertex("name", "vertex2"))
+        val vertex3 = SafeCasting.safeCastVertex(graph.addVertex("name", "vertex3"))
 
         vertex.addEdge("knows", vertex2)
         vertex.addEdge("likes", vertex3)
@@ -131,8 +132,8 @@ class TinkerVertexTest {
 
     @Test
     fun testVertexTraversal() {
-        val vertex2 = graph.addVertex("name", "vertex2") as TinkerVertex
-        val vertex3 = graph.addVertex("name", "vertex3") as TinkerVertex
+        val vertex2 = SafeCasting.safeCastVertex(graph.addVertex("name", "vertex2"))
+        val vertex3 = SafeCasting.safeCastVertex(graph.addVertex("name", "vertex3"))
 
         vertex.addEdge("knows", vertex2)
         vertex.addEdge("likes", vertex3)
@@ -150,8 +151,8 @@ class TinkerVertexTest {
 
     @Test
     fun testEdgeCounting() {
-        val vertex2 = graph.addVertex() as TinkerVertex
-        val vertex3 = graph.addVertex() as TinkerVertex
+        val vertex2 = SafeCasting.safeCastVertex(graph.addVertex())
+        val vertex3 = SafeCasting.safeCastVertex(graph.addVertex())
 
         vertex.addEdge("knows", vertex2)
         vertex.addEdge("likes", vertex3)
@@ -165,7 +166,7 @@ class TinkerVertexTest {
 
     @Test
     fun testVertexRemoval() {
-        val vertex2 = graph.addVertex() as TinkerVertex
+        val vertex2 = SafeCasting.safeCastVertex(graph.addVertex())
         vertex.addEdge("knows", vertex2)
 
         // Verify vertex exists
@@ -197,7 +198,7 @@ class TinkerVertexTest {
 
     @Test
     fun testVertexEquality() {
-        val vertex2 = graph.addVertex() as TinkerVertex
+        val vertex2 = SafeCasting.safeCastVertex(graph.addVertex())
 
         assertNotEquals(vertex, vertex2)
         assertEquals(vertex, vertex) // Self equality
@@ -217,14 +218,14 @@ class TinkerVertexTest {
 
     @Test
     fun testVertexLabels() {
-        val labeledVertex = graph.addVertex(T.label, "person", "name", "Alice") as TinkerVertex
+        val labeledVertex = SafeCasting.safeCastVertex(graph.addVertex(T.label, "person", "name", "Alice"))
         assertEquals("person", labeledVertex.label())
     }
 
     @Test
     fun testEdgeLabels() {
-        val vertex2 = graph.addVertex() as TinkerVertex
-        val vertex3 = graph.addVertex() as TinkerVertex
+        val vertex2 = SafeCasting.safeCastVertex(graph.addVertex())
+        val vertex3 = SafeCasting.safeCastVertex(graph.addVertex())
 
         vertex.addEdge("knows", vertex2)
         vertex.addEdge("likes", vertex3)

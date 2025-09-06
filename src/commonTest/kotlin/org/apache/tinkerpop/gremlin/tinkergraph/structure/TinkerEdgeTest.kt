@@ -1,6 +1,7 @@
 package org.apache.tinkerpop.gremlin.tinkergraph.structure
 
 import org.apache.tinkerpop.gremlin.structure.*
+import org.apache.tinkerpop.gremlin.tinkergraph.util.SafeCasting
 import kotlin.test.*
 
 /**
@@ -16,9 +17,9 @@ class TinkerEdgeTest {
     @BeforeTest
     fun setUp() {
         graph = TinkerGraph.open()
-        outVertex = graph.addVertex("name", "alice") as TinkerVertex
-        inVertex = graph.addVertex("name", "bob") as TinkerVertex
-        edge = outVertex.addEdge("knows", inVertex, "since", 2020) as TinkerEdge
+        outVertex = SafeCasting.safeCastVertex(graph.addVertex("name", "alice"))
+        inVertex = SafeCasting.safeCastVertex(graph.addVertex("name", "bob"))
+        edge = SafeCasting.safeCastEdge(outVertex.addEdge("knows", inVertex, "since", 2020))
     }
 
     @Test
@@ -136,7 +137,7 @@ class TinkerEdgeTest {
         assertFalse(edge.isSelfLoop())
 
         // Create a self-loop
-        val selfLoopEdge = outVertex.addEdge("reflects", outVertex) as TinkerEdge
+        val selfLoopEdge = SafeCasting.safeCastEdge(outVertex.addEdge("reflects", outVertex))
         assertTrue(selfLoopEdge.isSelfLoop())
     }
 
@@ -173,8 +174,8 @@ class TinkerEdgeTest {
 
     @Test
     fun testCopy() {
-        val vertex3 = graph.addVertex("name", "charlie") as TinkerVertex
-        val vertex4 = graph.addVertex("name", "david") as TinkerVertex
+        val vertex3 = SafeCasting.safeCastVertex(graph.addVertex("name", "charlie"))
+        val vertex4 = SafeCasting.safeCastVertex(graph.addVertex("name", "david"))
 
         val copiedEdge = edge.copy(vertex3, vertex4)
 
@@ -196,8 +197,8 @@ class TinkerEdgeTest {
 
     @Test
     fun testDirectionComparisons() {
-        val sameDirectionEdge = outVertex.addEdge("likes", inVertex) as TinkerEdge
-        val oppositeDirectionEdge = inVertex.addEdge("dislikes", outVertex) as TinkerEdge
+        val sameDirectionEdge = SafeCasting.safeCastEdge(outVertex.addEdge("likes", inVertex))
+        val oppositeDirectionEdge = SafeCasting.safeCastEdge(inVertex.addEdge("dislikes", outVertex))
 
         assertTrue(edge.hasSameDirection(sameDirectionEdge))
         assertFalse(edge.hasSameDirection(oppositeDirectionEdge))
@@ -249,7 +250,7 @@ class TinkerEdgeTest {
 
     @Test
     fun testEdgeEquality() {
-        val edge2 = outVertex.addEdge("likes", inVertex) as TinkerEdge
+        val edge2 = SafeCasting.safeCastEdge(outVertex.addEdge("likes", inVertex))
 
         assertNotEquals(edge, edge2)
         assertEquals(edge, edge) // Self equality
@@ -270,15 +271,15 @@ class TinkerEdgeTest {
 
     @Test
     fun testEdgeLabels() {
-        val labeledEdge = outVertex.addEdge("WORKS_FOR", inVertex, "department", "engineering") as TinkerEdge
+        val labeledEdge = SafeCasting.safeCastEdge(outVertex.addEdge("WORKS_FOR", inVertex, "department", "engineering"))
         assertEquals("WORKS_FOR", labeledEdge.label())
         assertEquals("engineering", labeledEdge.value<String>("department"))
     }
 
     @Test
     fun testMultipleEdgesBetweenVertices() {
-        val edge2 = outVertex.addEdge("likes", inVertex) as TinkerEdge
-        val edge3 = outVertex.addEdge("follows", inVertex) as TinkerEdge
+        val edge2 = SafeCasting.safeCastEdge(outVertex.addEdge("likes", inVertex))
+        val edge3 = SafeCasting.safeCastEdge(outVertex.addEdge("follows", inVertex))
 
         // All edges should exist
         val outEdges = outVertex.edges(Direction.OUT).asSequence().toList()

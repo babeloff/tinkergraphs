@@ -328,7 +328,8 @@ class IndexCache<T : Element> {
      * @return true if the entry is expired, false otherwise
      */
     private fun isExpired(entry: CacheEntry<T>): Boolean {
-        return Platform.currentTimeMillis() - entry.timestamp > maxAge
+        val timeDiff = Platform.timeDifference(entry.timestamp, Platform.currentTimeMillis())
+        return Platform.timeComparison(timeDiff, maxAge)
     }
 
     /**

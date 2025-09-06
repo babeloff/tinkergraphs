@@ -30,4 +30,12 @@ actual object Platform {
     actual fun sleep(millis: Long) {
         Thread.sleep(millis)
     }
+
+    actual fun timeDifference(start: Long, end: Long): Long {
+        return end - start
+    }
+
+    actual fun timeComparison(duration: Long, threshold: Long): Boolean {
+        return duration > threshold
+    }
 }

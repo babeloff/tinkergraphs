@@ -1,6 +1,7 @@
 package org.apache.tinkerpop.gremlin.tinkergraph.structure
 
 import org.apache.tinkerpop.gremlin.structure.*
+import org.apache.tinkerpop.gremlin.tinkergraph.util.SafeCasting
 
 /**
  * TinkerVertexProperty is the vertex property implementation for TinkerGraph.
@@ -25,7 +26,7 @@ class TinkerVertexProperty<V>(
     private val vertex: TinkerVertex,
     private val propertyKey: String,
     private val propertyValue: V
-) : VertexProperty<V>, TinkerElement(id, VertexProperty::class.simpleName ?: "vertexproperty", vertex.graph() as TinkerGraph) {
+) : VertexProperty<V>, TinkerElement(id, VertexProperty::class.simpleName ?: "vertexproperty", SafeCasting.asTinkerGraph(vertex.graph()) ?: throw IllegalStateException("Expected TinkerGraph")) {
 
     /**
      * Flag to track if this vertex property has been removed.
@@ -352,7 +353,7 @@ class TinkerVertexProperty<V>(
          * @return a new TinkerVertexProperty instance
          */
         fun <V> of(vertex: TinkerVertex, key: String, value: V): TinkerVertexProperty<V> {
-            val graph = vertex.graph() as TinkerGraph
+            val graph = SafeCasting.asTinkerGraph(vertex.graph()) ?: throw IllegalStateException("Expected TinkerGraph")
             return TinkerVertexProperty(graph.getNextId(), vertex, key, value)
         }
 
