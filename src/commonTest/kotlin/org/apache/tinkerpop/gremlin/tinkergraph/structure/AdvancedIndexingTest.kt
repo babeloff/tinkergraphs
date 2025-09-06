@@ -268,13 +268,13 @@ class AdvancedIndexingTest {
 
         // Put something in cache
         val testResults = setOf<TinkerVertex>()
-        cache.put(IndexCache.IndexType.SINGLE_PROPERTY, "department", testResults)
+        cache.put(IndexType.SINGLE_PROPERTY, "department", testResults)
 
-        assertTrue(cache.contains(IndexCache.IndexType.SINGLE_PROPERTY, "department"))
+        assertTrue(cache.contains(IndexType.SINGLE_PROPERTY, "department"))
 
         // Invalidate by key
         cache.invalidateKey("department")
-        assertFalse(cache.contains(IndexCache.IndexType.SINGLE_PROPERTY, "department"))
+        assertFalse(cache.contains(IndexType.SINGLE_PROPERTY, "department"))
     }
 
     @Test
@@ -284,15 +284,15 @@ class AdvancedIndexingTest {
 
         // Add entry to cache
         val testResults = setOf<TinkerVertex>()
-        cache.put(IndexCache.IndexType.SINGLE_PROPERTY, "test", testResults)
+        cache.put(IndexType.SINGLE_PROPERTY, "test", testResults)
 
-        assertTrue(cache.contains(IndexCache.IndexType.SINGLE_PROPERTY, "test"))
+        assertTrue(cache.contains(IndexType.SINGLE_PROPERTY, "test"))
 
         // Wait for expiration
         Platform.sleep(150)
 
         // Entry should be expired
-        assertNull(cache.get(IndexCache.IndexType.SINGLE_PROPERTY, "test"))
+        assertNull(cache.get(IndexType.SINGLE_PROPERTY, "test"))
     }
 
     @Test

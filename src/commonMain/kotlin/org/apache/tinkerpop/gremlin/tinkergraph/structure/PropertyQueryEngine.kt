@@ -20,7 +20,7 @@ class PropertyQueryEngine(private val graph: TinkerGraph) {
 
         // Check cache first
         val cached = graph.vertexIndexCache.get(
-            IndexCache.IndexType.COMPOSITE,
+            IndexType.COMPOSITE,
             cacheKey,
             mapOf("criteria" to criteria)
         )
@@ -52,7 +52,7 @@ class PropertyQueryEngine(private val graph: TinkerGraph) {
 
         // Cache result
         graph.vertexIndexCache.put(
-            IndexCache.IndexType.COMPOSITE,
+            IndexType.COMPOSITE,
             cacheKey,
             mapOf("criteria" to criteria),
             result
@@ -104,7 +104,7 @@ class PropertyQueryEngine(private val graph: TinkerGraph) {
         val cacheKey = "range_${key}_${minValue}_${maxValue}_${includeMin}_${includeMax}"
 
         // Check cache first
-        val cached = graph.vertexIndexCache.get(IndexCache.IndexType.RANGE, cacheKey)
+        val cached = graph.vertexIndexCache.get(IndexType.RANGE, cacheKey)
         if (cached != null) {
             return cached.iterator()
         }
@@ -121,7 +121,7 @@ class PropertyQueryEngine(private val graph: TinkerGraph) {
         }
 
         // Cache result
-        graph.vertexIndexCache.put(IndexCache.IndexType.RANGE, cacheKey, result)
+        graph.vertexIndexCache.put(IndexType.RANGE, cacheKey, result)
 
         return result.iterator()
     }

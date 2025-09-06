@@ -91,12 +91,12 @@ class TinkerGraph private constructor(
     /**
      * Index cache for vertex queries.
      */
-    internal val vertexIndexCache: IndexCache<TinkerVertex> = IndexCache()
+    internal val vertexIndexCache: IndexCache<TinkerVertex> = IndexCache.create()
 
     /**
      * Index cache for edge queries.
      */
-    internal val edgeIndexCache: IndexCache<TinkerEdge> = IndexCache()
+    internal val edgeIndexCache: IndexCache<TinkerEdge> = IndexCache.create()
 
     /**
      * Whether to allow null property values.
@@ -329,13 +329,13 @@ class TinkerGraph private constructor(
             "Vertex", "TinkerVertex" -> {
                 vertexCompositeIndex.createCompositeIndex(keys)
                 vertexCompositeIndex.rebuildCompositeIndex(keys, vertices.values)
-                vertexIndexCache.invalidateIndexType(IndexCache.IndexType.COMPOSITE)
+                vertexIndexCache.invalidateIndexType(IndexType.COMPOSITE)
                 vertexIndexOptimizer.clearSelectivityCache()
             }
             "Edge", "TinkerEdge" -> {
                 edgeCompositeIndex.createCompositeIndex(keys)
                 edgeCompositeIndex.rebuildCompositeIndex(keys, edges.values)
-                edgeIndexCache.invalidateIndexType(IndexCache.IndexType.COMPOSITE)
+                edgeIndexCache.invalidateIndexType(IndexType.COMPOSITE)
                 edgeIndexOptimizer.clearSelectivityCache()
             }
             else -> throw IllegalArgumentException("Class is not indexable: ${elementClass.simpleName}")
@@ -396,12 +396,12 @@ class TinkerGraph private constructor(
         when (elementClass.simpleName) {
             "Vertex", "TinkerVertex" -> {
                 vertexCompositeIndex.dropCompositeIndex(keys)
-                vertexIndexCache.invalidateIndexType(IndexCache.IndexType.COMPOSITE)
+                vertexIndexCache.invalidateIndexType(IndexType.COMPOSITE)
                 vertexIndexOptimizer.clearSelectivityCache()
             }
             "Edge", "TinkerEdge" -> {
                 edgeCompositeIndex.dropCompositeIndex(keys)
-                edgeIndexCache.invalidateIndexType(IndexCache.IndexType.COMPOSITE)
+                edgeIndexCache.invalidateIndexType(IndexType.COMPOSITE)
                 edgeIndexOptimizer.clearSelectivityCache()
             }
             else -> throw IllegalArgumentException("Class is not indexable: ${elementClass.simpleName}")

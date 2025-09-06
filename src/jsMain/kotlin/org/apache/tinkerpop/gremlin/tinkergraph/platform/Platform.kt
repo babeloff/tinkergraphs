@@ -9,7 +9,7 @@ actual object Platform {
      */
     actual fun currentTimeMillis(): Long {
         return try {
-            js("Date.now()").unsafeCast<Long>()
+            kotlin.js.Date.now().toLong()
         } catch (e: Exception) {
             0L
         }
@@ -51,18 +51,11 @@ actual object Platform {
      * Sleep for the specified number of milliseconds.
      */
     actual fun sleep(millis: Long) {
-        // JavaScript doesn't have synchronous sleep, so we use a busy wait
+        // JavaScript doesn't have synchronous sleep, so we use a simple busy wait
         // This is not ideal but necessary for cross-platform compatibility in tests
-        val start = try {
-            js("Date.now()").unsafeCast<Long>()
-        } catch (e: Exception) {
-            0L
-        }
-        while (try {
-            js("Date.now()").unsafeCast<Long>()
-        } catch (e: Exception) {
-            start + millis + 1 // Exit condition if we can't get time
-        } - start < millis) {
+        val start = kotlin.js.Date.now()
+        val target = start + millis.toDouble()
+        while (kotlin.js.Date.now() < target) {
             // Busy wait
         }
     }
@@ -74,7 +67,7 @@ actual object Platform {
      */
     actual fun timeDifference(start: Long, end: Long): Long {
         return try {
-            // Simple subtraction - JavaScript can handle this
+            // Use standard Kotlin arithmetic which is safe in JavaScript
             end - start
         } catch (e: Exception) {
             0L
@@ -86,7 +79,7 @@ actual object Platform {
      */
     actual fun timeComparison(duration: Long, threshold: Long): Boolean {
         return try {
-            // Simple comparison - JavaScript can handle this
+            // Use standard Kotlin comparison which is safe in JavaScript
             duration > threshold
         } catch (e: Exception) {
             false

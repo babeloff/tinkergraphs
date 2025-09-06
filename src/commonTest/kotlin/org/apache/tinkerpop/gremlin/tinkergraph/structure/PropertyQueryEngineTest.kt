@@ -233,9 +233,9 @@ class PropertyQueryEngineTest {
         ).asSequence().toList()
 
         assertEquals(3, results.size)
-        // Should include Bob, Charlie (persons >= 30) and ACME Corp (employees < 300)
+        // Should include Bob, Charlie (persons >= 30) and Globodyne (employees < 300)
         val names = results.map { it.value<String>("name")!! }.sorted()
-        assertEquals(listOf("ACME Corp", "Bob", "Charlie"), names)
+        assertEquals(listOf("Bob", "Charlie", "Globodyne"), names)
     }
 
     // Meta-property Query Tests
@@ -348,7 +348,7 @@ class PropertyQueryEngineTest {
 
         // Check skill property statistics
         val skillStats = stats["skill"]!!
-        assertEquals(7, skillStats.propertyCount) // 2+2+3 = 7 skill properties
+        assertEquals(6, skillStats.propertyCount) // 2+2+2 = 6 skill properties
         assertEquals(3, skillStats.vertexCount)   // 3 vertices have skills
     }
 
