@@ -89,8 +89,12 @@ kotlin {
         }
         val jvmMain by getting {
             dependencies {
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
                 implementation("ch.qos.logback:logback-classic:1.4.14")
+                implementation("org.apache.tinkerpop:gremlin-core:3.7.0")
+                implementation("org.apache.tinkerpop:tinkergraph-gremlin:3.7.0")
+                implementation("org.apache.tinkerpop:gremlin-groovy:3.7.0")
             }
         }
         val jvmTest by getting {
