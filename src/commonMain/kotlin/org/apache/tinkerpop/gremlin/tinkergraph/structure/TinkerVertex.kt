@@ -226,6 +226,10 @@ class TinkerVertex(
                 toRemove.forEach { prop ->
                     // Update vertex index for removed property
                     elementGraph.vertexIndex.autoUpdate(key, null, prop.value(), this)
+                    // Update range index for removed property
+                    elementGraph.vertexRangeIndex.autoUpdate(key, null, prop.value(), this)
+                    // Update composite index for removed property
+                    elementGraph.vertexCompositeIndex.autoUpdate(key, this)
                     // Mark property as removed
                     prop.markPropertyRemoved()
                 }
@@ -253,6 +257,10 @@ class TinkerVertex(
 
         // Update vertex index
         elementGraph.vertexIndex.autoUpdate(key, value, null, this)
+        // Update range index
+        elementGraph.vertexRangeIndex.autoUpdate(key, value, null, this)
+        // Update composite index
+        elementGraph.vertexCompositeIndex.autoUpdate(key, this)
 
         return vertexProperty
     }

@@ -1,6 +1,7 @@
 package org.apache.tinkerpop.gremlin.tinkergraph.structure
 
 import org.apache.tinkerpop.gremlin.structure.*
+import org.apache.tinkerpop.gremlin.tinkergraph.util.SafeCasting
 
 /**
  * PropertyQueryEngine provides advanced querying capabilities for properties in TinkerGraph.
@@ -40,7 +41,7 @@ class PropertyQueryEngine(private val graph: TinkerGraph) {
             }
             else -> {
                 // Fall back to full scan
-                val allVertices = graph.vertices().asSequence().map { it as TinkerVertex }
+                val allVertices = graph.vertices().asSequence().mapNotNull { SafeCasting.asTinkerVertex(it) }
                 allVertices.filter { vertex ->
                     criteria.all { criterion ->
                         evaluateCriterion(vertex, criterion)
@@ -91,14 +92,16 @@ class PropertyQueryEngine(private val graph: TinkerGraph) {
 
     /**
      * Range query for numeric properties using optimized range index.
+     * Follows TinkerPop semantics: [min, max) - inclusive on min, exclusive on max by default.
      */
     fun queryVerticesByRange(
         key: String,
         minValue: Number?,
         maxValue: Number?,
-        inclusive: Boolean = true
+        includeMin: Boolean = true,
+        includeMax: Boolean = false
     ): Iterator<TinkerVertex> {
-        val cacheKey = "range_${key}_${minValue}_${maxValue}_$inclusive"
+        val cacheKey = "range_${key}_${minValue}_${maxValue}_${includeMin}_${includeMax}"
 
         // Check cache first
         val cached = graph.vertexIndexCache.get(IndexCache.IndexType.RANGE, cacheKey)
@@ -110,10 +113,10 @@ class PropertyQueryEngine(private val graph: TinkerGraph) {
         val result = if (graph.vertexRangeIndex.isRangeIndexed(key)) {
             val minComparable = RangeIndex.safeComparable(minValue)
             val maxComparable = RangeIndex.safeComparable(maxValue)
-            graph.vertexRangeIndex.rangeQuery(key, minComparable, maxComparable, inclusive, inclusive)
+            graph.vertexRangeIndex.rangeQuery(key, minComparable, maxComparable, includeMin, includeMax)
         } else {
             // Fall back to criterion-based query
-            val criterion = RangeCriterion(key, minValue, maxValue, inclusive)
+            val criterion = RangeCriterion(key, minValue, maxValue, includeMin, includeMax)
             queryVertices(listOf(criterion)).asSequence().toSet()
         }
 
@@ -131,7 +134,7 @@ class PropertyQueryEngine(private val graph: TinkerGraph) {
         metaPropertyKey: String,
         metaPropertyValue: Any?
     ): Iterator<TinkerVertex> {
-        val allVertices = graph.vertices().asSequence().map { it as TinkerVertex }
+        val allVertices = graph.vertices().asSequence().mapNotNull { SafeCasting.asTinkerVertex(it) }
 
         val filteredVertices = allVertices.filter { vertex ->
             val properties = vertex.getVertexProperties<Any>(propertyKey)
@@ -151,7 +154,7 @@ class PropertyQueryEngine(private val graph: TinkerGraph) {
         key: String,
         cardinality: VertexProperty.Cardinality
     ): Iterator<TinkerVertex> {
-        val allVertices = graph.vertices().asSequence().map { it as TinkerVertex }
+        val allVertices = graph.vertices().asSequence().mapNotNull { SafeCasting.asTinkerVertex(it) }
 
         val filteredVertices = allVertices.filter { vertex ->
             vertex.getPropertyCardinality(key) == cardinality
@@ -270,12 +273,12 @@ class PropertyQueryEngine(private val graph: TinkerGraph) {
                     else {
                         val numValue = value.toDouble()
                         val minCheck = criterion.minValue?.let { min ->
-                            if (criterion.inclusive) numValue >= min.toDouble()
+                            if (criterion.includeMin) numValue >= min.toDouble()
                             else numValue > min.toDouble()
                         } ?: true
 
                         val maxCheck = criterion.maxValue?.let { max ->
-                            if (criterion.inclusive) numValue <= max.toDouble()
+                            if (criterion.includeMax) numValue <= max.toDouble()
                             else numValue < max.toDouble()
                         } ?: true
 
@@ -364,12 +367,14 @@ class PropertyQueryEngine(private val graph: TinkerGraph) {
 
     /**
      * Range criterion for numeric values.
+     * Follows TinkerPop semantics: [min, max) - inclusive on min, exclusive on max.
      */
     data class RangeCriterion(
         val key: String,
         val minValue: Number?,
         val maxValue: Number?,
-        val inclusive: Boolean = true
+        val includeMin: Boolean = true,
+        val includeMax: Boolean = false
     ) : PropertyCriterion
 
     /**
@@ -441,10 +446,10 @@ class PropertyQueryEngine(private val graph: TinkerGraph) {
         }
 
         /**
-         * Create a range criterion.
+         * Create a range criterion following TinkerPop semantics [min, max).
          */
-        fun range(key: String, min: Number? = null, max: Number? = null, inclusive: Boolean = true): RangeCriterion {
-            return RangeCriterion(key, min, max, inclusive)
+        fun range(key: String, min: Number? = null, max: Number? = null, includeMin: Boolean = true, includeMax: Boolean = false): RangeCriterion {
+            return RangeCriterion(key, min, max, includeMin, includeMax)
         }
 
         /**
@@ -554,8 +559,8 @@ class PropertyQueryEngine(private val graph: TinkerGraph) {
             criterion.key,
             minComparable,
             maxComparable,
-            criterion.inclusive,
-            criterion.inclusive
+            criterion.includeMin,
+            criterion.includeMax
         )
 
         return if (secondaryFilters.isEmpty()) {

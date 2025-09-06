@@ -489,9 +489,10 @@ class TinkerGraph private constructor(
         key: String,
         minValue: Number?,
         maxValue: Number?,
-        inclusive: Boolean = true
+        includeMin: Boolean = true,
+        includeMax: Boolean = false
     ): Iterator<TinkerVertex> {
-        return propertyQueryEngine.queryVerticesByRange(key, minValue, maxValue, inclusive)
+        return propertyQueryEngine.queryVerticesByRange(key, minValue, maxValue, includeMin, includeMax)
     }
 
     /**

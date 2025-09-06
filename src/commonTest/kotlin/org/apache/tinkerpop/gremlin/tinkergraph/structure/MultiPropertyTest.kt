@@ -255,7 +255,7 @@ class MultiPropertyTest {
         val queryEngine = graph.propertyQueryEngine()
 
         // Range query: score between 20 and 40 (inclusive)
-        val results = queryEngine.queryVerticesByRange("score", 20, 40, true)
+        val results = queryEngine.queryVerticesByRange("score", 20, 40, true, true)
             .asSequence().toList()
 
         assertEquals(3, results.size) // scores 20, 30, 40

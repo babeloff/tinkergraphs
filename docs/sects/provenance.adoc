@@ -16,6 +16,7 @@ This document tracks all source materials, references, and inspirations used in 
 
 * *Repository*: https://github.com/apache/tinkerpop
 * *Specific Path*: `/tinkergraph-gremlin/src/main/java/org/apache/tinkerpop/gremlin/tinkergraph/`
+* *Reference Documentation*: https://tinkerpop.apache.org/docs/current/reference/#tinkergraph-gremlin
 * *License*: Apache License 2.0
 * *Version Referenced*: 3.7.x branch
 * *Authors*: Apache TinkerPop Community

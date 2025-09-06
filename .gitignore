@@ -4,3 +4,4 @@
 build/
 .gradle/
 .kotlin/
+build_output.txt

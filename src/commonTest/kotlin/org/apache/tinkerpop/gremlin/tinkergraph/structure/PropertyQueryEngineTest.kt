@@ -102,7 +102,7 @@ class PropertyQueryEngineTest {
     @Test
     fun testRangeCriterionInclusive() {
         val results = queryEngine.queryVertices(
-            PropertyQueryEngine.range("age", 25, 30, true)
+            PropertyQueryEngine.range("age", 25, 30, true, true)
         ).asSequence().toList()
 
         assertEquals(2, results.size)
@@ -113,7 +113,7 @@ class PropertyQueryEngineTest {
     @Test
     fun testRangeCriterionExclusive() {
         val results = queryEngine.queryVertices(
-            PropertyQueryEngine.range("age", 25, 35, false)
+            PropertyQueryEngine.range("age", 25, 35, false, false)
         ).asSequence().toList()
 
         assertEquals(1, results.size)
@@ -442,7 +442,7 @@ class PropertyQueryEngineTest {
         val results = queryEngine.queryVertices(
             listOf(
                 PropertyQueryEngine.exists("age"),
-                PropertyQueryEngine.range("age", 25, 30, true),
+                PropertyQueryEngine.range("age", 25, 30, true, true),
                 PropertyQueryEngine.not(PropertyQueryEngine.exact("age", 35))
             )
         ).asSequence().toList()

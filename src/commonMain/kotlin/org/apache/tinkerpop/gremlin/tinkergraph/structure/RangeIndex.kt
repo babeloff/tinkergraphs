@@ -1,6 +1,7 @@
 package org.apache.tinkerpop.gremlin.tinkergraph.structure
 
-import org.apache.tinkerpop.gremlin.structure.*
+import org.apache.tinkerpop.gremlin.structure.Element
+import org.apache.tinkerpop.gremlin.tinkergraph.util.SafeCasting
 import org.apache.tinkerpop.gremlin.tinkergraph.platform.Platform
 
 /**
@@ -466,18 +467,7 @@ class RangeIndex<T : Element> {
          * @return the value as Comparable<Any> if it implements Comparable, null otherwise
          */
         fun <V> safeComparable(value: V?): Comparable<Any>? {
-            return when (value) {
-                null -> null
-                is Comparable<*> -> {
-                    try {
-                        @Suppress("UNCHECKED_CAST") // This is safe because we checked is Comparable<*>
-                        value as Comparable<Any>
-                    } catch (e: ClassCastException) {
-                        null
-                    }
-                }
-                else -> null
-            }
+            return SafeCasting.asComparable(value)
         }
 
         /**

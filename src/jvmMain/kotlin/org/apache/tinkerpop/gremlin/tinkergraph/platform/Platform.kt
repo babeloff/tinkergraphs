@@ -1,28 +1,19 @@
 package org.apache.tinkerpop.gremlin.tinkergraph.platform
 
-import java.util.*
+import java.text.DecimalFormat
+import java.util.TreeMap
+import java.util.LinkedHashMap
 
 /**
- * JVM implementation of platform abstraction.
+ * JVM-specific platform implementation.
  */
 actual object Platform {
-    /**
-     * Get the current time in milliseconds since epoch.
-     */
-    actual fun currentTimeMillis(): Long {
-        return System.currentTimeMillis()
-    }
+    actual fun currentTimeMillis(): Long = System.currentTimeMillis()
 
-    /**
-     * Create a sorted map implementation.
-     */
     actual fun <K : Comparable<K>, V> createSortedMap(): MutableMap<K, V> {
         return TreeMap<K, V>()
     }
 
-    /**
-     * Create a linked hash map with specified initial capacity, load factor, and access order.
-     */
     actual fun <K, V> createLinkedHashMap(
         initialCapacity: Int,
         loadFactor: Float,
@@ -31,16 +22,11 @@ actual object Platform {
         return LinkedHashMap<K, V>(initialCapacity, loadFactor, accessOrder)
     }
 
-    /**
-     * Format a double value as a percentage string with 2 decimal places.
-     */
     actual fun formatPercentage(value: Double): String {
-        return "%.2f".format(value)
+        val formatter = DecimalFormat("#0.00%")
+        return formatter.format(value)
     }
 
-    /**
-     * Sleep for the specified number of milliseconds.
-     */
     actual fun sleep(millis: Long) {
         Thread.sleep(millis)
     }
