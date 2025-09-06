@@ -5,10 +5,34 @@ import org.apache.tinkerpop.gremlin.structure.Direction
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph
 
 /**
- * Simple test to verify basic iterator functionality works correctly.
+ * Simple test suite to verify basic iterator functionality works correctly.
+ *
+ * This test class provides fundamental validation of TinkerGraph iterator
+ * implementations without complex scenarios. It focuses on core functionality
+ * including:
+ * - Basic vertex iteration and property access
+ * - Edge iteration and traversal
+ * - Property iterator functionality
+ * - Iterator behavior with empty graphs
+ *
+ * These tests serve as a baseline to ensure iterator implementations work
+ * correctly before testing more advanced scenarios in other test suites.
+ *
+ * @see org.apache.tinkerpop.gremlin.tinkergraph.structure.iterators.TinkerVertexIterator
+ * @see org.apache.tinkerpop.gremlin.tinkergraph.structure.iterators.TinkerEdgeIterator
+ * @see org.apache.tinkerpop.gremlin.tinkergraph.structure.iterators.TinkerPropertyIterator
  */
 class SimpleIteratorTest {
 
+    /**
+     * Tests basic vertex iteration functionality.
+     *
+     * Creates a simple graph with three vertices and verifies that:
+     * - All vertices can be iterated correctly
+     * - Vertex properties can be accessed during iteration
+     * - The correct number of vertices is returned
+     * - Vertex names match expected values
+     */
     @Test
     fun testBasicVertexIteration() {
         val graph = TinkerGraph.open()

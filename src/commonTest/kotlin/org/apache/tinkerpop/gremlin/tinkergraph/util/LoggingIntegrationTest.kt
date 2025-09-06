@@ -9,13 +9,30 @@ import kotlin.test.assertTrue
 /**
  * Integration test for logging functionality introduced in Prompt 3.0.1.
  *
- * This test demonstrates:
- * 1. KmLogging integration across all TinkerGraph operations
- * 2. Proper KDoc documentation generation
- * 3. Cross-platform logging support
+ * This comprehensive test suite validates the logging infrastructure across
+ * all TinkerGraph operations and platforms. It demonstrates:
+ *
+ * 1. **KmLogging Integration**: Cross-platform logging support using KmLogging library
+ * 2. **Logger Creation**: Both typed and named logger creation utilities
+ * 3. **Performance Monitoring**: Time measurement and performance logging capabilities
+ * 4. **Graph Operations Logging**: Vertex and edge creation with integrated logging
+ * 5. **Cross-platform Compatibility**: Logging functionality across JVM, JS, and Native
+ * 6. **Error Handling**: Proper logging of errors and exceptions
+ *
+ * The tests verify that logging doesn't interfere with graph operations while
+ * providing valuable debugging and monitoring information.
+ *
+ * @see LoggingConfig
+ * @see org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph
  */
 class LoggingIntegrationTest {
 
+    /**
+     * Tests the LoggingConfig utility methods for logger creation.
+     *
+     * Validates both typed logger creation (using reified generics) and
+     * named logger creation to ensure proper logger instantiation.
+     */
     @Test
     fun testLoggingConfigUtilities() {
         // Test logger creation
@@ -26,6 +43,11 @@ class LoggingIntegrationTest {
         assertNotNull(namedLogger, "Named logger should be created successfully")
     }
 
+    /**
+     * Tests graph operations with integrated logging to ensure logging
+     * doesn't interfere with normal graph functionality while providing
+     * appropriate debug information.
+     */
     @Test
     fun testGraphOperationsWithLogging() {
         val graph = TinkerGraph.open()

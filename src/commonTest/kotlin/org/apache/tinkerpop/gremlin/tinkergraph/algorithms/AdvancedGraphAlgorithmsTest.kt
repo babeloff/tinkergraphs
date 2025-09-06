@@ -4,22 +4,55 @@ import org.apache.tinkerpop.gremlin.structure.Direction
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph
 import kotlin.test.*
 
+/**
+ * Test suite for advanced graph algorithms implementation.
+ *
+ * Tests sophisticated graph algorithms including:
+ * - Dijkstra's shortest path algorithm with weighted edges
+ * - Minimum spanning tree (Kruskal's and Prim's algorithms)
+ * - Strongly connected components detection
+ * - Graph connectivity analysis
+ * - Weighted path finding and optimization
+ *
+ * All tests verify correctness, edge cases, and performance characteristics
+ * of the advanced algorithm implementations across different graph structures.
+ *
+ * @see org.apache.tinkerpop.gremlin.tinkergraph.algorithms.AdvancedGraphAlgorithms
+ */
 class AdvancedGraphAlgorithmsTest {
 
+    /**
+     * TinkerGraph instance used for testing algorithms.
+     * Initialized fresh for each test to ensure isolation.
+     */
     private lateinit var graph: TinkerGraph
 
+    /**
+     * Sets up a fresh TinkerGraph instance before each test.
+     * Ensures test isolation and clean state for each algorithm test.
+     */
     @BeforeTest
     fun setUp() {
         graph = TinkerGraph.open()
     }
 
+    /**
+     * Cleans up resources after each test by closing the graph.
+     * Ensures proper resource management and prevents memory leaks.
+     */
     @AfterTest
     fun tearDown() {
         graph.close()
     }
 
-    // Dijkstra's Algorithm Tests
+    // ========================================
+    // Dijkstra's Shortest Path Algorithm Tests
+    // ========================================
 
+    /**
+     * Tests Dijkstra's algorithm when source and target are the same vertex.
+     * Should return a path containing only the single vertex with zero weight.
+     */
     @Test
     fun testDijkstraShortestPathSameVertex() {
         val v1 = graph.addVertex("id", 1)

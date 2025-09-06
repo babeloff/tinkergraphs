@@ -3,15 +3,44 @@ package org.apache.tinkerpop.gremlin.tinkergraph.algorithms
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph
 import kotlin.test.*
 
+/**
+ * Test suite for basic graph algorithms implementation.
+ *
+ * Tests fundamental graph algorithms including:
+ * - Breadth-first search (BFS) traversal
+ * - Depth-first search (DFS) traversal
+ * - Path finding algorithms
+ * - Graph connectivity analysis
+ * - Cycle detection
+ * - Topological sorting
+ *
+ * All tests verify correctness across different graph topologies including
+ * linear graphs, trees, cycles, and disconnected components. Tests ensure
+ * proper handling of edge cases and performance characteristics.
+ *
+ * @see org.apache.tinkerpop.gremlin.tinkergraph.algorithms.GraphAlgorithms
+ */
 class GraphAlgorithmsTest {
 
+    /**
+     * TinkerGraph instance used for testing basic algorithms.
+     * Initialized fresh for each test to ensure isolation.
+     */
     private lateinit var graph: TinkerGraph
 
+    /**
+     * Sets up a fresh TinkerGraph instance before each test.
+     * Ensures test isolation and clean state for each algorithm test.
+     */
     @BeforeTest
     fun setUp() {
         graph = TinkerGraph.open()
     }
 
+    /**
+     * Tests breadth-first search on a graph with a single vertex.
+     * Should return a sequence containing only the starting vertex.
+     */
     @Test
     fun testBreadthFirstSearchSingleVertex() {
         val v1 = graph.addVertex("id", 1)
@@ -22,6 +51,10 @@ class GraphAlgorithmsTest {
         assertEquals(v1, result[0])
     }
 
+    /**
+     * Tests breadth-first search on a linear graph structure.
+     * Verifies that BFS visits vertices in the correct order from the starting point.
+     */
     @Test
     fun testBreadthFirstSearchLinearGraph() {
         // Create linear graph: 1 - 2 - 3 - 4
