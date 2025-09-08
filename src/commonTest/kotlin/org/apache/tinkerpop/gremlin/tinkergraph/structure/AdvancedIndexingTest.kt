@@ -196,7 +196,7 @@ class AdvancedIndexingTest :
                         engineersInNY.filter { vertex ->
                             try {
                                 val salary = vertex.value<Int>("salary")
-                                salary >= 80000
+                                salary?.let { it >= 80000 } ?: false
                             } catch (e: Exception) {
                                 false
                             }
@@ -348,7 +348,8 @@ class AdvancedIndexingTest :
                             try {
                                 val age = vertex.value<Int>("age")
                                 val salary = vertex.value<Int>("salary")
-                                age in 28..32 && salary > 90000
+                                (age?.let { it in 28..32 }
+                                        ?: false) && (salary?.let { it > 90000 } ?: false)
                             } catch (e: Exception) {
                                 false
                             }

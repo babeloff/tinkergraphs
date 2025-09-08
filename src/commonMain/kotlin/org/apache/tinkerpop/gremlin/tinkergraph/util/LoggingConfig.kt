@@ -1,16 +1,16 @@
 package org.apache.tinkerpop.gremlin.tinkergraph.util
 
-import io.github.oshai.kotlinlogging.KotlinLogging
-import io.github.oshai.kotlinlogging.KLogger
+import co.touchlab.kermit.Logger
+import kotlinx.datetime.Clock
 
 /**
  * Logging configuration and utility class for TinkerGraph operations.
  *
  * This class provides centralized logging configuration and utilities for the TinkerGraph
- * implementation, using KmLogging for cross-platform compatibility.
+ * implementation, using Kermit for cross-platform compatibility.
  *
  * ## Features
- * - Cross-platform logging support via KmLogging
+ * - Cross-platform logging support via Kermit
  * - Configurable log levels
  * - Performance monitoring utilities
  * - Debug helpers for graph operations
@@ -19,45 +19,39 @@ import io.github.oshai.kotlinlogging.KLogger
  * ```kotlin
  * class MyGraphClass {
  *     companion object {
- *         private val logger = LoggingConfig.getLogger<MyGraphClass>()
+ *         private val logger = LoggingConfig.getLogger("MyGraphClass")
  *     }
  *
  *     fun performOperation() {
- *         logger.info { "Starting operation" }
+ *         logger.i { "Starting operation" }
  *         LoggingConfig.measureTime("operation") {
  *             // Your code here
  *         }
- *         logger.info { "Operation completed" }
+ *         logger.i { "Operation completed" }
  *     }
  * }
  * ```
  *
  * @author TinkerGraph Team
  * @since 3.0.1
- * @see KotlinLogging
+ * @see Logger
  */
 object LoggingConfig {
 
-    /**
-     * Default logger instance for general TinkerGraph operations.
-     */
-    private val defaultLogger: KLogger = KotlinLogging.logger("TinkerGraph")
+    /** Default logger instance for general TinkerGraph operations. */
+    private val defaultLogger: Logger = Logger.withTag("TinkerGraph")
 
-    /**
-     * Logger for performance monitoring and metrics.
-     */
-    private val performanceLogger: KLogger = KotlinLogging.logger("TinkerGraph.Performance")
+    /** Logger for performance monitoring and metrics. */
+    private val performanceLogger: Logger = Logger.withTag("TinkerGraph.Performance")
 
-    /**
-     * Logger for debug operations and detailed tracing.
-     */
-    private val debugLogger: KLogger = KotlinLogging.logger("TinkerGraph.Debug")
+    /** Logger for debug operations and detailed tracing. */
+    private val debugLogger: Logger = Logger.withTag("TinkerGraph.Debug")
 
     /**
      * Creates a logger instance for a specific class.
      *
      * @param T The class type for which to create the logger
-     * @return A configured KLogger instance
+     * @return A configured Logger instance
      *
      * Example:
      * ```kotlin
@@ -68,18 +62,18 @@ object LoggingConfig {
      * }
      * ```
      */
-    inline fun <reified T> getLogger(): KLogger {
-        return KotlinLogging.logger(T::class.simpleName ?: "Unknown")
+    inline fun <reified T> getLogger(): Logger {
+        return Logger.withTag(T::class.simpleName ?: "Unknown")
     }
 
     /**
      * Creates a logger instance with a custom name.
      *
      * @param name Custom name for the logger
-     * @return A configured KLogger instance with the specified name
+     * @return A configured Logger instance with the specified name
      */
-    fun getLogger(name: String): KLogger {
-        return KotlinLogging.logger(name)
+    fun getLogger(name: String): Logger {
+        return Logger.withTag(name)
     }
 
     /**
@@ -90,7 +84,7 @@ object LoggingConfig {
      * @param operation The operation that triggered this log entry
      */
     fun logGraphStats(vertexCount: Int, edgeCount: Int, operation: String) {
-        performanceLogger.info {
+        performanceLogger.i {
             "Graph stats after '$operation': vertices=$vertexCount, edges=$edgeCount"
         }
     }
@@ -98,8 +92,8 @@ object LoggingConfig {
     /**
      * Measures and logs the execution time of a block of code.
      *
-     * This function executes the provided block and logs the execution time
-     * to the performance logger.
+     * This function executes the provided block and logs the execution time to the performance
+     * logger.
      *
      * @param T The return type of the block
      * @param operationName Name of the operation being measured
@@ -116,11 +110,11 @@ object LoggingConfig {
     fun <T> measureTime(operationName: String, block: () -> T): T {
         val startTime = getCurrentTimeMillis()
         try {
-            performanceLogger.debug { "Starting operation: $operationName" }
+            performanceLogger.d { "Starting operation: $operationName" }
             return block()
         } finally {
             val duration = getCurrentTimeMillis() - startTime
-            performanceLogger.info { "Operation '$operationName' completed in ${duration}ms" }
+            performanceLogger.i { "Operation '$operationName' completed in ${duration}ms" }
         }
     }
 
@@ -132,7 +126,7 @@ object LoggingConfig {
      * @param details Additional details about the element
      */
     fun logElementDebug(elementType: String, elementId: Any?, details: String) {
-        debugLogger.debug { "$elementType[$elementId]: $details" }
+        debugLogger.d { "$elementType[$elementId]: $details" }
     }
 
     /**
@@ -144,29 +138,27 @@ object LoggingConfig {
      * @param resultCount Number of results returned (for queries)
      */
     fun logIndexOperation(
-        indexType: String,
-        operation: String,
-        key: String,
-        resultCount: Int? = null
+            indexType: String,
+            operation: String,
+            key: String,
+            resultCount: Int? = null
     ) {
         val resultInfo = resultCount?.let { " (results: $it)" } ?: ""
-        performanceLogger.debug {
-            "Index operation: $indexType.$operation on key '$key'$resultInfo"
-        }
+        performanceLogger.d { "Index operation: $indexType.$operation on key '$key'$resultInfo" }
     }
 
     /**
      * Logs memory usage information if available on the current platform.
      *
-     * This method attempts to log memory usage statistics. Implementation
-     * varies by platform and may not be available on all targets.
+     * This method attempts to log memory usage statistics. Implementation varies by platform and
+     * may not be available on all targets.
      *
      * @param context Description of when this memory check is being performed
      */
     fun logMemoryUsage(context: String) {
         // Note: Memory monitoring implementation would be platform-specific
         // This is a placeholder for future platform-specific implementations
-        performanceLogger.debug { "Memory check at: $context" }
+        performanceLogger.d { "Memory check at: $context" }
     }
 
     /**
@@ -177,7 +169,7 @@ object LoggingConfig {
      */
     fun setDebugEnabled(component: String, enabled: Boolean) {
         val status = if (enabled) "enabled" else "disabled"
-        defaultLogger.info { "Debug logging $status for component: $component" }
+        defaultLogger.i { "Debug logging $status for component: $component" }
         // Note: Actual log level configuration would depend on the logging framework
         // This is a placeholder for configuration logic
     }
@@ -185,14 +177,12 @@ object LoggingConfig {
     /**
      * Gets the current time in milliseconds.
      *
-     * This is a platform-abstraction function that should work across
-     * JVM, JavaScript, and Native targets.
+     * This is a platform-abstraction function that should work across JVM, JavaScript, and Native
+     * targets using kotlinx-datetime.
      *
      * @return Current time in milliseconds
      */
     internal fun getCurrentTimeMillis(): Long {
-        // Platform-specific time implementation would go here
-        // For now, returning a placeholder
-        return 0L // This would be replaced with actual platform-specific implementation
+        return Clock.System.now().toEpochMilliseconds()
     }
 }

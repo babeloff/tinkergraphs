@@ -1,16 +1,15 @@
 package org.apache.tinkerpop.gremlin.tinkergraph.structure
 
-import io.github.oshai.kotlinlogging.KotlinLogging
-import org.apache.tinkerpop.gremlin.structure.*
-import org.apache.tinkerpop.gremlin.tinkergraph.structure.iterators.TinkerVertexIterator
-import org.apache.tinkerpop.gremlin.tinkergraph.structure.iterators.TinkerEdgeIterator
-import org.apache.tinkerpop.gremlin.tinkergraph.util.SafeCasting
-import org.apache.tinkerpop.gremlin.tinkergraph.util.VertexCastingManager
+import co.touchlab.kermit.Logger
 import kotlin.reflect.KClass
+import org.apache.tinkerpop.gremlin.structure.*
+import org.apache.tinkerpop.gremlin.tinkergraph.structure.iterators.TinkerEdgeIterator
+import org.apache.tinkerpop.gremlin.tinkergraph.structure.iterators.TinkerVertexIterator
+import org.apache.tinkerpop.gremlin.tinkergraph.util.VertexCastingManager
 
 /**
- * An in-memory graph database implementation of TinkerPop's Graph interface.
- * TinkerGraph is a toy graph database that is useful for testing and learning purposes.
+ * An in-memory graph database implementation of TinkerPop's Graph interface. TinkerGraph is a toy
+ * graph database that is useful for testing and learning purposes.
  *
  * This implementation provides:
  * - In-memory storage for vertices and edges
@@ -21,116 +20,75 @@ import kotlin.reflect.KClass
  * @param configuration Graph configuration parameters
  * @since 1.0.0
  */
-class TinkerGraph private constructor(
-    private val configuration: Map<String, Any?>
-) : Graph {
+class TinkerGraph private constructor(private val configuration: Map<String, Any?>) : Graph {
 
-
-
-    /**
-     * Internal storage for vertices, keyed by vertex ID.
-     */
+    /** Internal storage for vertices, keyed by vertex ID. */
     internal val vertices: MutableMap<Any, TinkerVertex> = mutableMapOf()
 
-    /**
-     * Internal storage for edges, keyed by edge ID.
-     */
+    /** Internal storage for edges, keyed by edge ID. */
     internal val edges: MutableMap<Any, TinkerEdge> = mutableMapOf()
 
-    /**
-     * Current ID counter for auto-generated IDs.
-     */
+    /** Current ID counter for auto-generated IDs. */
     internal var currentId: Long = 0L
 
-    /**
-     * Graph variables for storing metadata.
-     */
+    /** Graph variables for storing metadata. */
     private val graphVariables: TinkerGraphVariables = TinkerGraphVariables()
 
-    /**
-     * Index for vertex properties to enable fast lookups.
-     */
+    /** Index for vertex properties to enable fast lookups. */
     internal val vertexIndex: TinkerIndex<TinkerVertex> = TinkerIndex()
 
-    /**
-     * Index for edge properties to enable fast lookups.
-     */
+    /** Index for edge properties to enable fast lookups. */
     internal val edgeIndex: TinkerIndex<TinkerEdge> = TinkerIndex()
 
-    /**
-     * Composite index for vertex properties to enable multi-property queries.
-     */
+    /** Composite index for vertex properties to enable multi-property queries. */
     internal val vertexCompositeIndex: CompositeIndex<TinkerVertex> = CompositeIndex()
 
-    /**
-     * Composite index for edge properties to enable multi-property queries.
-     */
+    /** Composite index for edge properties to enable multi-property queries. */
     internal val edgeCompositeIndex: CompositeIndex<TinkerEdge> = CompositeIndex()
 
-    /**
-     * Range index for vertex properties to enable efficient range queries.
-     */
+    /** Range index for vertex properties to enable efficient range queries. */
     internal val vertexRangeIndex: RangeIndex<TinkerVertex> = RangeIndex()
 
-    /**
-     * Range index for edge properties to enable efficient range queries.
-     */
+    /** Range index for edge properties to enable efficient range queries. */
     internal val edgeRangeIndex: RangeIndex<TinkerEdge> = RangeIndex()
 
-    /**
-     * Index optimizer for vertex queries.
-     */
+    /** Index optimizer for vertex queries. */
     internal val vertexIndexOptimizer: IndexOptimizer<TinkerVertex> =
-        IndexOptimizer(vertexIndex, vertexCompositeIndex, vertexRangeIndex)
+            IndexOptimizer(vertexIndex, vertexCompositeIndex, vertexRangeIndex)
 
-    /**
-     * Index optimizer for edge queries.
-     */
+    /** Index optimizer for edge queries. */
     internal val edgeIndexOptimizer: IndexOptimizer<TinkerEdge> =
-        IndexOptimizer(edgeIndex, edgeCompositeIndex, edgeRangeIndex)
+            IndexOptimizer(edgeIndex, edgeCompositeIndex, edgeRangeIndex)
 
-    /**
-     * Index cache for vertex queries.
-     */
+    /** Index cache for vertex queries. */
     internal val vertexIndexCache: IndexCache<TinkerVertex> = IndexCache.create()
 
-    /**
-     * Index cache for edge queries.
-     */
+    /** Index cache for edge queries. */
     internal val edgeIndexCache: IndexCache<TinkerEdge> = IndexCache.create()
 
-    /**
-     * Whether to allow null property values.
-     */
+    /** Whether to allow null property values. */
     internal val allowNullPropertyValues: Boolean =
-        configuration[GREMLIN_TINKERGRAPH_ALLOW_NULL_PROPERTY_VALUES] as? Boolean ?: false
+            configuration[GREMLIN_TINKERGRAPH_ALLOW_NULL_PROPERTY_VALUES] as? Boolean ?: false
 
-    /**
-     * Default cardinality for vertex properties.
-     */
+    /** Default cardinality for vertex properties. */
     internal val defaultVertexPropertyCardinality: VertexProperty.Cardinality =
-        VertexProperty.Cardinality.valueOf(
-            configuration[GREMLIN_TINKERGRAPH_DEFAULT_VERTEX_PROPERTY_CARDINALITY] as? String
-                ?: VertexProperty.Cardinality.SINGLE.name
-        )
+            VertexProperty.Cardinality.valueOf(
+                    configuration[GREMLIN_TINKERGRAPH_DEFAULT_VERTEX_PROPERTY_CARDINALITY] as?
+                            String
+                            ?: VertexProperty.Cardinality.SINGLE.name
+            )
 
-    /**
-     * Graph features describing capabilities.
-     */
+    /** Graph features describing capabilities. */
     private val graphFeatures: TinkerGraphFeatures = TinkerGraphFeatures()
 
-    /**
-     * Property manager for advanced property operations.
-     */
+    /** Property manager for advanced property operations. */
     internal val propertyManager: PropertyManager = PropertyManager(this)
 
-    /**
-     * Property query engine for advanced property querying.
-     */
+    /** Property query engine for advanced property querying. */
     internal val propertyQueryEngine: PropertyQueryEngine = PropertyQueryEngine(this)
 
     override fun addVertex(vararg keyValues: Any?): Vertex {
-        logger.debug { "Adding vertex with keyValues: ${keyValues.contentToString()}" }
+        logger.d { "Adding vertex with keyValues: ${keyValues.contentToString()}" }
         val properties = ElementHelper.asMap(keyValues)
         return addVertex(properties)
     }
@@ -139,11 +97,11 @@ class TinkerGraph private constructor(
         val id = ElementHelper.getIdValue(properties) ?: getNextId()
         val label = ElementHelper.getLabelValue(properties) ?: Vertex.DEFAULT_LABEL
 
-        logger.debug { "Creating vertex with id: $id, label: $label, properties: $properties" }
+        logger.d { "Creating vertex with id: $id, label: $label, properties: $properties" }
 
         // Check if vertex with this ID already exists
         if (vertices.containsKey(id)) {
-            logger.warn { "Attempt to create vertex with existing id: $id" }
+            logger.w { "Attempt to create vertex with existing id: $id" }
             throw Graph.Exceptions.vertexWithIdAlreadyExists(id)
         }
 
@@ -154,23 +112,25 @@ class TinkerGraph private constructor(
         // Add properties (excluding reserved keys)
         ElementHelper.attachProperties(vertex, ElementHelper.removeReservedKeys(properties))
 
-        logger.info { "Successfully created vertex with id: $id, total vertices: ${vertices.size}" }
+        logger.i { "Successfully created vertex with id: $id, total vertices: ${vertices.size}" }
         return vertex
     }
 
     override fun vertex(id: Any?): Vertex? {
-        logger.debug { "Looking up vertex with id: $id" }
+        logger.d { "Looking up vertex with id: $id" }
         val vertex = vertices[id]
         if (vertex == null) {
-            logger.debug { "Vertex with id: $id not found" }
+            logger.d { "Vertex with id: $id not found" }
         }
         return vertex
     }
 
     override fun vertices(vararg vertexIds: Any?): Iterator<Vertex> {
-        logger.debug { "Retrieving vertices: ${if (vertexIds.isEmpty()) "all" else vertexIds.contentToString()}" }
+        logger.d {
+            "Retrieving vertices: ${if (vertexIds.isEmpty()) "all" else vertexIds.contentToString()}"
+        }
         return if (vertexIds.isEmpty()) {
-            logger.debug { "Returning all ${vertices.size} vertices" }
+            logger.d { "Returning all ${vertices.size} vertices" }
             TinkerVertexIterator.all(this)
         } else {
             TinkerVertexIterator.byIds(this, *vertexIds)
@@ -178,40 +138,42 @@ class TinkerGraph private constructor(
     }
 
     override fun edge(id: Any?): Edge? {
-        logger.debug { "Looking up edge with id: $id" }
+        logger.d { "Looking up edge with id: $id" }
         val edge = edges[id]
         if (edge == null) {
-            logger.debug { "Edge with id: $id not found" }
+            logger.d { "Edge with id: $id not found" }
         }
         return edge
     }
 
     override fun edges(vararg edgeIds: Any?): Iterator<Edge> {
-        logger.debug { "Retrieving edges: ${if (edgeIds.isEmpty()) "all" else edgeIds.contentToString()}" }
+        logger.d {
+            "Retrieving edges: ${if (edgeIds.isEmpty()) "all" else edgeIds.contentToString()}"
+        }
         return if (edgeIds.isEmpty()) {
-            logger.debug { "Returning all ${edges.size} edges" }
+            logger.d { "Returning all ${edges.size} edges" }
             TinkerEdgeIterator.all(this)
         } else {
             TinkerEdgeIterator.byIds(this, *edgeIds)
         }
     }
 
-    /**
-     * Add an edge between two vertices.
-     */
+    /** Add an edge between two vertices. */
     internal fun addEdge(
-        outVertex: TinkerVertex,
-        inVertex: TinkerVertex,
-        label: String,
-        properties: Map<String, Any?>
+            outVertex: TinkerVertex,
+            inVertex: TinkerVertex,
+            label: String,
+            properties: Map<String, Any?>
     ): TinkerEdge {
         val id = ElementHelper.getIdValue(properties) ?: getNextId()
 
-        logger.debug { "Creating edge with id: $id, label: $label, from vertex: ${outVertex.id()} to vertex: ${inVertex.id()}" }
+        logger.d {
+            "Creating edge with id: $id, label: $label, from vertex: ${outVertex.id()} to vertex: ${inVertex.id()}"
+        }
 
         // Check if edge with this ID already exists
         if (edges.containsKey(id)) {
-            logger.warn { "Attempt to create edge with existing id: $id" }
+            logger.w { "Attempt to create edge with existing id: $id" }
             throw Graph.Exceptions.edgeWithIdAlreadyExists(id)
         }
 
@@ -226,22 +188,18 @@ class TinkerGraph private constructor(
         // Add properties (excluding reserved keys)
         ElementHelper.attachProperties(edge, ElementHelper.removeReservedKeys(properties))
 
-        logger.info { "Successfully created edge with id: $id, total edges: ${edges.size}" }
+        logger.i { "Successfully created edge with id: $id, total edges: ${edges.size}" }
         return edge
     }
 
-    /**
-     * Remove a vertex from the graph.
-     */
+    /** Remove a vertex from the graph. */
     internal fun removeVertex(vertex: TinkerVertex) {
         // Remove all incident edges first
         val incidentEdges = mutableSetOf<TinkerEdge>()
         incidentEdges.addAll(vertex.getOutEdges())
         incidentEdges.addAll(vertex.getInEdges())
 
-        incidentEdges.forEach { edge ->
-            removeEdge(edge)
-        }
+        incidentEdges.forEach { edge -> removeEdge(edge) }
 
         // Remove from vertex index
         vertexIndex.removeElement(vertex)
@@ -256,9 +214,7 @@ class TinkerGraph private constructor(
         vertex.markRemoved()
     }
 
-    /**
-     * Remove an edge from the graph.
-     */
+    /** Remove an edge from the graph. */
     internal fun removeEdge(edge: TinkerEdge) {
         // Remove from vertex adjacency lists using centralized casting
         VertexCastingManager.tryGetTinkerVertex(edge.outVertex())?.removeOutEdge(edge)
@@ -277,9 +233,7 @@ class TinkerGraph private constructor(
         edge.markEdgeRemoved()
     }
 
-    /**
-     * Generate the next available ID.
-     */
+    /** Generate the next available ID. */
     internal fun getNextId(): Any {
         return ++currentId
     }
@@ -301,9 +255,7 @@ class TinkerGraph private constructor(
         // In a persistent implementation, this would save to disk
     }
 
-    /**
-     * Create an index for faster property lookups.
-     */
+    /** Create an index for faster property lookups. */
     fun createIndex(key: String, elementClass: KClass<out Element>) {
         when (elementClass.simpleName) {
             "Vertex", "TinkerVertex" -> {
@@ -318,13 +270,14 @@ class TinkerGraph private constructor(
                 edgeIndexCache.invalidateKey(key)
                 edgeIndexOptimizer.clearSelectivityCache()
             }
-            else -> throw IllegalArgumentException("Class is not indexable: ${elementClass.simpleName}")
+            else ->
+                    throw IllegalArgumentException(
+                            "Class is not indexable: ${elementClass.simpleName}"
+                    )
         }
     }
 
-    /**
-     * Create a composite index for faster multi-property queries.
-     */
+    /** Create a composite index for faster multi-property queries. */
     fun createCompositeIndex(keys: List<String>, elementClass: KClass<out Element>) {
         when (elementClass.simpleName) {
             "Vertex", "TinkerVertex" -> {
@@ -339,20 +292,19 @@ class TinkerGraph private constructor(
                 edgeIndexCache.invalidateIndexType(IndexType.COMPOSITE)
                 edgeIndexOptimizer.clearSelectivityCache()
             }
-            else -> throw IllegalArgumentException("Class is not indexable: ${elementClass.simpleName}")
+            else ->
+                    throw IllegalArgumentException(
+                            "Class is not indexable: ${elementClass.simpleName}"
+                    )
         }
     }
 
-    /**
-     * Create a composite index for faster multi-property queries (vararg convenience).
-     */
+    /** Create a composite index for faster multi-property queries (vararg convenience). */
     fun createCompositeIndex(elementClass: KClass<out Element>, vararg keys: String) {
         createCompositeIndex(keys.toList(), elementClass)
     }
 
-    /**
-     * Create a range index for faster range queries on comparable properties.
-     */
+    /** Create a range index for faster range queries on comparable properties. */
     fun createRangeIndex(key: String, elementClass: KClass<out Element>) {
         when (elementClass.simpleName) {
             "Vertex", "TinkerVertex" -> {
@@ -367,13 +319,14 @@ class TinkerGraph private constructor(
                 edgeIndexCache.invalidateKey(key)
                 edgeIndexOptimizer.clearSelectivityCache()
             }
-            else -> throw IllegalArgumentException("Class is not indexable: ${elementClass.simpleName}")
+            else ->
+                    throw IllegalArgumentException(
+                            "Class is not indexable: ${elementClass.simpleName}"
+                    )
         }
     }
 
-    /**
-     * Drop an index.
-     */
+    /** Drop an index. */
     fun dropIndex(key: String, elementClass: KClass<out Element>) {
         when (elementClass.simpleName) {
             "Vertex", "TinkerVertex" -> {
@@ -386,13 +339,14 @@ class TinkerGraph private constructor(
                 edgeIndexCache.invalidateKey(key)
                 edgeIndexOptimizer.clearSelectivityCache()
             }
-            else -> throw IllegalArgumentException("Class is not indexable: ${elementClass.simpleName}")
+            else ->
+                    throw IllegalArgumentException(
+                            "Class is not indexable: ${elementClass.simpleName}"
+                    )
         }
     }
 
-    /**
-     * Drop a composite index.
-     */
+    /** Drop a composite index. */
     fun dropCompositeIndex(keys: List<String>, elementClass: KClass<out Element>) {
         when (elementClass.simpleName) {
             "Vertex", "TinkerVertex" -> {
@@ -405,20 +359,19 @@ class TinkerGraph private constructor(
                 edgeIndexCache.invalidateIndexType(IndexType.COMPOSITE)
                 edgeIndexOptimizer.clearSelectivityCache()
             }
-            else -> throw IllegalArgumentException("Class is not indexable: ${elementClass.simpleName}")
+            else ->
+                    throw IllegalArgumentException(
+                            "Class is not indexable: ${elementClass.simpleName}"
+                    )
         }
     }
 
-    /**
-     * Drop a composite index (vararg convenience).
-     */
+    /** Drop a composite index (vararg convenience). */
     fun dropCompositeIndex(elementClass: KClass<out Element>, vararg keys: String) {
         dropCompositeIndex(keys.toList(), elementClass)
     }
 
-    /**
-     * Drop a range index.
-     */
+    /** Drop a range index. */
     fun dropRangeIndex(key: String, elementClass: KClass<out Element>) {
         when (elementClass.simpleName) {
             "Vertex", "TinkerVertex" -> {
@@ -431,174 +384,162 @@ class TinkerGraph private constructor(
                 edgeIndexCache.invalidateKey(key)
                 edgeIndexOptimizer.clearSelectivityCache()
             }
-            else -> throw IllegalArgumentException("Class is not indexable: ${elementClass.simpleName}")
+            else ->
+                    throw IllegalArgumentException(
+                            "Class is not indexable: ${elementClass.simpleName}"
+                    )
         }
     }
 
-    /**
-     * Get the indexed keys for a given element class.
-     */
+    /** Get the indexed keys for a given element class. */
     fun getIndexedKeys(elementClass: KClass<out Element>): Set<String> {
         return when (elementClass.simpleName) {
             "Vertex", "TinkerVertex" -> vertexIndex.getIndexedKeys()
             "Edge", "TinkerEdge" -> edgeIndex.getIndexedKeys()
-            else -> throw IllegalArgumentException("Class is not indexable: ${elementClass.simpleName}")
+            else ->
+                    throw IllegalArgumentException(
+                            "Class is not indexable: ${elementClass.simpleName}"
+                    )
         }
     }
 
-    /**
-     * Get the property manager for advanced property operations.
-     */
+    /** Get the property manager for advanced property operations. */
     fun propertyManager(): PropertyManager = propertyManager
 
-    /**
-     * Get the property query engine for advanced property querying.
-     */
+    /** Get the property query engine for advanced property querying. */
     fun propertyQueryEngine(): PropertyQueryEngine = propertyQueryEngine
 
-    /**
-     * Add a vertex property with explicit cardinality and meta-properties.
-     */
+    /** Add a vertex property with explicit cardinality and meta-properties. */
     fun <V> addVertexProperty(
-        vertex: TinkerVertex,
-        key: String,
-        value: V,
-        cardinality: VertexProperty.Cardinality = defaultVertexPropertyCardinality,
-        metaProperties: Map<String, Any?> = emptyMap(),
-        id: Any? = null
+            vertex: TinkerVertex,
+            key: String,
+            value: V,
+            cardinality: VertexProperty.Cardinality = defaultVertexPropertyCardinality,
+            metaProperties: Map<String, Any?> = emptyMap(),
+            id: Any? = null
     ): TinkerVertexProperty<V> {
-        return propertyManager.addVertexProperty(vertex, key, value, cardinality, metaProperties, id)
+        return propertyManager.addVertexProperty(
+                vertex,
+                key,
+                value,
+                cardinality,
+                metaProperties,
+                id
+        )
     }
 
-    /**
-     * Query vertices by property criteria.
-     */
+    /** Query vertices by property criteria. */
     fun queryVertices(criteria: List<PropertyQueryEngine.PropertyCriterion>): Iterator<Vertex> {
         return propertyQueryEngine.queryVertices(criteria)
     }
 
-    /**
-     * Query vertices by a single property criterion.
-     */
+    /** Query vertices by a single property criterion. */
     fun queryVertices(criterion: PropertyQueryEngine.PropertyCriterion): Iterator<Vertex> {
         return propertyQueryEngine.queryVertices(criterion)
     }
 
-    /**
-     * Range query for numeric properties.
-     */
+    /** Range query for numeric properties. */
     fun queryVerticesByRange(
-        key: String,
-        minValue: Number?,
-        maxValue: Number?,
-        includeMin: Boolean = true,
-        includeMax: Boolean = false
+            key: String,
+            minValue: Number?,
+            maxValue: Number?,
+            includeMin: Boolean = true,
+            includeMax: Boolean = false
     ): Iterator<Vertex> {
-        return propertyQueryEngine.queryVerticesByRange(key, minValue, maxValue, includeMin, includeMax)
+        return propertyQueryEngine.queryVerticesByRange(
+                key,
+                minValue,
+                maxValue,
+                includeMin,
+                includeMax
+        )
     }
 
-    /**
-     * Get comprehensive property statistics for the graph.
-     */
+    /** Get comprehensive property statistics for the graph. */
     fun getPropertyStatistics(): Map<String, PropertyQueryEngine.GraphPropertyStats> {
         return propertyQueryEngine.getGraphPropertyStatistics()
     }
 
-    /**
-     * Get comprehensive indexing statistics for the graph.
-     */
+    /** Get comprehensive indexing statistics for the graph. */
     fun getIndexingStatistics(): Map<String, Any> {
         return mapOf(
-            "vertexIndices" to mapOf(
-                "singleProperty" to vertexIndex.getStatistics(),
-                "composite" to vertexCompositeIndex.getStatistics(),
-                "range" to vertexRangeIndex.getStatistics(),
-                "cache" to vertexIndexCache.getStatistics(),
-                "optimizer" to vertexIndexOptimizer.getOptimizerStatistics()
-            ),
-            "edgeIndices" to mapOf(
-                "singleProperty" to edgeIndex.getStatistics(),
-                "composite" to edgeCompositeIndex.getStatistics(),
-                "range" to edgeRangeIndex.getStatistics(),
-                "cache" to edgeIndexCache.getStatistics(),
-                "optimizer" to edgeIndexOptimizer.getOptimizerStatistics()
-            )
+                "vertexIndices" to
+                        mapOf(
+                                "singleProperty" to vertexIndex.getStatistics(),
+                                "composite" to vertexCompositeIndex.getStatistics(),
+                                "range" to vertexRangeIndex.getStatistics(),
+                                "cache" to vertexIndexCache.getStatistics(),
+                                "optimizer" to vertexIndexOptimizer.getOptimizerStatistics()
+                        ),
+                "edgeIndices" to
+                        mapOf(
+                                "singleProperty" to edgeIndex.getStatistics(),
+                                "composite" to edgeCompositeIndex.getStatistics(),
+                                "range" to edgeRangeIndex.getStatistics(),
+                                "cache" to edgeIndexCache.getStatistics(),
+                                "optimizer" to edgeIndexOptimizer.getOptimizerStatistics()
+                        )
         )
     }
 
-    /**
-     * Get index recommendations based on query patterns.
-     */
+    /** Get index recommendations based on query patterns. */
     fun getIndexRecommendations(): Map<String, List<IndexOptimizer.IndexRecommendation>> {
         return mapOf(
-            "vertices" to vertexIndexOptimizer.getIndexRecommendations(),
-            "edges" to edgeIndexOptimizer.getIndexRecommendations()
+                "vertices" to vertexIndexOptimizer.getIndexRecommendations(),
+                "edges" to edgeIndexOptimizer.getIndexRecommendations()
         )
     }
 
-    /**
-     * Optimize index caches by removing expired entries.
-     */
+    /** Optimize index caches by removing expired entries. */
     fun optimizeIndexCaches() {
         vertexIndexCache.cleanupExpired()
         edgeIndexCache.cleanupExpired()
     }
 
-    /**
-     * Configure index cache settings.
-     */
-    fun configureIndexCache(
-        maxSize: Int = 1000,
-        maxAgeMs: Long = 300_000L
-    ) {
+    /** Configure index cache settings. */
+    fun configureIndexCache(maxSize: Int = 1000, maxAgeMs: Long = 300_000L) {
         vertexIndexCache.setMaxSize(maxSize)
         vertexIndexCache.setMaxAge(maxAgeMs)
         edgeIndexCache.setMaxSize(maxSize)
         edgeIndexCache.setMaxAge(maxAgeMs)
     }
 
-    /**
-     * Get optimized query plan for vertex queries.
-     */
-    fun optimizeVertexQuery(criteria: List<PropertyQueryEngine.PropertyCriterion>): IndexOptimizer.QueryPlan {
+    /** Get optimized query plan for vertex queries. */
+    fun optimizeVertexQuery(
+            criteria: List<PropertyQueryEngine.PropertyCriterion>
+    ): IndexOptimizer.QueryPlan {
         return vertexIndexOptimizer.optimizeQuery(criteria)
     }
 
-    /**
-     * Get optimized query plan for edge queries.
-     */
-    fun optimizeEdgeQuery(criteria: List<PropertyQueryEngine.PropertyCriterion>): IndexOptimizer.QueryPlan {
+    /** Get optimized query plan for edge queries. */
+    fun optimizeEdgeQuery(
+            criteria: List<PropertyQueryEngine.PropertyCriterion>
+    ): IndexOptimizer.QueryPlan {
         return edgeIndexOptimizer.optimizeQuery(criteria)
     }
 
     companion object {
-        /**
-         * Logger instance for TinkerGraph operations.
-         */
-        private val logger = KotlinLogging.logger {}
+        /** Logger instance for TinkerGraph operations. */
+        private val logger = Logger.withTag("TinkerGraph")
 
         // Configuration keys
-        const val GREMLIN_TINKERGRAPH_ALLOW_NULL_PROPERTY_VALUES = "gremlin.tinkerGraph.allowNullPropertyValues"
-        const val GREMLIN_TINKERGRAPH_DEFAULT_VERTEX_PROPERTY_CARDINALITY = "gremlin.tinkerGraph.defaultVertexPropertyCardinality"
+        const val GREMLIN_TINKERGRAPH_ALLOW_NULL_PROPERTY_VALUES =
+                "gremlin.tinkerGraph.allowNullPropertyValues"
+        const val GREMLIN_TINKERGRAPH_DEFAULT_VERTEX_PROPERTY_CARDINALITY =
+                "gremlin.tinkerGraph.defaultVertexPropertyCardinality"
         const val GREMLIN_TINKERGRAPH_GRAPH_LOCATION = "gremlin.tinkerGraph.graphLocation"
         const val GREMLIN_TINKERGRAPH_GRAPH_FORMAT = "gremlin.tinkerGraph.graphFormat"
 
-        /**
-         * Create a new TinkerGraph instance.
-         */
+        /** Create a new TinkerGraph instance. */
         fun open(): TinkerGraph = open(emptyMap())
 
-        /**
-         * Create a new TinkerGraph instance with configuration.
-         */
+        /** Create a new TinkerGraph instance with configuration. */
         fun open(configuration: Map<String, Any?>): TinkerGraph {
             return TinkerGraph(configuration)
         }
     }
 
-    /**
-     * TinkerGraph-specific features implementation.
-     */
+    /** TinkerGraph-specific features implementation. */
     private class TinkerGraphFeatures : Graph.Features {
         private val graphFeatures = TinkerGraphGraphFeatures()
         private val vertexFeatures = TinkerGraphVertexFeatures()
@@ -636,6 +577,4 @@ class TinkerGraph private constructor(
         override fun supportsCustomIds(): Boolean = true
         override fun supportsAnyIds(): Boolean = true
     }
-
-
 }

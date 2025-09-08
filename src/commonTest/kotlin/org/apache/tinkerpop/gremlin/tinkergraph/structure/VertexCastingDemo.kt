@@ -1,8 +1,6 @@
 package org.apache.tinkerpop.gremlin.tinkergraph.structure
 
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.matchers.booleans.shouldBeFalse
-import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
@@ -10,9 +8,9 @@ import org.apache.tinkerpop.gremlin.structure.VertexProperty
 import org.apache.tinkerpop.gremlin.tinkergraph.util.VertexCastingManager
 
 /**
- * Demo test to verify the new liberal parameter approach works correctly.
- * This test demonstrates that external SafeCasting calls are no longer needed
- * and that PropertyQueryEngine handles casting internally.
+ * Demo test to verify the new liberal parameter approach works correctly. This test demonstrates
+ * that external SafeCasting calls are no longer needed and that PropertyQueryEngine handles casting
+ * internally.
  */
 class VertexCastingDemo :
         StringSpec({
@@ -48,15 +46,22 @@ class VertexCastingDemo :
                 vertex3.property("active", false)
 
                 // Test queries without explicit casting - should work automatically
-                val youngPeople = queryEngine.queryVerticesByRange("age", 20, 32, true).asSequence().toList()
+                val youngPeople =
+                        queryEngine.queryVerticesByRange("age", 20, 32, true).asSequence().toList()
                 youngPeople shouldHaveSize 2 // Alice (30) and Bob ("25")
 
-                val highScorers = queryEngine.queryVerticesByRange("score", 80.0, 100.0, true).asSequence().toList()
+                val highScorers =
+                        queryEngine
+                                .queryVerticesByRange("score", 80.0, 100.0, true)
+                                .asSequence()
+                                .toList()
                 highScorers shouldHaveSize 2 // Alice (85.5) and Bob ("92.3")
 
-                val activeUsers = queryEngine.queryVertices(
-                    PropertyQueryEngine.exact("active", true)
-                ).asSequence().toList()
+                val activeUsers =
+                        queryEngine
+                                .queryVertices(PropertyQueryEngine.exact("active", true))
+                                .asSequence()
+                                .toList()
                 activeUsers shouldHaveSize 2 // Alice (true) and Bob ("true")
             }
 
@@ -68,13 +73,22 @@ class VertexCastingDemo :
                 vertex.property("stringBoolean", "false")
 
                 // Query using different types to trigger casting
-                queryEngine.queryVertices(PropertyQueryEngine.exact("stringNumber", 123)).asSequence().toList()
-                queryEngine.queryVertices(PropertyQueryEngine.exact("stringDouble", 45.67)).asSequence().toList()
-                queryEngine.queryVertices(PropertyQueryEngine.exact("stringBoolean", false)).asSequence().toList()
+                queryEngine
+                        .queryVertices(PropertyQueryEngine.exact("stringNumber", 123))
+                        .asSequence()
+                        .toList()
+                queryEngine
+                        .queryVertices(PropertyQueryEngine.exact("stringDouble", 45.67))
+                        .asSequence()
+                        .toList()
+                queryEngine
+                        .queryVertices(PropertyQueryEngine.exact("stringBoolean", false))
+                        .asSequence()
+                        .toList()
 
-                val stats = VertexCastingManager.getStatistics()
+                val stats = VertexCastingManager.getCastingStatistics()
                 stats["totalCasts"] shouldNotBe null
-                (stats["totalCasts"] as Int) > 0 shouldBeTrue()
+                ((stats["totalCasts"] as Int) > 0) shouldBe true
             }
 
             "casting should handle null values gracefully" {
@@ -82,9 +96,11 @@ class VertexCastingDemo :
                 vertex.property("name", "Test")
                 // No age property - effectively null
 
-                val results = queryEngine.queryVertices(
-                    PropertyQueryEngine.exact("age", null)
-                ).asSequence().toList()
+                val results =
+                        queryEngine
+                                .queryVertices(PropertyQueryEngine.exact("age", null))
+                                .asSequence()
+                                .toList()
 
                 // Should find vertices without the age property
                 results shouldHaveSize 1
@@ -99,24 +115,32 @@ class VertexCastingDemo :
                 vertex.property("exactBoolean", true)
 
                 // Query with exact same types - should work without casting
-                val intResult = queryEngine.queryVertices(
-                    PropertyQueryEngine.exact("exactInt", 42)
-                ).asSequence().toList()
+                val intResult =
+                        queryEngine
+                                .queryVertices(PropertyQueryEngine.exact("exactInt", 42))
+                                .asSequence()
+                                .toList()
                 intResult shouldHaveSize 1
 
-                val doubleResult = queryEngine.queryVertices(
-                    PropertyQueryEngine.exact("exactDouble", 3.14159)
-                ).asSequence().toList()
+                val doubleResult =
+                        queryEngine
+                                .queryVertices(PropertyQueryEngine.exact("exactDouble", 3.14159))
+                                .asSequence()
+                                .toList()
                 doubleResult shouldHaveSize 1
 
-                val stringResult = queryEngine.queryVertices(
-                    PropertyQueryEngine.exact("exactString", "hello")
-                ).asSequence().toList()
+                val stringResult =
+                        queryEngine
+                                .queryVertices(PropertyQueryEngine.exact("exactString", "hello"))
+                                .asSequence()
+                                .toList()
                 stringResult shouldHaveSize 1
 
-                val booleanResult = queryEngine.queryVertices(
-                    PropertyQueryEngine.exact("exactBoolean", true)
-                ).asSequence().toList()
+                val booleanResult =
+                        queryEngine
+                                .queryVertices(PropertyQueryEngine.exact("exactBoolean", true))
+                                .asSequence()
+                                .toList()
                 booleanResult shouldHaveSize 1
             }
 
@@ -128,38 +152,48 @@ class VertexCastingDemo :
                 vertex.property("zeroString", "0")
 
                 // Test edge case queries
-                val zeroResults = queryEngine.queryVertices(
-                    PropertyQueryEngine.exact("zero", "0")
-                ).asSequence().toList()
+                val zeroResults =
+                        queryEngine
+                                .queryVertices(PropertyQueryEngine.exact("zero", "0"))
+                                .asSequence()
+                                .toList()
                 zeroResults shouldHaveSize 1
 
-                val emptyResults = queryEngine.queryVertices(
-                    PropertyQueryEngine.exact("empty", "")
-                ).asSequence().toList()
+                val emptyResults =
+                        queryEngine
+                                .queryVertices(PropertyQueryEngine.exact("empty", ""))
+                                .asSequence()
+                                .toList()
                 emptyResults shouldHaveSize 1
 
-                val falseResults = queryEngine.queryVertices(
-                    PropertyQueryEngine.exact("falseString", false)
-                ).asSequence().toList()
+                val falseResults =
+                        queryEngine
+                                .queryVertices(PropertyQueryEngine.exact("falseString", false))
+                                .asSequence()
+                                .toList()
                 falseResults shouldHaveSize 1
 
-                val zeroStringResults = queryEngine.queryVertices(
-                    PropertyQueryEngine.exact("zeroString", 0)
-                ).asSequence().toList()
+                val zeroStringResults =
+                        queryEngine
+                                .queryVertices(PropertyQueryEngine.exact("zeroString", 0))
+                                .asSequence()
+                                .toList()
                 zeroStringResults shouldHaveSize 1
             }
 
             "casting should work with complex property structures" {
                 val vertex = graph.addVertex()
-                vertex.property(VertexProperty.Cardinality.list, "tags", "developer")
-                vertex.property(VertexProperty.Cardinality.list, "tags", "kotlin")
-                vertex.property(VertexProperty.Cardinality.list, "tags", "testing")
+                vertex.property("tags", "developer", VertexProperty.Cardinality.LIST)
+                vertex.property("tags", "kotlin", VertexProperty.Cardinality.LIST)
+                vertex.property("tags", "testing", VertexProperty.Cardinality.LIST)
                 vertex.property("metadata", mapOf("created" to "2024", "version" to "1.0"))
 
                 // Query should still work with casting enabled
-                val taggedVertices = queryEngine.queryVertices(
-                    PropertyQueryEngine.exact("tags", "developer")
-                ).asSequence().toList()
+                val taggedVertices =
+                        queryEngine
+                                .queryVertices(PropertyQueryEngine.exact("tags", "developer"))
+                                .asSequence()
+                                .toList()
                 taggedVertices shouldHaveSize 1
             }
 
@@ -177,19 +211,21 @@ class VertexCastingDemo :
 
                 // Perform queries that require casting
                 repeat(50) { i ->
-                    queryEngine.queryVertices(
-                        PropertyQueryEngine.exact("stringId", i)
-                    ).asSequence().toList()
-                    queryEngine.queryVertices(
-                        PropertyQueryEngine.exact("stringDouble", i.toDouble())
-                    ).asSequence().toList()
+                    queryEngine
+                            .queryVertices(PropertyQueryEngine.exact("stringId", i))
+                            .asSequence()
+                            .toList()
+                    queryEngine
+                            .queryVertices(PropertyQueryEngine.exact("stringDouble", i.toDouble()))
+                            .asSequence()
+                            .toList()
                 }
 
                 val endTime = System.currentTimeMillis()
                 val duration = endTime - startTime
 
                 // Should complete within reasonable time
-                (duration < 5000) shouldBeTrue() // Less than 5 seconds
+                (duration < 5000) shouldBe true // Less than 5 seconds
             }
 
             "casting manager should provide useful statistics" {
@@ -199,26 +235,35 @@ class VertexCastingDemo :
                 vertex.property("decimal", "45.67")
                 vertex.property("flag", "true")
 
-                queryEngine.queryVertices(PropertyQueryEngine.exact("number", 123)).asSequence().toList()
-                queryEngine.queryVertices(PropertyQueryEngine.exact("decimal", 45.67)).asSequence().toList()
-                queryEngine.queryVertices(PropertyQueryEngine.exact("flag", true)).asSequence().toList()
+                queryEngine
+                        .queryVertices(PropertyQueryEngine.exact("number", 123))
+                        .asSequence()
+                        .toList()
+                queryEngine
+                        .queryVertices(PropertyQueryEngine.exact("decimal", 45.67))
+                        .asSequence()
+                        .toList()
+                queryEngine
+                        .queryVertices(PropertyQueryEngine.exact("flag", true))
+                        .asSequence()
+                        .toList()
 
-                val stats = VertexCastingManager.getStatistics()
+                val stats = VertexCastingManager.getCastingStatistics()
 
                 // Verify statistics are meaningful
                 stats shouldNotBe null
-                stats.containsKey("totalCasts") shouldBeTrue()
-                stats.containsKey("successfulCasts") shouldBeTrue()
-                stats.containsKey("failedCasts") shouldBeTrue()
+                stats.containsKey("totalCasts") shouldBe true
+                stats.containsKey("successfulCasts") shouldBe true
+                stats.containsKey("failedCasts") shouldBe true
 
                 val totalCasts = stats["totalCasts"] as Int
                 val successfulCasts = stats["successfulCasts"] as Int
                 val failedCasts = stats["failedCasts"] as Int
 
-                (totalCasts >= 0) shouldBeTrue()
-                (successfulCasts >= 0) shouldBeTrue()
-                (failedCasts >= 0) shouldBeTrue()
-                (totalCasts == successfulCasts + failedCasts) shouldBeTrue()
+                (totalCasts >= 0) shouldBe true
+                (successfulCasts >= 0) shouldBe true
+                (failedCasts >= 0) shouldBe true
+                (totalCasts == successfulCasts + failedCasts) shouldBe true
             }
 
             "casting should be disabled when not needed" {
@@ -230,15 +275,16 @@ class VertexCastingDemo :
                 vertex.property("exactMatch", 42)
 
                 // Query with exact same type
-                queryEngine.queryVertices(
-                    PropertyQueryEngine.exact("exactMatch", 42)
-                ).asSequence().toList()
+                queryEngine
+                        .queryVertices(PropertyQueryEngine.exact("exactMatch", 42))
+                        .asSequence()
+                        .toList()
 
-                val stats = VertexCastingManager.getStatistics()
+                val stats = VertexCastingManager.getCastingStatistics()
                 val totalCasts = stats["totalCasts"] as Int
 
                 // Should have minimal or zero casts for exact matches
-                (totalCasts <= 1) shouldBeTrue()
+                (totalCasts <= 1) shouldBe true
             }
 
             "liberal parameter approach should work with indices" {
@@ -250,9 +296,11 @@ class VertexCastingDemo :
                 vertex.property("value", "123")
 
                 // Query using index with casting
-                val results = queryEngine.queryVertices(
-                    PropertyQueryEngine.exact("value", 123)
-                ).asSequence().toList()
+                val results =
+                        queryEngine
+                                .queryVertices(PropertyQueryEngine.exact("value", 123))
+                                .asSequence()
+                                .toList()
 
                 results shouldHaveSize 1
                 results.first().value<String>("category") shouldBe "test"

@@ -1,14 +1,14 @@
 [versions]
-kotlin = "2.1.0"
+kotlin = "2.2.0"
 dokka = "1.9.20"
 kotlinx-serialization = "1.7.3"
 kotlinx-coroutines = "1.8.1"
 kotlinx-datetime = "0.6.1"
-kotlin-logging = "7.0.0"
+kermit = "2.0.8"
 logback = "1.4.14"
 tinkerpop = "3.7.0"
 junit = "5.11.0"
-kotest = "5.8.0"
+kotest = "5.9.1"
 
 [libraries]
 # Kotlin and KotlinX
@@ -19,7 +19,7 @@ kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-t
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
 
 # Logging
-kotlin-logging = { module = "io.github.oshai:kotlin-logging", version.ref = "kotlin-logging" }
+kermit = { module = "co.touchlab:kermit", version.ref = "kermit" }
 logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
 
 # TinkerPop
@@ -39,7 +39,7 @@ kotest-property = { module = "io.kotest:kotest-property", version.ref = "kotest"
 
 [bundles]
 # Common runtime dependencies
-common-main = ["kotlinx-serialization-core", "kotlinx-coroutines-core", "kotlinx-datetime", "kotlin-logging"]
+common-main = ["kotlinx-serialization-core", "kotlinx-coroutines-core", "kotlinx-datetime", "kermit"]
 
 # JVM-specific dependencies
 jvm-main = ["kotlinx-serialization-json", "kotlinx-coroutines-core", "logback-classic", "tinkerpop-gremlin-core", "tinkerpop-tinkergraph-gremlin", "tinkerpop-gremlin-groovy"]

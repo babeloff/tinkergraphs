@@ -1,7 +1,6 @@
 package org.apache.tinkerpop.gremlin.tinkergraph.structure
 
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import org.apache.tinkerpop.gremlin.structure.VertexProperty
@@ -99,7 +98,7 @@ class PropertyQueryEngineTest :
                                 .toList()
 
                 results shouldHaveSize 2
-                results.all { it.hasProperty("industry") } shouldBe true
+                results.all { (it as TinkerVertex).hasProperty("industry") } shouldBe true
             }
 
             "not exists criterion should work correctly" {
@@ -110,7 +109,7 @@ class PropertyQueryEngineTest :
                                 .toList()
 
                 results shouldHaveSize 3
-                results.all { !it.hasProperty("industry") } shouldBe true
+                results.all { !(it as TinkerVertex).hasProperty("industry") } shouldBe true
             }
 
             // Range Query Tests
@@ -513,7 +512,7 @@ class PropertyQueryEngineTest :
                 results shouldHaveSize 0
 
                 val stats = emptyQueryEngine.getGraphPropertyStatistics()
-                stats.shouldBeEmpty()
+                stats shouldBe emptyList<Map<String, Any>>()
 
                 emptyGraph.close()
             }

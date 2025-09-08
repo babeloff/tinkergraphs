@@ -2241,11 +2241,6 @@ type-is@~1.6.18:
     media-typer "0.3.0"
     mime-types "~2.1.24"
 
-typescript@5.5.4:
-  version "5.5.4"
-  resolved "https://registry.yarnpkg.com/typescript/-/typescript-5.5.4.tgz#d9852d6c82bad2d2eda4fd74a5762a8f5909e9ba"
-  integrity sha512-Mtq29sKDAEYP7aljRgtPOpTvOfbwRWlS6dPRzwjdE+C0R4brX/GUyhHSecbHMFLNBLcJIPt9nl9yG5TZ1weH+Q==
-
 undici-types@~7.10.0:
   version "7.10.0"
   resolved "https://registry.yarnpkg.com/undici-types/-/undici-types-7.10.0.tgz#4ac2e058ce56b462b056e629cc6a02393d3ff350"

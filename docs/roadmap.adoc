@@ -243,6 +243,20 @@ while maintaining API compatibility with the original Java implementation.
 - [x] Core implementation classes: TinkerVertex, TinkerVertexProperty, TinkerEdge
 - [x] Phase 1 Core Implementation: COMPLETED
 
+=== Build System
+
+**Important Note**: This project uses **Pixi** for dependency management and build tasks, not the standard Gradle Wrapper.
+
+* Use `pixi run <task>` instead of `./gradlew <task>`
+* Example commands:
+  - `pixi run build` - Build the entire project
+  - `pixi run compile` - Compile JVM target
+  - `pixi run test` - Run tests
+  - `pixi run clean` - Clean build artifacts
+  - `pixi run docs` - Generate documentation
+
+Pixi provides consistent dependency management across platforms and ensures reproducible builds with the exact versions specified in `pixi.toml`.
+
 === Target Architecture
 
 ....
@@ -492,11 +506,13 @@ Enhanced indexing system with comprehensive capabilities:
 
 **Task 3.0.1: Generic Capabilities** [✅ COMPLETED]
 
-- ✅ Integration with cross platform logging framework: KmLogging
-  * Added kotlin-logging dependency (version 7.0.0) for multiplatform support
-  * Integrated logging throughout TinkerGraph core operations (vertex/edge creation, lookups)
-  * Created comprehensive LoggingConfig utility class with performance monitoring
-  * Added platform-specific logback-classic for JVM target
+- ✅ Cross-platform logging framework migration: KotlinLogging → Kermit
+  * ✅ Successfully migrated from kotlin-logging (7.0.0) to Kermit (2.0.8)
+  * ✅ Updated LoggingConfig utility to use Kermit APIs (Logger.withTag, .i{}, .d{}, .w{}, .e{})
+  * ✅ Migrated TinkerGraph.kt logging calls to Kermit syntax
+  * ✅ Updated Kotlin to 2.2.0 for full Kermit compatibility
+  * ✅ All platform targets (JVM/JS/Native) now support Kermit
+  * ✅ Updated build.gradle.kts to use version catalog for dependency management
 - ✅ Provide KDoc for all objects
   * Added comprehensive KDoc documentation to TinkerGraph class and methods
   * Created detailed documentation for LoggingConfig utility
@@ -510,10 +526,13 @@ Enhanced indexing system with comprehensive capabilities:
 
 **Implementation Details:**
 
-- Added LoggingConfig object with cross-platform utilities for performance monitoring, debug logging, and graph statistics
-- Enhanced TinkerGraph with debug/info/warn logging for all major operations
-- Created comprehensive test suite (LoggingIntegrationTest) validating logging functionality
-- All tests pass, documentation builds successfully, KDoc generation working
+- ✅ Updated LoggingConfig to use Kermit's cleaner API (Logger.withTag vs KotlinLogging.logger)
+- ✅ Converted all logging calls: logger.info{} → logger.i{}, logger.debug{} → logger.d{}
+- ✅ Updated project to Kotlin 2.2.0 for full Kermit compatibility
+- ✅ All platform targets (JVM/JS/Native) now compile successfully with Kermit
+- ✅ Integrated Gradle version catalogs for consistent dependency management
+- ✅ Removed deprecated withJava() configuration for Kotlin 2.2.0 compatibility
+- 📋 LoggingIntegrationTest needs updates for Kermit compatibility
 
 === 3.1 JVM Platform Support
 

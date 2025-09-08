@@ -277,10 +277,10 @@ class TinkerVertexTest :
                 val allLabels = vertex.getAllEdgeLabels()
                 allLabels shouldHaveSize 3
             }
-
-            /** Helper object for reserved keys. */
-            object T {
-                const val id = "id"
-                const val label = "label"
-            }
         })
+
+/** Helper object for reserved keys. */
+private object T {
+    const val id = "id"
+    const val label = "label"
+}
