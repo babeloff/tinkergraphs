@@ -7,7 +7,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
- * Integration test for logging functionality introduced in Prompt 3.0.1.
+ * Integration test for logging functionality introduced in Task 3.0.1.
  *
  * This comprehensive test suite validates the logging infrastructure across
  * all TinkerGraph operations and platforms. It demonstrates:

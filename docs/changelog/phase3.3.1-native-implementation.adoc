@@ -6,7 +6,7 @@
 
 == Overview
 
-This document summarizes the implementation of Prompt 3.3.1: Native platform implementations for TinkerGraph Kotlin Multiplatform. The implementation provides comprehensive native platform support with memory management optimizations, native file I/O operations, platform-specific collections, C interop for performance-critical operations, and cross-platform compatibility.
+This document summarizes the implementation of Task 3.3.1: Native platform implementations for TinkerGraph Kotlin Multiplatform. The implementation provides comprehensive native platform support with memory management optimizations, native file I/O operations, platform-specific collections, C interop for performance-critical operations, and cross-platform compatibility.
 
 == Implementation Summary
 

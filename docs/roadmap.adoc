@@ -79,8 +79,9 @@ The TinkerGraph Kotlin Multiplatform implementation has made significant progres
 === Current Issues & Next Steps
 1. **🚧 JavaScript Platform**: Resolve 36 ClassCastException test failures in PropertyQueryEngine
 2. **🚧 Native Platform**: Fix 4 AdvancedIndexingTest assertion errors
-3. **🚧 TypeScript Definitions**: Begin Phase 3.2.2 implementation
-4. **🚧 Advanced Native Optimizations**: Begin Phase 3.3.2 implementation
+3. **🚧 GraphSON Parser**: Replace JSON fallback with proper GraphSON v3.0 implementation (Phase 3.6.1)
+4. **🚧 TypeScript Definitions**: Begin Phase 3.2.2 implementation
+5. **🚧 Advanced Native Optimizations**: Begin Phase 3.3.2 implementation
 
 === Build Stability
 - ✅ **Compilation**: All platforms compile successfully
@@ -131,6 +132,22 @@ The TinkerGraph Kotlin Multiplatform implementation has made significant progres
   * Native threading support where applicable
 - **Prerequisites**: Native platform stability (Priority 1)
 - **Estimated Effort**: 3-4 weeks
+
+==== GraphSON Parser Implementation
+- **Issue**: GraphML and GraphSON formats currently use JSON fallback instead of proper parsing
+- **Root Cause**: Incomplete parsing implementations for standard TinkerPop I/O formats
+- **Action Required**:
+  * Implement native GraphSON v3.0 parser following TinkerPop specification
+  * Add support for typed values, collections, and graph structures
+  * Replace current JSON fallback with proper GraphSON deserialization
+  * Ensure multiplatform compatibility (JVM, JS, Native)
+  * Add comprehensive test coverage for GraphSON import/export operations
+- **Prerequisites**: JavaScript platform stability (Priority 1)
+- **Estimated Effort**: 2-3 weeks
+- **Success Criteria**:
+  * GraphSON files load correctly with proper type preservation
+  * All GraphSON format tests pass across platforms
+  * Full compliance with TinkerPop GraphSON v3.0 specification
 
 === Priority 3: Production Readiness
 
@@ -205,7 +222,7 @@ The roadmap uses the following status indicators to track progress:
 
 === 1.1 Complete Basic Element Classes
 
-**Prompt 1.1.1: Implement TinkerVertex** [✅ COMPLETED]
+**Task 1.1.1: Implement TinkerVertex** [✅ COMPLETED]
 
 Create TinkerVertex class that implements the Vertex interface. This should include:
 
@@ -218,7 +235,7 @@ Create TinkerVertex class that implements the Vertex interface. This should incl
 
 Reference the JavaScript implementation structure from tinkergraph-js for API design patterns.
 
-**Prompt 1.1.2: Implement TinkerEdge** [✅ COMPLETED]
+**Task 1.1.2: Implement TinkerEdge** [✅ COMPLETED]
 
 Create TinkerEdge class that implements the Edge interface. This should include:
 
@@ -228,7 +245,7 @@ Create TinkerEdge class that implements the Edge interface. This should include:
 - Integration with graph indexing system
 - Proper cleanup when removed from graph
 
-**Prompt 1.1.3: Implement TinkerVertexProperty** [✅ COMPLETED]
+**Task 1.1.3: Implement TinkerVertexProperty** [✅ COMPLETED]
 
 Create TinkerVertexProperty class that implements VertexProperty interface. This should include:
 
@@ -239,7 +256,7 @@ Create TinkerVertexProperty class that implements VertexProperty interface. This
 
 === 1.2 Helper and Utility Classes
 
-**Prompt 1.2.1: Create ElementHelper utility** [✅ COMPLETED]
+**Task 1.2.1: Create ElementHelper utility** [✅ COMPLETED]
 
 Create ElementHelper utility class with static methods for:
 
@@ -251,7 +268,7 @@ Create ElementHelper utility class with static methods for:
 
 This mirrors the ElementHelper from the Java TinkerPop implementation.
 
-**Prompt 1.2.2: Implement TinkerIndex** [✅ COMPLETED]
+**Task 1.2.2: Implement TinkerIndex** [✅ COMPLETED]
 
 Create TinkerIndex class for property indexing:
 
@@ -263,7 +280,7 @@ Create TinkerIndex class for property indexing:
 
 This should support the indexing functionality seen in the JavaScript version.
 
-**Prompt 1.2.3: Create TinkerGraphVariables** [✅ COMPLETED]
+**Task 1.2.3: Create TinkerGraphVariables** [✅ COMPLETED]
 
 Implement TinkerGraphVariables class for graph metadata:
 
@@ -276,7 +293,7 @@ Implement TinkerGraphVariables class for graph metadata:
 
 === 2.1 Graph Traversal Support
 
-**Prompt 2.1.1: Implement graph traversal iterators** [✅ COMPLETED]
+**Task 2.1.1: Implement graph traversal iterators** [✅ COMPLETED]
 
 Create efficient iterators for graph traversal:
 
@@ -297,7 +314,7 @@ Create efficient iterators for graph traversal:
 - Full integration with TinkerGraph, TinkerVertex, and TinkerElement classes
 - Comprehensive test coverage and performance optimization
 
-**Prompt 2.1.2: Add graph algorithms support** [✅ COMPLETED]
+**Task 2.1.2: Add graph algorithms support** [✅ COMPLETED]
 
 Implement basic graph algorithms:
 
@@ -318,7 +335,7 @@ GraphAlgorithms.kt: Complete implementation of core graph algorithms as Graph ex
 - Full multiplatform compatibility (JVM, JS, Native)
 - Detailed documentation with Wikipedia references and complexity analysis
 
-**Prompt 2.1.3: Advanced graph algorithms support** [✅ COMPLETED]
+**Task 2.1.3: Advanced graph algorithms support** [✅ COMPLETED]
 
 Implement advanced graph algorithms:
 
@@ -357,7 +374,7 @@ This major enhancement implements multi-property and meta-property support for T
 
 === 2.2 Advanced Property Management
 
-**Prompt 2.2.1: Multi-property and Meta-property support** [✅ COMPLETED]
+**Task 2.2.1: Multi-property and Meta-property support** [✅ COMPLETED]
 
 Enhanced property system with comprehensive support for:
 
@@ -382,7 +399,7 @@ Enhanced property system with comprehensive support for:
 - Comprehensive error handling and constraint validation
 - Full multiplatform compatibility maintained
 
-**Prompt 2.2.2: Property indexing and querying** [✅ COMPLETED]
+**Task 2.2.2: Property indexing and querying** [✅ COMPLETED]
 
 Enhanced indexing system with comprehensive capabilities:
 
@@ -410,7 +427,7 @@ Enhanced indexing system with comprehensive capabilities:
 
 == Phase 3: Platform-Specific Implementations
 
-**Prompt 3.0.1: Generic Capabilities** [✅ COMPLETED]
+**Task 3.0.1: Generic Capabilities** [✅ COMPLETED]
 
 - ✅ Integration with cross platform logging framework: KmLogging
   * Added kotlin-logging dependency (version 7.0.0) for multiplatform support
@@ -437,7 +454,7 @@ Enhanced indexing system with comprehensive capabilities:
 
 === 3.1 JVM Platform Support
 
-**Prompt 3.1.1: JVM-specific optimizations** [✅ COMPLETED]
+**Task 3.1.1: JVM-specific optimizations** [✅ COMPLETED]
 
 Implement JVM-specific features:
 
@@ -454,7 +471,7 @@ Implement JVM-specific features:
 - Comprehensive test suite with 15+ test methods validating all functionality
 - Full backward compatibility maintained - all features are opt-in
 
-**Prompt 3.1.2: JVM persistence layer** [✅ COMPLETED]
+**Task 3.1.2: JVM persistence layer** [✅ COMPLETED]
 
 Add JVM persistence capabilities:
 Implement phase 3.1.2
@@ -478,7 +495,7 @@ Implement phase 3.1.2
 
 === 3.2 JavaScript Platform Support
 
-**Prompt 3.2.1: Fix Tinkergraphs JavaScript Tests Compilation** [✅ COMPLETED]
+**Task 3.2.1: Fix Tinkergraphs JavaScript Tests Compilation** [✅ COMPLETED]
 
 JavaScript tests compilation and type preservation fixes:
 
@@ -514,7 +531,7 @@ JavaScript tests compilation and type preservation fixes:
 - Web Worker support for background processing
 - ✅ Implementation summary documented in ./docs/changelog/ as phase3.2.1-js-tests-fix.adoc
 
-**Prompt 3.2.2: TypeScript definitions** [🚧 IN PROGRESS]
+**Task 3.2.2: TypeScript definitions** [🚧 IN PROGRESS]
 
 Generate comprehensive TypeScript definitions:
 
@@ -527,7 +544,7 @@ Generate comprehensive TypeScript definitions:
 
 === 3.3 Native Platform Support
 
-**Prompt 3.3.1: Native platform implementations** [✅ COMPLETED]
+**Task 3.3.1: Native platform implementations** [✅ COMPLETED]
 
 Implement native platform support:
 
@@ -551,7 +568,7 @@ Implement native platform support:
 - Native tests: 244/248 tests passing (98.4% success rate)
 - Minor issues: Some AdvancedIndexingTest assertion errors (4 failing tests)
 
-**Prompt 3.3.2: Native performance optimizations** [🚧 IN PROGRESS]
+**Task 3.3.2: Native performance optimizations** [🚧 IN PROGRESS]
 
 Add native-specific optimizations:
 
@@ -564,7 +581,7 @@ Add native-specific optimizations:
 
 === 3.4 Python Platform Support
 
-**Prompt 3.4.1: Python platform implementations** [⏸️ TODO]
+**Task 3.4.1: Python platform implementations** [⏸️ TODO]
 
 Implement python platform support:
 
@@ -575,7 +592,7 @@ Implement python platform support:
 
 === 3.5 Jank on LLVM Support
 
-**Prompt 3.5.1: Jank platform implementations** [⏸️ TODO]
+**Task 3.5.1: Jank platform implementations** [⏸️ TODO]
 
 Implement Jank platform support:
 
@@ -584,12 +601,41 @@ Implement Jank platform support:
 - This allows the call to the Kotlin functions as if they were native Jank functions.
 - Place the implementation summary in ./docs/changelog/ as phase3.5.1-jank-platform.adoc
 
+=== 3.6 Cross-Platform I/O Format Improvements
+
+**Task 3.6.1: Native GraphSON v3.0 Parser Implementation** [🚧 HIGH PRIORITY]
+
+Replace JSON fallback with proper GraphSON v3.0 parser:
+
+- Implement native GraphSON v3.0 parser following TinkerPop specification
+- Add support for typed values (g:Int32, g:Int64, g:Double, g:Float, etc.)
+- Handle GraphSON collections (g:List, g:Set, g:Map) with proper type preservation
+- Support graph structures (g:Vertex, g:Edge, g:VertexProperty) serialization/deserialization
+- Implement multiplatform compatibility (JVM, JavaScript, Native platforms)
+- Replace current JSON serialization fallback in GraphML and GraphSON formats
+- Add comprehensive test coverage for all GraphSON data types and structures
+- Ensure performance parity or improvement over JSON fallback
+- Full compliance with Apache TinkerPop GraphSON v3.0 specification
+- Place the implementation summary in ./docs/changelog/ as phase3.6.1-graphson-parser.adoc
+
+**Current Issues:**
+- GraphSON format loading returns incomplete results due to stub implementations
+- Type information is lost during serialization/deserialization process
+- Multiplatform tests failing due to format parsing inconsistencies
+- Performance degradation from double-parsing (GraphSON → JSON → Objects)
+
+**Success Criteria:**
+- All GraphSON format tests pass across JVM, JavaScript, and Native platforms
+- Type preservation maintained for all TinkerPop data types
+- Performance improvement over current JSON fallback approach
+- Full TinkerPop specification compliance verified through test suite
+
 
 == Phase 4: Testing and Quality Assurance
 
 === 4.1 Comprehensive Test Suite
 
-**Prompt 4.1.1: Core functionality tests**Corrected build issues [⏸️ TODO]
+**Task 4.1.1: Core functionality tests**Corrected build issues [⏸️ TODO]
 
 Create comprehensive test suite:
 
@@ -600,7 +646,7 @@ Create comprehensive test suite:
 - Cross-platform compatibility tests
 - Place the implementation summary in ./docs/changelog/ as phase4.1.1-qa.adoc
 
-**Prompt 4.1.2: TinkerPop compliance tests** [⏸️ TODO]
+**Task 4.1.2: TinkerPop compliance tests** [⏸️ TODO]
 
 Implement TinkerPop compliance testing:
 
@@ -613,7 +659,7 @@ Implement TinkerPop compliance testing:
 
 === 4.2 Performance Testing
 
-**Prompt 4.2.1: Benchmarking framework** [⏸️ TODO]
+**Task 4.2.1: Benchmarking framework** [⏸️ TODO]
 
 Create performance benchmarking framework:
 
@@ -624,7 +670,7 @@ Create performance benchmarking framework:
 - Cross-platform performance comparison
 - Place the implementation summary in ./docs/changelog/ as phase4.2.1-qa-benchmarks.adoc
 
-**Prompt 4.2.2: Performance optimizations** [⏸️ TODO]
+**Task 4.2.2: Performance optimizations** [⏸️ TODO]
 
 Implement performance optimizations based on benchmarks:
 
@@ -639,7 +685,7 @@ Implement performance optimizations based on benchmarks:
 
 === 5.1 API Documentation
 
-**Prompt 5.1.1: Comprehensive API documentation** [⏸️ TODO]
+**Task 5.1.1: Comprehensive API documentation** [⏸️ TODO]
 
 Create complete API documentation:
 
@@ -650,7 +696,7 @@ Create complete API documentation:
 - API reference documentation generation
 - Place the implementation summary in ./docs/changelog/ as phase5.1.1-docs-api.adoc
 
-**Prompt 5.1.2: Tutorial and guides** [⏸️ TODO]
+**Task 5.1.2: Tutorial and guides** [⏸️ TODO]
 
 Write comprehensive tutorials:
 
@@ -663,7 +709,7 @@ Write comprehensive tutorials:
 
 === 5.2 Example Applications
 
-**Prompt 5.2.1: Sample applications** [⏸️ TODO]
+**Task 5.2.1: Sample applications** [⏸️ TODO]
 
 Create sample applications for each platform:
 
@@ -673,7 +719,7 @@ Create sample applications for each platform:
 - Cross-platform: Shared business logic with platform UIs
 - Place the implementation summary in ./docs/changelog/ as phase5.2.1-docs-samples.adoc
 
-**Prompt 5.2.2: Integration examples** [⏸️ TODO]
+**Task 5.2.2: Integration examples** [⏸️ TODO]
 
 Provide integration examples:
 
@@ -688,7 +734,7 @@ Provide integration examples:
 
 === 6.1 Production Features
 
-**Prompt 6.1.1: Monitoring and observability** [⏸️ TODO]
+**Task 6.1.1: Monitoring and observability** [⏸️ TODO]
 
 Add production monitoring features:
 
@@ -699,7 +745,7 @@ Add production monitoring features:
 - Performance monitoring dashboards
 - Place the implementation summary in ./docs/changelog/ as phase6.1.1-prod-telemetry.adoc
 
-**Prompt 6.1.2: Configuration management** [⏸️ TODO]
+**Task 6.1.2: Configuration management** [⏸️ TODO]
 
 Implement comprehensive configuration:
 
@@ -712,7 +758,7 @@ Implement comprehensive configuration:
 
 === 6.2 Release and Distribution
 
-**Prompt 6.2.1: Release automation** [⏸️ TODO]
+**Task 6.2.1: Release automation** [⏸️ TODO]
 
 Set up release processes:
 
@@ -723,7 +769,7 @@ Set up release processes:
 - Distribution to package managers (Maven Central, NPM, etc.)
 - Place the implementation summary in ./docs/changelog/ as phase6.2.1-prod-ci.adoc
 
-**Prompt 6.2.2: Packaging and distribution** [⏸️ TODO]
+**Task 6.2.2: Packaging and distribution** [⏸️ TODO]
 
 Create distribution packages:
 

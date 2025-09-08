@@ -6,7 +6,7 @@ import kotlin.test.*
 
 /**
  * Comprehensive tests for multi-property and meta-property support in TinkerGraph.
- * Tests Prompt 2.2.1 implementation: Multi-property and Meta-property support.
+ * Tests Task 2.2.1 implementation: Multi-property and Meta-property support.
  */
 class MultiPropertyTest {
 

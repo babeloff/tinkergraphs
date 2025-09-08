@@ -328,7 +328,7 @@ src/commonMain/kotlin/org/apache/tinkerpop/gremlin/tinkergraph/
 
 === Advanced Property Features
 
-==== Property Indexing Enhancements (Prompt 2.2.2)
+==== Property Indexing Enhancements (Task 2.2.2)
 The multi-property infrastructure provides foundation for:
 
 * **Composite Indices**: Multi-property index combinations
@@ -358,7 +358,7 @@ The multi-property infrastructure provides foundation for:
 
 == Conclusion
 
-The implementation of Prompt 2.2.1 successfully delivers a comprehensive multi-property and meta-property system that:
+The implementation of Task 2.2.1 successfully delivers a comprehensive multi-property and meta-property system that:
 
 * **Enhances TinkerGraph Capabilities**: Provides advanced property management matching TinkerPop standards
 * **Maintains Backward Compatibility**: Zero breaking changes while adding powerful new features
@@ -381,9 +381,9 @@ The implementation is production-ready with comprehensive test coverage, extensi
 
 === Next Steps
 
-With Prompt 2.2.1 completed, the property system foundation is robust and ready for:
+With Task 2.2.1 completed, the property system foundation is robust and ready for:
 
-1. **Property Indexing and Querying** (Prompt 2.2.2): Advanced indexing for multi-properties
+1. **Property Indexing and Querying** (Task 2.2.2): Advanced indexing for multi-properties
 2. **Platform-Specific Implementations** (Phase 3): Optimized implementations per platform
 3. **Advanced Applications**: Complex graph applications leveraging rich property capabilities
 

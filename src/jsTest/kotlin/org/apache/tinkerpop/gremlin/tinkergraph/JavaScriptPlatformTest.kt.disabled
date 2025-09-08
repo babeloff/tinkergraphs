@@ -8,7 +8,7 @@ import kotlin.test.*
 /**
  * Comprehensive test suite for JavaScript platform-specific implementations.
  *
- * Tests the major components implemented in Prompt 3.2.1:
+ * Tests the major components implemented in Task 3.2.1:
  * - JavaScript-friendly APIs and adapters
  * - Environment detection
  * - Basic graph operations in JavaScript context

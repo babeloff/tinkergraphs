@@ -4,7 +4,7 @@
 :sectlinks:
 :sectanchors:
 
-This document describes the advanced multi-property and meta-property support implemented in TinkerGraph, fulfilling *Prompt 2.2.1: Multi-property and Meta-property support* from the roadmap.
+This document describes the advanced multi-property and meta-property support implemented in TinkerGraph, fulfilling *Task 2.2.1: Multi-property and Meta-property support* from the roadmap.
 
 == Overview
 
