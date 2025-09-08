@@ -26,7 +26,7 @@ class IndexDebugTest {
         println("=== Testing Basic Property and Index ===")
 
         // Step 1: Create vertex and add property
-        val alice = SafeCasting.safeCastVertex(graph.addVertex())
+        val alice = graph.addVertex()
         alice.property("department", "Engineering")
         alice.property("name", "Alice")
 
@@ -70,7 +70,7 @@ class IndexDebugTest {
         assertEquals(1, engineersAfterIndex.size, "Should find 1 engineer with index")
 
         // Step 7: Verify the vertex is the same
-        val foundVertex = SafeCasting.asTinkerVertex(engineersAfterIndex.first())!!
+        val foundVertex = engineersAfterIndex.first()
         println("  Found vertex name: ${foundVertex.value<String>("name")}")
         assertEquals("Alice", foundVertex.value<String>("name"))
     }
@@ -80,15 +80,15 @@ class IndexDebugTest {
         println("\n=== Testing Multiple Vertices and Index ===")
 
         // Create test data (exactly like AdvancedIndexingTest)
-        val alice = SafeCasting.safeCastVertex(graph.addVertex())
+        val alice = graph.addVertex()
         alice.property("name", "Alice")
         alice.property("department", "Engineering")
 
-        val bob = SafeCasting.safeCastVertex(graph.addVertex())
+        val bob = graph.addVertex()
         bob.property("name", "Bob")
         bob.property("department", "Engineering")
 
-        val charlie = SafeCasting.safeCastVertex(graph.addVertex())
+        val charlie = graph.addVertex()
         charlie.property("name", "Charlie")
         charlie.property("department", "Marketing")
 
@@ -116,9 +116,10 @@ class IndexDebugTest {
         println("Engineers after index: ${engineersAfterIndex.size}")
 
         engineersAfterIndex.forEach { vertex ->
-            val v = SafeCasting.asTinkerVertex(vertex)
-            if (v != null) {
-                println("  Found: ${v.value<String>("name")}")
+            try {
+                println("  Found: ${vertex.value<String>("name")}")
+            } catch (e: Exception) {
+                println("  Error accessing vertex name: ${e.message}")
             }
         }
 
@@ -130,7 +131,7 @@ class IndexDebugTest {
         println("\n=== Testing Index Internals ===")
 
         // Create vertex with property
-        val vertex = SafeCasting.safeCastVertex(graph.addVertex())
+        val vertex = graph.addVertex()
         vertex.property("testKey", "testValue")
 
         // Check vertex index before creating index
@@ -160,7 +161,7 @@ class IndexDebugTest {
 
         // Create vertices with properties
         val vertices = (1..3).map { i ->
-            val vertex = SafeCasting.safeCastVertex(graph.addVertex())
+            val vertex = graph.addVertex()
             vertex.property("number", i)
             vertex.property("category", if (i % 2 == 0) "even" else "odd")
             vertex
@@ -169,7 +170,7 @@ class IndexDebugTest {
         println("Created ${vertices.size} vertices")
 
         // Manually test the rebuild process
-        val allVertices = graph.vertices().asSequence().mapNotNull { SafeCasting.asTinkerVertex(it) }.toList()
+        val allVertices = graph.vertices().asSequence().toList()
         println("Total vertices in graph: ${allVertices.size}")
 
         // Check each vertex's properties

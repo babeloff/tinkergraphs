@@ -61,15 +61,15 @@ class PropertyDiagnosticTest {
     @Test
     fun testPropertyQuery() {
         // Test 3: Create multiple vertices and query by property
-        val alice = SafeCasting.safeCastVertex(graph.addVertex())
+        val alice = graph.addVertex()
         alice.property("name", "Alice")
         alice.property("department", "Engineering")
 
-        val bob = SafeCasting.safeCastVertex(graph.addVertex())
+        val bob = graph.addVertex()
         bob.property("name", "Bob")
         bob.property("department", "Engineering")
 
-        val charlie = SafeCasting.safeCastVertex(graph.addVertex())
+        val charlie = graph.addVertex()
         charlie.property("name", "Charlie")
         charlie.property("department", "Marketing")
 
@@ -78,13 +78,19 @@ class PropertyDiagnosticTest {
         assertEquals(3, allVertices.size)
 
         // Verify each vertex has properties
-        val aliceFromGraph = SafeCasting.findVertexByName(allVertices.asSequence(), "Alice")
+        val aliceFromGraph = allVertices.asSequence().find { it.value<String>("name") == "Alice" }
         assertNotNull(aliceFromGraph)
-        assertEquals("Engineering", aliceFromGraph.value<String>("department"))
+        assertEquals("Engineering", aliceFromGraph!!.value<String>("department"))
 
         // Count engineering department
-        val engineers = allVertices.mapNotNull { SafeCasting.asTinkerVertex(it) }
-            .filter { it.value<String>("department") == "Engineering" }
+        val engineers = allVertices.filter { vertex ->
+            try {
+                vertex.value<String>("department") == "Engineering"
+            } catch (e: Exception) {
+                false
+            }
+        }
+        println("Found ${engineers.size} engineers")
         assertEquals(2, engineers.size)
     }
 
@@ -160,7 +166,7 @@ class PropertyDiagnosticTest {
         charlie.property("salary", 85000)
         charlie.property("department", "Marketing")
 
-        val diana = SafeCasting.safeCastVertex(graph.addVertex())
+        val diana = graph.addVertex()
         diana.property("name", "Diana")
         diana.property("age", 28)
         diana.property("city", "Chicago")

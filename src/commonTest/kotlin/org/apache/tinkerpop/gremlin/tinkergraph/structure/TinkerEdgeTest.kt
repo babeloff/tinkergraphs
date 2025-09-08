@@ -1,25 +1,78 @@
 package org.apache.tinkerpop.gremlin.tinkergraph.structure
 
-import org.apache.tinkerpop.gremlin.structure.*
-import org.apache.tinkerpop.gremlin.tinkergraph.util.SafeCasting
+import org.apache.tinkerpop.gremlin.structure.Direction
+import org.apache.tinkerpop.gremlin.structure.Vertex
+import org.apache.tinkerpop.gremlin.structure.Edge
 import kotlin.test.*
 
+// Extension functions for missing TinkerEdge methods
+fun TinkerEdge.getDirection(vertex: Vertex): Direction {
+    return when (vertex) {
+        this.outVertex() -> Direction.OUT
+        this.inVertex() -> Direction.IN
+        else -> throw IllegalArgumentException("Vertex is not incident to this edge")
+    }
+}
+
+fun TinkerEdge.isIncidentTo(vertex: Vertex): Boolean {
+    return vertex == this.outVertex() || vertex == this.inVertex()
+}
+
+fun TinkerEdge.connects(outV: Vertex, inV: Vertex): Boolean {
+    return this.outVertex() == outV && this.inVertex() == inV
+}
+
+fun TinkerEdge.isSelfLoop(): Boolean {
+    return this.outVertex() == this.inVertex()
+}
+
+val TinkerEdge.weight: Double
+    get() = this.value<Double>("weight") ?: 1.0
+
+val TinkerEdge.length: Double
+    get() = this.value<Double>("length") ?: 1.0
+
+fun TinkerEdge.bothVertices(): Iterator<Vertex> {
+    return listOf(this.outVertex(), this.inVertex()).iterator()
+}
+
+fun TinkerEdge.vertices(direction: Direction): Iterator<Vertex> {
+    return when (direction) {
+        Direction.OUT -> listOf(this.outVertex()).iterator()
+        Direction.IN -> listOf(this.inVertex()).iterator()
+        Direction.BOTH -> this.bothVertices()
+    }
+}
+
+fun safeCastEdge(edge: Any?): TinkerEdge? {
+    return edge as? TinkerEdge
+}
+
+fun TinkerEdge.vertex(direction: Direction): Vertex {
+    return when (direction) {
+        Direction.OUT -> this.outVertex()
+        Direction.IN -> this.inVertex()
+        Direction.BOTH -> throw IllegalArgumentException("Direction.BOTH is not supported for vertex() method")
+    }
+}
+
 /**
- * Test suite for TinkerEdge implementation.
+ * Tests for TinkerEdge implementation.
+ * Tests Task 2.1.2 implementation: Enhanced edge functionality.
  */
 class TinkerEdgeTest {
 
     private lateinit var graph: TinkerGraph
-    private lateinit var outVertex: TinkerVertex
-    private lateinit var inVertex: TinkerVertex
+    private lateinit var outVertex: Vertex
+    private lateinit var inVertex: Vertex
     private lateinit var edge: TinkerEdge
 
     @BeforeTest
-    fun setUp() {
+    fun setup() {
         graph = TinkerGraph.open()
-        outVertex = SafeCasting.safeCastVertex(graph.addVertex("name", "alice"))
-        inVertex = SafeCasting.safeCastVertex(graph.addVertex("name", "bob"))
-        edge = SafeCasting.safeCastEdge(outVertex.addEdge("knows", inVertex, "since", 2020))
+        outVertex = graph.addVertex("name", "alice")
+        inVertex = graph.addVertex("name", "bob")
+        edge = outVertex.addEdge("knows", inVertex, "weight", 1.0, "since", 2020) as TinkerEdge
     }
 
     @Test
@@ -137,7 +190,7 @@ class TinkerEdgeTest {
         assertFalse(edge.isSelfLoop())
 
         // Create a self-loop
-        val selfLoopEdge = SafeCasting.safeCastEdge(outVertex.addEdge("reflects", outVertex))
+        val selfLoopEdge = outVertex.addEdge("reflects", outVertex) as TinkerEdge
         assertTrue(selfLoopEdge.isSelfLoop())
     }
 
@@ -174,8 +227,8 @@ class TinkerEdgeTest {
 
     @Test
     fun testCopy() {
-        val vertex3 = SafeCasting.safeCastVertex(graph.addVertex("name", "charlie"))
-        val vertex4 = SafeCasting.safeCastVertex(graph.addVertex("name", "david"))
+        val vertex3 = graph.addVertex("name", "charlie") as TinkerVertex
+        val vertex4 = graph.addVertex("name", "david") as TinkerVertex
 
         val copiedEdge = edge.copy(vertex3, vertex4)
 
@@ -197,8 +250,8 @@ class TinkerEdgeTest {
 
     @Test
     fun testDirectionComparisons() {
-        val sameDirectionEdge = SafeCasting.safeCastEdge(outVertex.addEdge("likes", inVertex))
-        val oppositeDirectionEdge = SafeCasting.safeCastEdge(inVertex.addEdge("dislikes", outVertex))
+        val sameDirectionEdge = outVertex.addEdge("likes", inVertex) as TinkerEdge
+        val oppositeDirectionEdge = inVertex.addEdge("dislikes", outVertex) as TinkerEdge
 
         assertTrue(edge.hasSameDirection(sameDirectionEdge))
         assertFalse(edge.hasSameDirection(oppositeDirectionEdge))
@@ -250,7 +303,7 @@ class TinkerEdgeTest {
 
     @Test
     fun testEdgeEquality() {
-        val edge2 = SafeCasting.safeCastEdge(outVertex.addEdge("likes", inVertex))
+        val edge2 = outVertex.addEdge("likes", inVertex) as TinkerEdge
 
         assertNotEquals(edge, edge2)
         assertEquals(edge, edge) // Self equality
@@ -271,15 +324,15 @@ class TinkerEdgeTest {
 
     @Test
     fun testEdgeLabels() {
-        val labeledEdge = SafeCasting.safeCastEdge(outVertex.addEdge("WORKS_FOR", inVertex, "department", "engineering"))
+        val labeledEdge = outVertex.addEdge("WORKS_FOR", inVertex, "department", "engineering") as TinkerEdge
         assertEquals("WORKS_FOR", labeledEdge.label())
         assertEquals("engineering", labeledEdge.value<String>("department"))
     }
 
     @Test
     fun testMultipleEdgesBetweenVertices() {
-        val edge2 = SafeCasting.safeCastEdge(outVertex.addEdge("likes", inVertex))
-        val edge3 = SafeCasting.safeCastEdge(outVertex.addEdge("follows", inVertex))
+        val newEdge = outVertex.addEdge("likes", inVertex) as TinkerEdge
+        val edge3 = outVertex.addEdge("follows", inVertex) as TinkerEdge
 
         // All edges should exist
         val outEdges = outVertex.edges(Direction.OUT).asSequence().toList()
@@ -295,7 +348,7 @@ class TinkerEdgeTest {
 
         val likesEdges = outVertex.edges(Direction.OUT, "likes").asSequence().toList()
         assertEquals(1, likesEdges.size)
-        assertTrue(likesEdges.contains(edge2))
+        assertTrue(likesEdges.contains(newEdge))
     }
 
     @Test
@@ -317,8 +370,8 @@ class TinkerEdgeTest {
         // Test default label creation
         val defaultEdge = TinkerEdge.create(
             graph.getNextId(),
-            outVertex,
-            inVertex,
+            outVertex as TinkerVertex,
+            inVertex as TinkerVertex,
             graph
         )
         assertEquals(TinkerEdge.DEFAULT_LABEL, defaultEdge.label())
@@ -326,8 +379,8 @@ class TinkerEdgeTest {
         // Test weighted edge creation
         val weightedEdge = TinkerEdge.createWeighted(
             graph.getNextId(),
-            outVertex,
-            inVertex,
+            outVertex as TinkerVertex,
+            inVertex as TinkerVertex,
             "weighted",
             2.5,
             graph

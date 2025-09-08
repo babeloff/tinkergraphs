@@ -5,6 +5,7 @@ import org.apache.tinkerpop.gremlin.structure.*
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.iterators.TinkerVertexIterator
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.iterators.TinkerEdgeIterator
 import org.apache.tinkerpop.gremlin.tinkergraph.util.SafeCasting
+import org.apache.tinkerpop.gremlin.tinkergraph.util.VertexCastingManager
 import kotlin.reflect.KClass
 
 /**
@@ -259,9 +260,9 @@ class TinkerGraph private constructor(
      * Remove an edge from the graph.
      */
     internal fun removeEdge(edge: TinkerEdge) {
-        // Remove from vertex adjacency lists
-        SafeCasting.asTinkerVertex(edge.outVertex())?.removeOutEdge(edge)
-        SafeCasting.asTinkerVertex(edge.inVertex())?.removeInEdge(edge)
+        // Remove from vertex adjacency lists using centralized casting
+        VertexCastingManager.tryGetTinkerVertex(edge.outVertex())?.removeOutEdge(edge)
+        VertexCastingManager.tryGetTinkerVertex(edge.inVertex())?.removeInEdge(edge)
 
         // Remove from edge index
         edgeIndex.removeElement(edge)
@@ -472,14 +473,14 @@ class TinkerGraph private constructor(
     /**
      * Query vertices by property criteria.
      */
-    fun queryVertices(criteria: List<PropertyQueryEngine.PropertyCriterion>): Iterator<TinkerVertex> {
+    fun queryVertices(criteria: List<PropertyQueryEngine.PropertyCriterion>): Iterator<Vertex> {
         return propertyQueryEngine.queryVertices(criteria)
     }
 
     /**
      * Query vertices by a single property criterion.
      */
-    fun queryVertices(criterion: PropertyQueryEngine.PropertyCriterion): Iterator<TinkerVertex> {
+    fun queryVertices(criterion: PropertyQueryEngine.PropertyCriterion): Iterator<Vertex> {
         return propertyQueryEngine.queryVertices(criterion)
     }
 
@@ -492,7 +493,7 @@ class TinkerGraph private constructor(
         maxValue: Number?,
         includeMin: Boolean = true,
         includeMax: Boolean = false
-    ): Iterator<TinkerVertex> {
+    ): Iterator<Vertex> {
         return propertyQueryEngine.queryVerticesByRange(key, minValue, maxValue, includeMin, includeMax)
     }
 

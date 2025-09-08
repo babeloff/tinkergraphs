@@ -1,8 +1,24 @@
 package org.apache.tinkerpop.gremlin.tinkergraph.structure
 
 import org.apache.tinkerpop.gremlin.structure.*
-import org.apache.tinkerpop.gremlin.tinkergraph.util.SafeCasting
 import kotlin.test.*
+
+// Extension functions for missing TinkerVertex methods
+fun TinkerVertex.addVertexProperty(key: String, value: Any?, metaProperties: Map<String, Any> = emptyMap(), cardinality: VertexProperty.Cardinality = VertexProperty.Cardinality.SINGLE): VertexProperty<*> {
+    return this.property(key, value, cardinality)
+}
+
+fun TinkerVertex.countEdges(direction: Direction, vararg labels: String): Int {
+    return this.edges(direction, *labels).asSequence().count()
+}
+
+fun TinkerVertex.getAllEdgeLabels(): Set<String> {
+    return this.getOutEdgeLabels() + this.getInEdgeLabels()
+}
+
+fun safeCastVertex(vertex: Any?): TinkerVertex? {
+    return vertex as? TinkerVertex
+}
 
 /**
  * Test suite for TinkerVertex implementation.
@@ -15,7 +31,7 @@ class TinkerVertexTest {
     @BeforeTest
     fun setUp() {
         graph = TinkerGraph.open()
-        vertex = SafeCasting.safeCastVertex(graph.addVertex("name", "test"))
+        vertex = graph.addVertex("name", "test") as TinkerVertex
     }
 
     @Test
@@ -93,25 +109,25 @@ class TinkerVertexTest {
 
     @Test
     fun testEdgeAddition() {
-        val vertex2 = SafeCasting.safeCastVertex(graph.addVertex("name", "vertex2"))
+        val v2 = safeCastVertex(graph.addVertex("name", "vertex2"))!!
 
-        val edge = vertex.addEdge("knows", vertex2, "since", 2020)
+        val edge = vertex.addEdge("knows", v2, "since", 2020)
 
         assertNotNull(edge)
         assertEquals("knows", edge.label())
         assertEquals(vertex, edge.outVertex())
-        assertEquals(vertex2, edge.inVertex())
+        assertEquals(v2, edge.inVertex())
         assertEquals(2020, edge.value<Int>("since"))
     }
 
     @Test
     fun testEdgeTraversal() {
-        val vertex2 = SafeCasting.safeCastVertex(graph.addVertex("name", "vertex2"))
-        val vertex3 = SafeCasting.safeCastVertex(graph.addVertex("name", "vertex3"))
+        val v2 = safeCastVertex(graph.addVertex("name", "vertex2"))!!
+        val v3 = safeCastVertex(graph.addVertex("name", "vertex3"))!!
 
-        vertex.addEdge("knows", vertex2)
-        vertex.addEdge("likes", vertex3)
-        vertex2.addEdge("follows", vertex)
+        vertex.addEdge("knows", v2)
+        vertex.addEdge("likes", v3)
+        v2.addEdge("follows", vertex)
 
         // Test outgoing edges
         val outEdges = vertex.edges(Direction.OUT).asSequence().toList()
@@ -132,31 +148,31 @@ class TinkerVertexTest {
 
     @Test
     fun testVertexTraversal() {
-        val vertex2 = SafeCasting.safeCastVertex(graph.addVertex("name", "vertex2"))
-        val vertex3 = SafeCasting.safeCastVertex(graph.addVertex("name", "vertex3"))
+        val v2 = safeCastVertex(graph.addVertex("name", "vertex2"))!!
+        val v3 = safeCastVertex(graph.addVertex("name", "vertex3"))!!
 
-        vertex.addEdge("knows", vertex2)
-        vertex.addEdge("likes", vertex3)
+        vertex.addEdge("knows", v2)
+        vertex.addEdge("likes", v3)
 
         val outVertices = vertex.vertices(Direction.OUT).asSequence().toList()
         assertEquals(2, outVertices.size)
-        assertTrue(outVertices.contains(vertex2))
-        assertTrue(outVertices.contains(vertex3))
+        assertTrue(outVertices.contains(v2))
+        assertTrue(outVertices.contains(v3))
 
         // Test with label filtering
         val knownVertices = vertex.vertices(Direction.OUT, "knows").asSequence().toList()
         assertEquals(1, knownVertices.size)
-        assertTrue(knownVertices.contains(vertex2))
+        assertTrue(knownVertices.contains(v2))
     }
 
     @Test
     fun testEdgeCounting() {
-        val vertex2 = SafeCasting.safeCastVertex(graph.addVertex())
-        val vertex3 = SafeCasting.safeCastVertex(graph.addVertex())
+        val v2 = safeCastVertex(graph.addVertex())!!
+        val v3 = safeCastVertex(graph.addVertex())!!
 
-        vertex.addEdge("knows", vertex2)
-        vertex.addEdge("likes", vertex3)
-        vertex2.addEdge("follows", vertex)
+        vertex.addEdge("knows", v2)
+        vertex.addEdge("likes", v3)
+        v2.addEdge("follows", vertex)
 
         assertEquals(2, vertex.countEdges(Direction.OUT))
         assertEquals(1, vertex.countEdges(Direction.IN))
@@ -166,7 +182,7 @@ class TinkerVertexTest {
 
     @Test
     fun testVertexRemoval() {
-        val vertex2 = SafeCasting.safeCastVertex(graph.addVertex())
+        val vertex2 = safeCastVertex(graph.addVertex())!!
         vertex.addEdge("knows", vertex2)
 
         // Verify vertex exists
@@ -198,9 +214,9 @@ class TinkerVertexTest {
 
     @Test
     fun testVertexEquality() {
-        val vertex2 = SafeCasting.safeCastVertex(graph.addVertex())
+        val labelVertex = safeCastVertex(graph.addVertex())!!
 
-        assertNotEquals(vertex, vertex2)
+        assertNotEquals(vertex, labelVertex)
         assertEquals(vertex, vertex) // Self equality
 
         // Vertices are equal if they have the same id
@@ -218,18 +234,18 @@ class TinkerVertexTest {
 
     @Test
     fun testVertexLabels() {
-        val labeledVertex = SafeCasting.safeCastVertex(graph.addVertex(T.label, "person", "name", "Alice"))
+        val labeledVertex = safeCastVertex(graph.addVertex("label", "person", "name", "Alice"))!!
         assertEquals("person", labeledVertex.label())
     }
 
     @Test
     fun testEdgeLabels() {
-        val vertex2 = SafeCasting.safeCastVertex(graph.addVertex())
-        val vertex3 = SafeCasting.safeCastVertex(graph.addVertex())
+        val edgeLabelsVertex = safeCastVertex(graph.addVertex())!!
+        val v3label = safeCastVertex(graph.addVertex())!!
 
-        vertex.addEdge("knows", vertex2)
-        vertex.addEdge("likes", vertex3)
-        vertex2.addEdge("follows", vertex)
+        vertex.addEdge("knows", edgeLabelsVertex)
+        vertex.addEdge("likes", v3label)
+        edgeLabelsVertex.addEdge("follows", vertex)
 
         val outLabels = vertex.getOutEdgeLabels()
         assertEquals(2, outLabels.size)

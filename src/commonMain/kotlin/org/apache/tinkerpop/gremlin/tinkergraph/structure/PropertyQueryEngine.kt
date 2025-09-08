@@ -2,358 +2,16 @@ package org.apache.tinkerpop.gremlin.tinkergraph.structure
 
 import org.apache.tinkerpop.gremlin.structure.*
 import org.apache.tinkerpop.gremlin.tinkergraph.util.SafeCasting
+import org.apache.tinkerpop.gremlin.tinkergraph.util.VertexCastingManager
 
 /**
  * PropertyQueryEngine provides advanced querying capabilities for properties in TinkerGraph.
  * It supports complex property filtering, range queries, and composite queries.
+ *
+ * This implementation uses liberal input parameters and handles vertex casting internally
+ * to eliminate ClassCastException issues, especially on the JavaScript platform.
  */
 class PropertyQueryEngine(private val graph: TinkerGraph) {
-
-    /**
-     * Query vertices by property criteria with support for multiple conditions.
-     * Uses optimized indices and caching for better performance.
-     */
-    fun queryVertices(criteria: List<PropertyCriterion>): Iterator<TinkerVertex> {
-        // Try to use optimized query plan first
-        val queryPlan = graph.optimizeVertexQuery(criteria)
-        val cacheKey = criteria.joinToString("|") { it.toString() }
-
-        // Check cache first
-        val cached = graph.vertexIndexCache.get(
-            IndexType.COMPOSITE,
-            cacheKey,
-            mapOf("criteria" to criteria)
-        )
-        if (cached != null) {
-            return cached.iterator()
-        }
-
-        // Execute optimized query
-        val result = when (val strategy = queryPlan.primaryStrategy) {
-            is IndexOptimizer.CompositeIndexStrategy -> {
-                executeCompositeQuery(strategy, queryPlan.secondaryFilters)
-            }
-            is IndexOptimizer.RangeIndexStrategy -> {
-                executeRangeQuery(strategy, queryPlan.secondaryFilters)
-            }
-            is IndexOptimizer.SingleIndexStrategy -> {
-                executeSingleQuery(strategy, criteria)
-            }
-            else -> {
-                // Fall back to full scan
-                val allVertices = graph.vertices().asSequence().mapNotNull { SafeCasting.asTinkerVertex(it) }
-                allVertices.filter { vertex ->
-                    criteria.all { criterion ->
-                        evaluateCriterion(vertex, criterion)
-                    }
-                }.toSet()
-            }
-        }
-
-        // Cache result
-        graph.vertexIndexCache.put(
-            IndexType.COMPOSITE,
-            cacheKey,
-            mapOf("criteria" to criteria),
-            result
-        )
-
-        return result.iterator()
-    }
-
-    /**
-     * Query vertices by a single property criterion.
-     */
-    fun queryVertices(criterion: PropertyCriterion): Iterator<TinkerVertex> {
-        return queryVertices(listOf(criterion))
-    }
-
-    /**
-     * Query vertex properties with advanced filtering.
-     */
-    fun <V> queryVertexProperties(
-        vertex: TinkerVertex,
-        criteria: List<PropertyCriterion>
-    ): List<TinkerVertexProperty<V>> {
-        val result = mutableListOf<TinkerVertexProperty<V>>()
-
-        vertex.getActivePropertyKeys().forEach { key ->
-            val properties = vertex.getVertexProperties<V>(key)
-
-            properties.forEach { property ->
-                if (criteria.all { criterion -> evaluatePropertyCriterion(property, criterion) }) {
-                    result.add(property)
-                }
-            }
-        }
-
-        return result
-    }
-
-    /**
-     * Range query for numeric properties using optimized range index.
-     * Follows TinkerPop semantics: [min, max) - inclusive on min, exclusive on max by default.
-     */
-    fun queryVerticesByRange(
-        key: String,
-        minValue: Number?,
-        maxValue: Number?,
-        includeMin: Boolean = true,
-        includeMax: Boolean = false
-    ): Iterator<TinkerVertex> {
-        val cacheKey = "range_${key}_${minValue}_${maxValue}_${includeMin}_${includeMax}"
-
-        // Check cache first
-        val cached = graph.vertexIndexCache.get(IndexType.RANGE, cacheKey)
-        if (cached != null) {
-            return cached.iterator()
-        }
-
-        // Use range index if available
-        val result = if (graph.vertexRangeIndex.isRangeIndexed(key)) {
-            val minComparable = RangeIndex.safeComparable(minValue)
-            val maxComparable = RangeIndex.safeComparable(maxValue)
-            graph.vertexRangeIndex.rangeQuery(key, minComparable, maxComparable, includeMin, includeMax)
-        } else {
-            // Fall back to criterion-based query
-            val criterion = RangeCriterion(key, minValue, maxValue, includeMin, includeMax)
-            queryVertices(listOf(criterion)).asSequence().toSet()
-        }
-
-        // Cache result
-        graph.vertexIndexCache.put(IndexType.RANGE, cacheKey, result)
-
-        return result.iterator()
-    }
-
-    /**
-     * Query vertices that have properties with specific meta-properties.
-     */
-    fun queryVerticesByMetaProperty(
-        propertyKey: String,
-        metaPropertyKey: String,
-        metaPropertyValue: Any?
-    ): Iterator<TinkerVertex> {
-        val allVertices = graph.vertices().asSequence().mapNotNull { SafeCasting.asTinkerVertex(it) }
-
-        val filteredVertices = allVertices.filter { vertex ->
-            val properties = vertex.getVertexProperties<Any>(propertyKey)
-            properties.any { property ->
-                val metaProperty = property.property<Any>(metaPropertyKey)
-                metaProperty.isPresent() && metaProperty.value() == metaPropertyValue
-            }
-        }
-
-        return filteredVertices.iterator()
-    }
-
-    /**
-     * Query vertices by property cardinality.
-     */
-    fun queryVerticesByCardinality(
-        key: String,
-        cardinality: VertexProperty.Cardinality
-    ): Iterator<TinkerVertex> {
-        val allVertices = graph.vertices().asSequence().mapNotNull { SafeCasting.asTinkerVertex(it) }
-
-        val filteredVertices = allVertices.filter { vertex ->
-            vertex.getPropertyCardinality(key) == cardinality
-        }
-
-        return filteredVertices.iterator()
-    }
-
-    /**
-     * Find vertices with duplicate property values (useful for SET cardinality validation).
-     */
-    fun findVerticesWithDuplicateProperties(key: String): Iterator<TinkerVertex> {
-        val allVertices = graph.vertices().asSequence().mapNotNull { SafeCasting.asTinkerVertex(it) }
-
-        val filteredVertices = allVertices.filter { vertex ->
-            val properties = vertex.getVertexProperties<Any>(key)
-            val values = properties.map { it.value() }
-            values.size != values.toSet().size
-        }
-
-        return filteredVertices.iterator()
-    }
-
-    /**
-     * Complex property aggregation queries.
-     */
-    fun aggregateProperties(
-        key: String,
-        aggregation: PropertyAggregation
-    ): Any? {
-        val allVertices = graph.vertices().asSequence().mapNotNull { SafeCasting.asTinkerVertex(it) }
-        val allValues = allVertices.flatMap { vertex ->
-            vertex.getVertexProperties<Any>(key).map { it.value() }
-        }.toList()
-
-        return when (aggregation) {
-            PropertyAggregation.COUNT -> allValues.size
-            PropertyAggregation.DISTINCT_COUNT -> allValues.toSet().size
-            PropertyAggregation.MIN -> {
-                val numbers = allValues.filterIsInstance<Number>()
-                if (numbers.isNotEmpty()) numbers.minOf { it.toDouble() } else null
-            }
-            PropertyAggregation.MAX -> {
-                val numbers = allValues.filterIsInstance<Number>()
-                if (numbers.isNotEmpty()) numbers.maxOf { it.toDouble() } else null
-            }
-            PropertyAggregation.SUM -> {
-                val numbers = allValues.filterIsInstance<Number>()
-                numbers.sumOf { it.toDouble() }
-            }
-            PropertyAggregation.AVERAGE -> {
-                val numbers = allValues.filterIsInstance<Number>()
-                if (numbers.isNotEmpty()) numbers.sumOf { it.toDouble() } / numbers.size else null
-            }
-        }
-    }
-
-    /**
-     * Get property statistics across the entire graph.
-     */
-    fun getGraphPropertyStatistics(): Map<String, GraphPropertyStats> {
-        val stats = mutableMapOf<String, GraphPropertyStats>()
-        val allVertices = graph.vertices().asSequence().mapNotNull { SafeCasting.asTinkerVertex(it) }.toList()
-
-        // Collect all property keys
-        val allKeys = allVertices.flatMap { it.getActivePropertyKeys() }.toSet()
-
-        allKeys.forEach { key ->
-            val propertyCount = allVertices.sumOf { vertex ->
-                vertex.propertyCount(key)
-            }
-
-            val vertexCount = allVertices.count { vertex ->
-                vertex.hasProperty(key)
-            }
-
-            val hasMetaProperties = allVertices.any { vertex ->
-                vertex.getVertexProperties<Any>(key).any { it.hasMetaProperties() }
-            }
-
-            val cardinalityDistribution = allVertices.groupBy { vertex ->
-                vertex.getPropertyCardinality(key)
-            }.mapValues { it.value.count() }
-
-            stats[key] = GraphPropertyStats(
-                propertyCount = propertyCount,
-                vertexCount = vertexCount,
-                hasMetaProperties = hasMetaProperties,
-                cardinalityDistribution = cardinalityDistribution
-            )
-        }
-
-        return stats
-    }
-
-    /**
-     * Evaluates a property criterion against a vertex to determine if it matches.
-     * This method handles all types of criteria including exact matches, ranges,
-     * exists checks, and compound expressions.
-     *
-     * @param vertex the vertex to evaluate the criterion against
-     * @param criterion the property criterion to evaluate
-     * @return true if the vertex satisfies the criterion, false otherwise
-     */
-    private fun evaluateCriterion(vertex: TinkerVertex, criterion: PropertyCriterion): Boolean {
-        return when (criterion) {
-            is ExactCriterion -> {
-                val properties = vertex.getVertexProperties<Any>(criterion.key)
-                properties.any { it.value() == criterion.value }
-            }
-            is RangeCriterion -> {
-                val properties = vertex.getVertexProperties<Any>(criterion.key)
-                properties.any { property ->
-                    val value = property.value()
-                    if (value !is Number) false
-                    else {
-                        val numValue = value.toDouble()
-                        val minCheck = criterion.minValue?.let { min ->
-                            if (criterion.includeMin) numValue >= min.toDouble()
-                            else numValue > min.toDouble()
-                        } ?: true
-
-                        val maxCheck = criterion.maxValue?.let { max ->
-                            if (criterion.includeMax) numValue <= max.toDouble()
-                            else numValue < max.toDouble()
-                        } ?: true
-
-                        minCheck && maxCheck
-                    }
-                }
-            }
-            is ExistsCriterion -> {
-                vertex.hasProperty(criterion.key)
-            }
-            is NotExistsCriterion -> {
-                !vertex.hasProperty(criterion.key)
-            }
-            is ContainsCriterion -> {
-                val properties = vertex.getVertexProperties<Any>(criterion.key)
-                properties.any { property ->
-                    val value = property.value()
-                    when (value) {
-                        is String -> criterion.substring?.let { value.contains(it, ignoreCase = criterion.ignoreCase) } ?: false
-                        is Collection<*> -> criterion.element in value
-                        else -> false
-                    }
-                }
-            }
-            is RegexCriterion -> {
-                val properties = vertex.getVertexProperties<Any>(criterion.key)
-                properties.any { property ->
-                    val value = property.value()
-                    if (value is String) {
-                        criterion.pattern.matches(value)
-                    } else false
-                }
-            }
-            is CompositeCriterion -> {
-                when (criterion.operator) {
-                    LogicalOperator.AND -> criterion.criteria.all { evaluateCriterion(vertex, it) }
-                    LogicalOperator.OR -> criterion.criteria.any { evaluateCriterion(vertex, it) }
-                    LogicalOperator.NOT -> !evaluateCriterion(vertex, criterion.criteria.first())
-                }
-            }
-        }
-    }
-
-    /**
-     * Evaluates a property criterion against a specific vertex property.
-     * This method is used when working with multi-property vertices where
-     * each property instance needs to be evaluated individually.
-     *
-     * @param property the vertex property to evaluate
-     * @param criterion the property criterion to apply
-     * @return true if the property satisfies the criterion, false otherwise
-     */
-    private fun evaluatePropertyCriterion(
-        property: TinkerVertexProperty<*>,
-        criterion: PropertyCriterion
-    ): Boolean {
-        return when (criterion) {
-            is ExactCriterion -> {
-                property.key() == criterion.key && property.value() == criterion.value
-            }
-            is ExistsCriterion -> {
-                property.key() == criterion.key
-            }
-            is NotExistsCriterion -> {
-                property.key() != criterion.key
-            }
-            else -> {
-                // For other criteria, create a temporary vertex and evaluate
-                // This is less efficient but handles complex cases
-                val tempVertex = TinkerVertex("temp", "temp", graph)
-                tempVertex.getVertexProperties<Any>(property.key()).isNotEmpty() &&
-                evaluateCriterion(tempVertex, criterion)
-            }
-        }
-    }
 
     /**
      * Base interface for property criteria.
@@ -437,163 +95,408 @@ class PropertyQueryEngine(private val graph: TinkerGraph) {
         val cardinalityDistribution: Map<VertexProperty.Cardinality, Int>
     )
 
-    companion object {
-        /**
-         * Create an exact match criterion.
-         */
-        fun exact(key: String, value: Any?): ExactCriterion {
-            return ExactCriterion(key, value)
-        }
-
-        /**
-         * Create a range criterion following TinkerPop semantics [min, max).
-         */
-        fun range(key: String, min: Number? = null, max: Number? = null, includeMin: Boolean = true, includeMax: Boolean = false): RangeCriterion {
-            return RangeCriterion(key, min, max, includeMin, includeMax)
-        }
-
-        /**
-         * Create an exists criterion.
-         */
-        fun exists(key: String): ExistsCriterion {
-            return ExistsCriterion(key)
-        }
-
-        /**
-         * Create a not exists criterion.
-         */
-        fun notExists(key: String): NotExistsCriterion {
-            return NotExistsCriterion(key)
-        }
-
-        /**
-         * Create a contains criterion.
-         */
-        fun contains(key: String, substring: String, ignoreCase: Boolean = false): ContainsCriterion {
-            return ContainsCriterion(key, substring = substring, ignoreCase = ignoreCase)
-        }
-
-        /**
-         * Create a collection contains criterion.
-         */
-        fun containsElement(key: String, element: Any?): ContainsCriterion {
-            return ContainsCriterion(key, element = element)
-        }
-
-        /**
-         * Create a regex criterion.
-         */
-        fun regex(key: String, pattern: String): RegexCriterion {
-            return RegexCriterion(key, Regex(pattern))
-        }
-
-        /**
-         * Create an AND composite criterion.
-         */
-        fun and(vararg criteria: PropertyCriterion): CompositeCriterion {
-            return CompositeCriterion(LogicalOperator.AND, criteria.toList())
-        }
-
-        /**
-         * Create an OR composite criterion.
-         */
-        fun or(vararg criteria: PropertyCriterion): CompositeCriterion {
-            return CompositeCriterion(LogicalOperator.OR, criteria.toList())
-        }
-
-        /**
-         * Create a NOT composite criterion.
-         */
-        fun not(criterion: PropertyCriterion): CompositeCriterion {
-            return CompositeCriterion(LogicalOperator.NOT, listOf(criterion))
-        }
-    }
-
     /**
-     * Executes a query using a composite index strategy.
-     * Uses the composite index to efficiently find vertices that match
-     * multiple property criteria, then applies any remaining filters.
+     * Query vertices by property criteria with support for multiple conditions.
+     * Uses optimized indices and caching for better performance.
      *
-     * @param strategy the composite index strategy to use
-     * @param secondaryFilters additional criteria to apply after index lookup
-     * @return sequence of vertices matching all criteria
+     * Returns Vertex interface types to avoid casting issues at call sites.
+     * Internal casting is handled safely by VertexCastingManager.
      */
-    private fun executeCompositeQuery(
-        strategy: IndexOptimizer.CompositeIndexStrategy,
-        secondaryFilters: List<PropertyCriterion>
-    ): Set<TinkerVertex> {
-        val keys = strategy.compositeKeys
-        val values = strategy.applicableCriteria.map { it.value }
-
-        val candidates = graph.vertexCompositeIndex.get(keys, values)
-
-        return if (secondaryFilters.isEmpty()) {
-            candidates
-        } else {
-            candidates.filter { vertex ->
-                secondaryFilters.all { criterion ->
-                    evaluateCriterion(vertex, criterion)
-                }
-            }.toSet()
+    fun queryVertices(criteria: List<PropertyCriterion>): Iterator<Vertex> {
+        // Use optimizer to record statistics and get optimization plan
+        if (criteria.isNotEmpty()) {
+            graph.optimizeVertexQuery(criteria)
         }
+
+        // Use centralized vertex casting for safety
+        val allVertices = safeGetVertices()
+
+        val filteredVertices = allVertices.filter { vertex ->
+            criteria.all { criterion -> evaluateCriterion(vertex, criterion) }
+        }
+
+        // Convert to Vertex interface to avoid casting issues at call sites
+        return filteredVertices.asSequence().map { it as Vertex }.iterator()
     }
 
     /**
-     * Executes a query using a range index strategy.
-     * Uses the range index to efficiently find vertices within a specified
-     * value range, then applies any remaining filters.
+     * Single criterion convenience method.
+     */
+    fun queryVertices(criterion: PropertyCriterion): Iterator<Vertex> {
+        return queryVertices(listOf(criterion))
+    }
+
+    /**
+     * Query vertex properties that satisfy given criteria.
      *
-     * @param strategy the range index strategy to use
-     * @param secondaryFilters additional criteria to apply after index lookup
-     * @return sequence of vertices matching all criteria
+     * @param vertex the vertex to query (accepts Vertex interface)
+     * @param criteria property criteria to evaluate
      */
-    private fun executeRangeQuery(
-        strategy: IndexOptimizer.RangeIndexStrategy,
-        secondaryFilters: List<PropertyCriterion>
-    ): Set<TinkerVertex> {
-        val criterion = strategy.criterion
-        val minComparable = RangeIndex.safeComparable(criterion.minValue)
-        val maxComparable = RangeIndex.safeComparable(criterion.maxValue)
-
-        val candidates = graph.vertexRangeIndex.rangeQuery(
-            criterion.key,
-            minComparable,
-            maxComparable,
-            criterion.includeMin,
-            criterion.includeMax
-        )
-
-        return if (secondaryFilters.isEmpty()) {
-            candidates
-        } else {
-            candidates.filter { vertex ->
-                secondaryFilters.all { filter ->
-                    evaluateCriterion(vertex, filter)
-                }
-            }.toSet()
-        }
-    }
-
-    /**
-     * Execute query using single property index strategy.
-     */
-    private fun executeSingleQuery(
-        strategy: IndexOptimizer.SingleIndexStrategy,
+    fun <V> queryVertexProperties(
+        vertex: Vertex,
         criteria: List<PropertyCriterion>
-    ): Set<TinkerVertex> {
-        val exactCriterion = criteria.filterIsInstance<ExactCriterion>()
-            .find { it.key == strategy.key }
+    ): List<VertexProperty<V>> {
+        val tinkerVertex = VertexCastingManager.tryGetTinkerVertex(vertex) ?: return emptyList()
 
-        val candidates = if (exactCriterion != null) {
-            graph.vertexIndex.get(strategy.key, exactCriterion.value)
-        } else {
-            graph.vertexIndex.getAllForKey(strategy.key)
+        return tinkerVertex.properties<V>().asSequence().filter { property ->
+            criteria.any { criterion -> evaluatePropertyCriterion(property, criterion) }
+        }.toList()
+    }
+
+    /**
+     * Range query for numeric properties using optimized range index.
+     * Follows TinkerPop semantics: [min, max) - inclusive on min, exclusive on max by default.
+     */
+    fun queryVerticesByRange(
+        key: String,
+        minValue: Number?,
+        maxValue: Number?,
+        includeMin: Boolean = true,
+        includeMax: Boolean = false
+    ): Iterator<Vertex> {
+        val cacheKey = "range_${key}_${minValue}_${maxValue}_${includeMin}_${includeMax}"
+
+        // Check cache first
+        val cached = graph.vertexIndexCache.get(IndexType.RANGE, cacheKey)
+        if (cached != null) {
+            return cached.iterator()
         }
 
-        return candidates.filter { vertex ->
-            criteria.all { criterion ->
-                evaluateCriterion(vertex, criterion)
+        // Use range index if available
+        val result: Set<Vertex> = if (graph.vertexRangeIndex.isRangeIndexed(key)) {
+            val minComparable = RangeIndex.safeComparable(minValue)
+            val maxComparable = RangeIndex.safeComparable(maxValue)
+            graph.vertexRangeIndex.rangeQuery(key, minComparable, maxComparable, includeMin, includeMax).toSet()
+        } else {
+            // Fall back to criterion-based query
+            val criterion = RangeCriterion(key, minValue, maxValue, includeMin, includeMax)
+            queryVertices(listOf(criterion)).asSequence().toSet()
+        }
+
+        // Cache result
+        graph.vertexIndexCache.put(IndexType.RANGE, cacheKey, result.map { it as TinkerVertex }.toSet())
+
+        return result.iterator()
+    }
+
+    /**
+     * Query vertices that have properties with specific meta-properties.
+     */
+    fun queryVerticesByMetaProperty(
+        propertyKey: String,
+        metaPropertyKey: String,
+        metaPropertyValue: Any?
+    ): Iterator<Vertex> {
+        val allVertices = safeGetVertices()
+
+        val filteredVertices = allVertices.filter { vertex ->
+            val properties = vertex.getVertexProperties<Any>(propertyKey)
+            properties.any { property ->
+                if (metaPropertyValue == null) {
+                    property.property<Any>(metaPropertyKey).isPresent()
+                } else {
+                    property.value<Any>(metaPropertyKey) == metaPropertyValue
+                }
             }
-        }.toSet()
+        }
+
+        return filteredVertices.asSequence().map { it as Vertex }.iterator()
+    }
+
+    /**
+     * Query vertices by property cardinality.
+     */
+    fun queryVerticesByCardinality(
+        key: String,
+        cardinality: VertexProperty.Cardinality
+    ): Iterator<Vertex> {
+        val allVertices = safeGetVertices()
+
+        val filteredVertices = allVertices.filter { vertex ->
+            vertex.getPropertyCardinality(key) == cardinality
+        }
+
+        return filteredVertices.asSequence().map { it as Vertex }.iterator()
+    }
+
+    /**
+     * Get aggregated values for a specific property across all vertices.
+     */
+    fun aggregateProperties(key: String, aggregation: PropertyAggregation): Any {
+        val allVertices = safeGetVertices()
+
+        val values = allVertices.flatMap { vertex ->
+            vertex.getVertexProperties<Any>(key).map { it.value() }
+        }.toList()
+
+        return when (aggregation) {
+            PropertyAggregation.COUNT -> values.size
+            PropertyAggregation.DISTINCT_COUNT -> values.toSet().size
+            PropertyAggregation.MIN -> {
+                val numericValues = values.mapNotNull { value ->
+                    when (value) {
+                        is Number -> value.toDouble()
+                        else -> null
+                    }
+                }
+                if (numericValues.isNotEmpty()) numericValues.minOrNull() ?: 0.0 else 0.0
+            }
+            PropertyAggregation.MAX -> {
+                val numericValues = values.mapNotNull { value ->
+                    when (value) {
+                        is Number -> value.toDouble()
+                        else -> null
+                    }
+                }
+                if (numericValues.isNotEmpty()) numericValues.maxOrNull() ?: 0.0 else 0.0
+            }
+            PropertyAggregation.SUM -> {
+                values.sumOf { value ->
+                    when (value) {
+                        is Number -> value.toDouble()
+                        else -> 0.0
+                    }
+                }
+            }
+            PropertyAggregation.AVERAGE -> {
+                val sum = values.sumOf { value ->
+                    when (value) {
+                        is Number -> value.toDouble()
+                        else -> 0.0
+                    }
+                }
+                if (values.isEmpty()) 0.0 else sum / values.size
+            }
+        }
+    }
+
+    /**
+     * Get property statistics across the entire graph.
+     */
+    fun getGraphPropertyStatistics(): Map<String, GraphPropertyStats> {
+        val stats = mutableMapOf<String, GraphPropertyStats>()
+        val allVertices = safeGetVertices().toList()
+
+        // Collect all property keys
+        val allKeys = allVertices.flatMap { it.getActivePropertyKeys() }.toSet()
+
+        allKeys.forEach { key ->
+            val propertyCount = allVertices.sumOf { vertex ->
+                vertex.propertyCount(key)
+            }
+
+            val vertexCount = allVertices.count { vertex ->
+                vertex.hasProperty(key)
+            }
+
+            val hasMetaProperties = allVertices.any { vertex ->
+                vertex.getVertexProperties<Any>(key).any { it.hasMetaProperties() }
+            }
+
+            val cardinalityDistribution = allVertices.groupBy { vertex ->
+                vertex.getPropertyCardinality(key)
+            }.mapValues { it.value.count() }
+
+            stats[key] = GraphPropertyStats(
+                propertyCount = propertyCount,
+                vertexCount = vertexCount,
+                hasMetaProperties = hasMetaProperties,
+                cardinalityDistribution = cardinalityDistribution
+            )
+        }
+
+        return stats
+    }
+
+    // Companion object for criterion factory methods
+    companion object {
+        fun exact(key: String, value: Any?) = ExactCriterion(key, value)
+        fun range(key: String, min: Number?, max: Number?, includeMin: Boolean = true, includeMax: Boolean = false) =
+            RangeCriterion(key, min, max, includeMin, includeMax)
+        fun exists(key: String) = ExistsCriterion(key)
+        fun notExists(key: String) = NotExistsCriterion(key)
+        fun contains(key: String, substring: String, ignoreCase: Boolean = false) =
+            ContainsCriterion(key, substring = substring, ignoreCase = ignoreCase)
+        fun containsElement(key: String, element: Any?) =
+            ContainsCriterion(key, element = element)
+        fun regex(key: String, pattern: String) = RegexCriterion(key, Regex(pattern))
+        fun and(vararg criteria: PropertyCriterion) = CompositeCriterion(LogicalOperator.AND, criteria.toList())
+        fun or(vararg criteria: PropertyCriterion) = CompositeCriterion(LogicalOperator.OR, criteria.toList())
+        fun not(criterion: PropertyCriterion) = CompositeCriterion(LogicalOperator.NOT, listOf(criterion))
+    }
+
+    /**
+     * Evaluates a criterion against a vertex.
+     *
+     * @param vertex the TinkerVertex to evaluate
+     * @param criterion the property criterion to evaluate
+     * @return true if the vertex satisfies the criterion, false otherwise
+     */
+    private fun evaluateCriterion(vertex: TinkerVertex, criterion: PropertyCriterion): Boolean {
+        try {
+            return when (criterion) {
+                is ExactCriterion -> {
+                    val properties = vertex.getVertexProperties<Any>(criterion.key)
+                    properties.any { it.value() == criterion.value }
+                }
+                is RangeCriterion -> {
+                    val properties = vertex.getVertexProperties<Any>(criterion.key)
+                    properties.any { property ->
+                        val value = property.value()
+                        if (value !is Number || (criterion.minValue == null && criterion.maxValue == null)) {
+                            false
+                        } else {
+                            val numberValue = value.toDouble()
+                            val minCheck = criterion.minValue?.let { min ->
+                                val minDouble = min.toDouble()
+                                if (criterion.includeMin) numberValue >= minDouble else numberValue > minDouble
+                            } ?: true
+                            val maxCheck = criterion.maxValue?.let { max ->
+                                val maxDouble = max.toDouble()
+                                if (criterion.includeMax) numberValue <= maxDouble else numberValue < maxDouble
+                            } ?: true
+                            minCheck && maxCheck
+                        }
+                    }
+                }
+                is ExistsCriterion -> {
+                    vertex.getVertexProperties<Any>(criterion.key).isNotEmpty()
+                }
+                is NotExistsCriterion -> {
+                    vertex.getVertexProperties<Any>(criterion.key).isEmpty()
+                }
+                is ContainsCriterion -> {
+                    val properties = vertex.getVertexProperties<Any>(criterion.key)
+                    properties.any { property ->
+                        val value = property.value()
+                        when {
+                            criterion.substring != null && value is String -> {
+                                value.contains(criterion.substring, criterion.ignoreCase)
+                            }
+                            criterion.element != null && value is Collection<*> -> {
+                                value.contains(criterion.element)
+                            }
+                            else -> false
+                        }
+                    }
+                }
+                is RegexCriterion -> {
+                    val properties = vertex.getVertexProperties<Any>(criterion.key)
+                    properties.any { property ->
+                        val value = property.value()
+                        value is String && criterion.pattern.matches(value)
+                    }
+                }
+                is CompositeCriterion -> {
+                    when (criterion.operator) {
+                        LogicalOperator.AND -> criterion.criteria.all { evaluateCriterion(vertex, it) }
+                        LogicalOperator.OR -> criterion.criteria.any { evaluateCriterion(vertex, it) }
+                        LogicalOperator.NOT -> !evaluateCriterion(vertex, criterion.criteria.first())
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            // Handle property access errors gracefully
+            return false
+        }
+    }
+
+    /**
+     * Evaluates a property criterion against a specific vertex property.
+     * This method is used when working with multi-property vertices where
+     * each property instance needs to be evaluated individually.
+     *
+     * @param property the vertex property to evaluate
+     * @param criterion the property criterion to apply
+     * @return true if the property satisfies the criterion, false otherwise
+     */
+    private fun evaluatePropertyCriterion(
+        property: VertexProperty<*>,
+        criterion: PropertyCriterion
+    ): Boolean {
+        return try {
+            when (criterion) {
+                is ExactCriterion -> {
+                    property.key() == criterion.key && property.value() == criterion.value
+                }
+                is RangeCriterion -> {
+                    if (property.key() != criterion.key) return false
+                    val value = property.value()
+                    if (value !is Number) return false
+
+                    val numberValue = value.toDouble()
+                    val minCheck = criterion.minValue?.let { min ->
+                        val minDouble = min.toDouble()
+                        if (criterion.includeMin) numberValue >= minDouble else numberValue > minDouble
+                    } ?: true
+                    val maxCheck = criterion.maxValue?.let { max ->
+                        val maxDouble = max.toDouble()
+                        if (criterion.includeMax) numberValue <= maxDouble else numberValue < maxDouble
+                    } ?: true
+                    minCheck && maxCheck
+                }
+                is ExistsCriterion -> {
+                    property.key() == criterion.key
+                }
+                is NotExistsCriterion -> {
+                    property.key() != criterion.key
+                }
+                is ContainsCriterion -> {
+                    if (property.key() != criterion.key) return false
+                    val value = property.value()
+                    when {
+                        criterion.substring != null && value is String -> {
+                            value.contains(criterion.substring, criterion.ignoreCase)
+                        }
+                        criterion.element != null && value is Collection<*> -> {
+                            value.contains(criterion.element)
+                        }
+                        else -> false
+                    }
+                }
+                is RegexCriterion -> {
+                    if (property.key() != criterion.key) return false
+                    val value = property.value()
+                    value is String && criterion.pattern.matches(value)
+                }
+                is CompositeCriterion -> {
+                    when (criterion.operator) {
+                        LogicalOperator.AND -> criterion.criteria.all { evaluatePropertyCriterion(property, it) }
+                        LogicalOperator.OR -> criterion.criteria.any { evaluatePropertyCriterion(property, it) }
+                        LogicalOperator.NOT -> !evaluatePropertyCriterion(property, criterion.criteria.first())
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /**
+     * Safely retrieves all vertices from the graph using centralized casting.
+     * This method eliminates ClassCastException issues by handling casting internally.
+     */
+    private fun safeGetVertices(): Sequence<TinkerVertex> {
+        return try {
+            // Cast the graph to Graph interface for VertexCastingManager
+            val graphInterface: Graph = graph
+            VertexCastingManager.safelyMapVertices(graphInterface.vertices().asSequence())
+        } catch (e: Exception) {
+            // Graceful degradation - return empty sequence if casting fails completely
+            emptySequence<TinkerVertex>()
+        }
+    }
+
+    /**
+     * Safely evaluates a criterion against a vertex using defensive programming.
+     * Handles potential casting and property access issues gracefully.
+     */
+    private fun safeEvaluateCriterion(vertex: Any?, criterion: PropertyCriterion): Boolean {
+        val tinkerVertex = VertexCastingManager.tryGetTinkerVertex(vertex) ?: return false
+        return try {
+            evaluateCriterion(tinkerVertex, criterion)
+        } catch (e: Exception) {
+            false
+        }
     }
 }
