@@ -1,220 +1,236 @@
 package org.apache.tinkerpop.gremlin.tinkergraph.structure.iterators
 
-import kotlin.test.*
+import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.collections.shouldBeEmpty
+import io.kotest.matchers.collections.shouldContain
+import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.shouldBe
 import org.apache.tinkerpop.gremlin.structure.Direction
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph
 
 /**
  * Simple test suite to verify basic iterator functionality works correctly.
  *
- * This test class provides fundamental validation of TinkerGraph iterator
- * implementations without complex scenarios. It focuses on core functionality
- * including:
+ * This test class provides fundamental validation of TinkerGraph iterator implementations without
+ * complex scenarios. It focuses on core functionality including:
  * - Basic vertex iteration and property access
  * - Edge iteration and traversal
  * - Property iterator functionality
  * - Iterator behavior with empty graphs
  *
- * These tests serve as a baseline to ensure iterator implementations work
- * correctly before testing more advanced scenarios in other test suites.
+ * These tests serve as a baseline to ensure iterator implementations work correctly before testing
+ * more advanced scenarios in other test suites.
  *
  * @see org.apache.tinkerpop.gremlin.tinkergraph.structure.iterators.TinkerVertexIterator
  * @see org.apache.tinkerpop.gremlin.tinkergraph.structure.iterators.TinkerEdgeIterator
  * @see org.apache.tinkerpop.gremlin.tinkergraph.structure.iterators.TinkerPropertyIterator
  */
-class SimpleIteratorTest {
+class SimpleIteratorTest :
+        StringSpec({
+            "basic vertex iteration should work correctly" {
+                /**
+                 * Tests basic vertex iteration functionality.
+                 *
+                 * Creates a simple graph with three vertices and verifies that:
+                 * - All vertices can be iterated correctly
+                 * - Vertex properties can be accessed during iteration
+                 * - The correct number of vertices is returned
+                 * - Vertex names match expected values
+                 */
+                val graph = TinkerGraph.open()
 
-    /**
-     * Tests basic vertex iteration functionality.
-     *
-     * Creates a simple graph with three vertices and verifies that:
-     * - All vertices can be iterated correctly
-     * - Vertex properties can be accessed during iteration
-     * - The correct number of vertices is returned
-     * - Vertex names match expected values
-     */
-    @Test
-    fun testBasicVertexIteration() {
-        val graph = TinkerGraph.open()
+                // Create some vertices
+                val v1 = graph.addVertex("name", "alice")
+                val v2 = graph.addVertex("name", "bob")
+                val v3 = graph.addVertex("name", "charlie")
 
-        // Create some vertices
-        val v1 = graph.addVertex("name", "alice")
-        val v2 = graph.addVertex("name", "bob")
-        val v3 = graph.addVertex("name", "charlie")
+                // Test that basic vertex iteration works
+                val vertices = graph.vertices().asSequence().toList()
 
-        // Test that basic vertex iteration works
-        val vertices = graph.vertices().asSequence().toList()
+                println("Vertices found: ${vertices.size}")
+                vertices.forEach { v ->
+                    println("  Vertex: ${v.id()} - ${v.value<String>("name")}")
+                }
 
-        println("Vertices found: ${vertices.size}")
-        vertices.forEach { v -> println("  Vertex: ${v.id()} - ${v.value<String>("name")}") }
+                vertices shouldHaveSize 3
 
-        assertEquals(3, vertices.size)
+                val names = vertices.map { it.value<String>("name") }.toSet()
+                println("Names: $names")
+                names shouldContain "alice"
+                names shouldContain "bob"
+                names shouldContain "charlie"
 
-        val names = vertices.map { it.value<String>("name") }.toSet()
-        println("Names: $names")
-        assertTrue(names.contains("alice"))
-        assertTrue(names.contains("bob"))
-        assertTrue(names.contains("charlie"))
-    }
+                graph.close()
+            }
 
-    @Test
-    fun testBasicEdgeIteration() {
-        val graph = TinkerGraph.open()
+            "basic edge iteration should work correctly" {
+                val graph = TinkerGraph.open()
 
-        val alice = graph.addVertex("name", "alice")
-        val bob = graph.addVertex("name", "bob")
-        val charlie = graph.addVertex("name", "charlie")
+                val alice = graph.addVertex("name", "alice")
+                val bob = graph.addVertex("name", "bob")
+                val charlie = graph.addVertex("name", "charlie")
 
-        // Create some edges
-        alice.addEdge("knows", bob, "weight", 0.5)
-        bob.addEdge("knows", charlie, "weight", 0.8)
+                // Create some edges
+                alice.addEdge("knows", bob, "weight", 0.5)
+                bob.addEdge("knows", charlie, "weight", 0.8)
 
-        // Test that basic edge iteration works
-        val edges = graph.edges().asSequence().toList()
+                // Test that basic edge iteration works
+                val edges = graph.edges().asSequence().toList()
 
-        assertEquals(2, edges.size)
+                edges shouldHaveSize 2
 
-        val labels = edges.map { it.label() }.toSet()
-        assertTrue(labels.contains("knows"))
+                val labels = edges.map { it.label() }.toSet()
+                labels shouldContain "knows"
 
-        val weights = edges.map { it.value<Double>("weight") }.toSet()
-        assertTrue(weights.contains(0.5))
-        assertTrue(weights.contains(0.8))
-    }
+                val weights = edges.map { it.value<Double>("weight") }.toSet()
+                weights shouldContain 0.5
+                weights shouldContain 0.8
 
-    @Test
-    fun testVertexTraversal() {
-        val graph = TinkerGraph.open()
+                graph.close()
+            }
 
-        val alice = graph.addVertex("name", "alice")
-        val bob = graph.addVertex("name", "bob")
-        val charlie = graph.addVertex("name", "charlie")
+            "vertex traversal should work correctly" {
+                val graph = TinkerGraph.open()
 
-        alice.addEdge("knows", bob)
-        bob.addEdge("knows", charlie)
+                val alice = graph.addVertex("name", "alice")
+                val bob = graph.addVertex("name", "bob")
+                val charlie = graph.addVertex("name", "charlie")
 
-        // Test outgoing vertex traversal from alice
-        val outVertices = alice.vertices(Direction.OUT, "knows").asSequence().toList()
+                alice.addEdge("knows", bob)
+                bob.addEdge("knows", charlie)
 
-        println("Alice out vertices: ${outVertices.size}")
-        outVertices.forEach { v -> println("  Out vertex: ${v.id()} - ${v.value<String>("name")}") }
+                // Test outgoing vertex traversal from alice
+                val outVertices = alice.vertices(Direction.OUT, "knows").asSequence().toList()
 
-        assertEquals(1, outVertices.size)
-        assertEquals("bob", outVertices.first().value<String>("name"))
+                println("Alice out vertices: ${outVertices.size}")
+                outVertices.forEach { v ->
+                    println("  Out vertex: ${v.id()} - ${v.value<String>("name")}")
+                }
 
-        // Test incoming vertex traversal to charlie
-        val inVertices = charlie.vertices(Direction.IN, "knows").asSequence().toList()
+                outVertices shouldHaveSize 1
+                outVertices.first().value<String>("name") shouldBe "bob"
 
-        assertEquals(1, inVertices.size)
-        assertEquals("bob", inVertices.first().value<String>("name"))
-    }
+                // Test incoming vertex traversal to charlie
+                val inVertices = charlie.vertices(Direction.IN, "knows").asSequence().toList()
 
-    @Test
-    fun testEdgeTraversal() {
-        val graph = TinkerGraph.open()
+                inVertices shouldHaveSize 1
+                inVertices.first().value<String>("name") shouldBe "bob"
 
-        val alice = graph.addVertex("name", "alice")
-        val bob = graph.addVertex("name", "bob")
-        val charlie = graph.addVertex("name", "charlie")
+                graph.close()
+            }
 
-        alice.addEdge("knows", bob, "type", "friend")
-        alice.addEdge("likes", charlie, "type", "romantic")
+            "edge traversal should work correctly" {
+                val graph = TinkerGraph.open()
 
-        // Test outgoing edge traversal from alice
-        val outEdges = alice.edges(Direction.OUT).asSequence().toList()
+                val alice = graph.addVertex("name", "alice")
+                val bob = graph.addVertex("name", "bob")
+                val charlie = graph.addVertex("name", "charlie")
 
-        assertEquals(2, outEdges.size)
+                alice.addEdge("knows", bob, "type", "friend")
+                alice.addEdge("likes", charlie, "type", "romantic")
 
-        val labels = outEdges.map { it.label() }.toSet()
-        assertTrue(labels.contains("knows"))
-        assertTrue(labels.contains("likes"))
+                // Test outgoing edge traversal from alice
+                val outEdges = alice.edges(Direction.OUT).asSequence().toList()
 
-        val types = outEdges.map { it.value<String>("type") }.toSet()
-        assertTrue(types.contains("friend"))
-        assertTrue(types.contains("romantic"))
-    }
+                outEdges shouldHaveSize 2
 
-    @Test
-    fun testLazyEvaluation() {
-        val graph = TinkerGraph.open()
+                val labels = outEdges.map { it.label() }.toSet()
+                labels shouldContain "knows"
+                labels shouldContain "likes"
 
-        // Create 10 vertices
-        repeat(10) { i ->
-            graph.addVertex("id", i, "type", if (i % 2 == 0) "even" else "odd")
-        }
+                val types = outEdges.map { it.value<String>("type") }.toSet()
+                types shouldContain "friend"
+                types shouldContain "romantic"
 
-        // Test that we can stop iteration early (lazy evaluation)
-        val iterator = graph.vertices()
-        var count = 0
+                graph.close()
+            }
 
-        while (iterator.hasNext() && count < 3) {
-            iterator.next()
-            count++
-        }
+            "lazy evaluation should work correctly" {
+                val graph = TinkerGraph.open()
 
-        assertEquals(3, count)
-        // If lazy evaluation works, we should still be able to continue
-        assertTrue(iterator.hasNext())
-    }
+                // Create 10 vertices
+                repeat(10) { i ->
+                    graph.addVertex("id", i, "type", if (i % 2 == 0) "even" else "odd")
+                }
 
-    @Test
-    fun testEmptyGraph() {
-        val graph = TinkerGraph.open()
+                // Test that we can stop iteration early (lazy evaluation)
+                val iterator = graph.vertices()
+                var count = 0
 
-        // Test empty graph iteration
-        val vertices = graph.vertices().asSequence().toList()
-        val edges = graph.edges().asSequence().toList()
+                while (iterator.hasNext() && count < 3) {
+                    iterator.next()
+                    count++
+                }
 
-        assertTrue(vertices.isEmpty())
-        assertTrue(edges.isEmpty())
-    }
+                count shouldBe 3
+                // If lazy evaluation works, we should still be able to continue
+                iterator.hasNext().shouldBeTrue()
 
-    @Test
-    fun testVertexPropertyIteration() {
-        val graph = TinkerGraph.open()
+                graph.close()
+            }
 
-        val vertex = graph.addVertex("name", "alice", "age", 29, "city", "paris")
+            "empty graph iteration should work correctly" {
+                val graph = TinkerGraph.open()
 
-        // Test vertex property iteration
-        val vertexProperties = vertex.properties<Any>().asSequence().toList()
+                // Test empty graph iteration
+                val vertices = graph.vertices().asSequence().toList()
+                val edges = graph.edges().asSequence().toList()
 
-        assertEquals(3, vertexProperties.size)
+                vertices.shouldBeEmpty()
+                edges.shouldBeEmpty()
 
-        val keys = vertexProperties.map { it.key() }.toSet()
-        assertTrue(keys.contains("name"))
-        assertTrue(keys.contains("age"))
-        assertTrue(keys.contains("city"))
+                graph.close()
+            }
 
-        val values = vertexProperties.map { it.value() }.toSet()
-        assertTrue(values.contains("alice"))
-        assertTrue(values.contains(29))
-        assertTrue(values.contains("paris"))
-    }
+            "vertex property iteration should work correctly" {
+                val graph = TinkerGraph.open()
 
-    @Test
-    fun testVertexDegree() {
-        val graph = TinkerGraph.open()
+                val vertex = graph.addVertex("name", "alice", "age", 29, "city", "paris")
 
-        val alice = graph.addVertex("name", "alice")
-        val bob = graph.addVertex("name", "bob")
-        val charlie = graph.addVertex("name", "charlie")
+                // Test vertex property iteration
+                val vertexProperties = vertex.properties<Any>().asSequence().toList()
 
-        alice.addEdge("knows", bob)
-        alice.addEdge("likes", charlie)
-        bob.addEdge("knows", charlie)
+                vertexProperties shouldHaveSize 3
 
-        // Alice should have 2 outgoing edges
-        val aliceOutEdges = alice.edges(Direction.OUT).asSequence().toList()
-        assertEquals(2, aliceOutEdges.size)
+                val keys = vertexProperties.map { it.key() }.toSet()
+                keys shouldContain "name"
+                keys shouldContain "age"
+                keys shouldContain "city"
 
-        // Charlie should have 2 incoming edges
-        val charlieInEdges = charlie.edges(Direction.IN).asSequence().toList()
-        assertEquals(2, charlieInEdges.size)
+                val values = vertexProperties.map { it.value() }.toSet()
+                values shouldContain "alice"
+                values shouldContain 29
+                values shouldContain "paris"
 
-        // Bob should have 1 outgoing and 1 incoming edge
-        val bobOutEdges = bob.edges(Direction.OUT).asSequence().toList()
-        val bobInEdges = bob.edges(Direction.IN).asSequence().toList()
-        assertEquals(1, bobOutEdges.size)
-        assertEquals(1, bobInEdges.size)
-    }
-}
+                graph.close()
+            }
+
+            "vertex degree calculation should work correctly" {
+                val graph = TinkerGraph.open()
+
+                val alice = graph.addVertex("name", "alice")
+                val bob = graph.addVertex("name", "bob")
+                val charlie = graph.addVertex("name", "charlie")
+
+                alice.addEdge("knows", bob)
+                alice.addEdge("likes", charlie)
+                bob.addEdge("knows", charlie)
+
+                // Alice should have 2 outgoing edges
+                val aliceOutEdges = alice.edges(Direction.OUT).asSequence().toList()
+                aliceOutEdges shouldHaveSize 2
+
+                // Charlie should have 2 incoming edges
+                val charlieInEdges = charlie.edges(Direction.IN).asSequence().toList()
+                charlieInEdges shouldHaveSize 2
+
+                // Bob should have 1 outgoing and 1 incoming edge
+                val bobOutEdges = bob.edges(Direction.OUT).asSequence().toList()
+                val bobInEdges = bob.edges(Direction.IN).asSequence().toList()
+                bobOutEdges shouldHaveSize 1
+                bobInEdges shouldHaveSize 1
+
+                graph.close()
+            }
+        })

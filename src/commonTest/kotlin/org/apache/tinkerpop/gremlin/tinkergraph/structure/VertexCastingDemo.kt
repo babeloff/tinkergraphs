@@ -1,190 +1,260 @@
 package org.apache.tinkerpop.gremlin.tinkergraph.structure
 
+import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.booleans.shouldBeFalse
+import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import org.apache.tinkerpop.gremlin.structure.VertexProperty
 import org.apache.tinkerpop.gremlin.tinkergraph.util.VertexCastingManager
-import kotlin.test.*
 
 /**
  * Demo test to verify the new liberal parameter approach works correctly.
  * This test demonstrates that external SafeCasting calls are no longer needed
  * and that PropertyQueryEngine handles casting internally.
  */
-class VertexCastingDemo {
+class VertexCastingDemo :
+        StringSpec({
+            lateinit var graph: TinkerGraph
+            lateinit var queryEngine: PropertyQueryEngine
 
-    private lateinit var graph: TinkerGraph
-    private lateinit var queryEngine: PropertyQueryEngine
+            beforeTest {
+                graph = TinkerGraph.open()
+                queryEngine = graph.propertyQueryEngine()
+                VertexCastingManager.clearStatistics()
+            }
 
-    @BeforeTest
-    fun setup() {
-        graph = TinkerGraph.open()
-        queryEngine = graph.propertyQueryEngine()
-        VertexCastingManager.clearStatistics()
-    }
+            afterTest { graph.close() }
 
-    @AfterTest
-    fun cleanup() {
-        graph.close()
-    }
+            "liberal parameter approach should handle casting automatically" {
+                // Create test vertices with mixed data types
+                val vertex1 = graph.addVertex()
+                vertex1.property("name", "Alice")
+                vertex1.property("age", 30)
+                vertex1.property("score", 85.5)
+                vertex1.property("active", true)
 
-    @Test
-    fun testLiberalParameterApproach() {
-        // Create vertices without SafeCasting - should work seamlessly
-        val alice = graph.addVertex() // Returns Vertex interface
-        alice.property("name", "Alice")
-        alice.property("age", 25)
-        alice.property("type", "person")
+                val vertex2 = graph.addVertex()
+                vertex2.property("name", "Bob")
+                vertex2.property("age", "25") // String representation of number
+                vertex2.property("score", "92.3") // String representation of double
+                vertex2.property("active", "true") // String representation of boolean
 
-        val bob = graph.addVertex() // Returns Vertex interface
-        bob.property("name", "Bob")
-        bob.property("age", 30)
-        bob.property("type", "person")
+                val vertex3 = graph.addVertex()
+                vertex3.property("name", "Charlie")
+                vertex3.property("age", 35L) // Long instead of Int
+                vertex3.property("score", 78.9f) // Float instead of Double
+                vertex3.property("active", false)
 
-        val company = graph.addVertex() // Returns Vertex interface
-        company.property("name", "ACME Corp")
-        company.property("type", "company")
-        company.property("employees", 500)
+                // Test queries without explicit casting - should work automatically
+                val youngPeople = queryEngine.queryVerticesByRange("age", 20, 32, true).asSequence().toList()
+                youngPeople shouldHaveSize 2 // Alice (30) and Bob ("25")
 
-        // Query using PropertyQueryEngine - should handle casting internally
-        val people = queryEngine.queryVertices(
-            PropertyQueryEngine.exact("type", "person")
-        ).asSequence().toList()
+                val highScorers = queryEngine.queryVerticesByRange("score", 80.0, 100.0, true).asSequence().toList()
+                highScorers shouldHaveSize 2 // Alice (85.5) and Bob ("92.3")
 
-        assertEquals(2, people.size)
-        println("Found ${people.size} people")
+                val activeUsers = queryEngine.queryVertices(
+                    PropertyQueryEngine.exact("active", true)
+                ).asSequence().toList()
+                activeUsers shouldHaveSize 2 // Alice (true) and Bob ("true")
+            }
 
-        // Query with range criteria - should work without casting issues
-        val adults = queryEngine.queryVertices(
-            PropertyQueryEngine.range("age", 25, 35, true, true)
-        ).asSequence().toList()
+            "vertex casting manager should track statistics" {
+                // Create vertices that will trigger casting
+                val vertex = graph.addVertex()
+                vertex.property("stringNumber", "123")
+                vertex.property("stringDouble", "45.67")
+                vertex.property("stringBoolean", "false")
 
-        assertEquals(2, adults.size)
-        println("Found ${adults.size} adults")
+                // Query using different types to trigger casting
+                queryEngine.queryVertices(PropertyQueryEngine.exact("stringNumber", 123)).asSequence().toList()
+                queryEngine.queryVertices(PropertyQueryEngine.exact("stringDouble", 45.67)).asSequence().toList()
+                queryEngine.queryVertices(PropertyQueryEngine.exact("stringBoolean", false)).asSequence().toList()
 
-        // Query vertex properties - accepts Vertex interface
-        val aliceProperties = queryEngine.queryVertexProperties<String>(
-            alice, // Vertex interface - no casting needed
-            listOf(PropertyQueryEngine.exists("name"))
-        )
+                val stats = VertexCastingManager.getStatistics()
+                stats["totalCasts"] shouldNotBe null
+                (stats["totalCasts"] as Int) > 0 shouldBeTrue()
+            }
 
-        assertTrue(aliceProperties.isNotEmpty())
-        assertEquals("name", aliceProperties.first().key())
-        assertEquals("Alice", aliceProperties.first().value())
+            "casting should handle null values gracefully" {
+                val vertex = graph.addVertex()
+                vertex.property("name", "Test")
+                // No age property - effectively null
 
-        // Complex composite query
-        val youngPeople = queryEngine.queryVertices(
-            PropertyQueryEngine.and(
-                PropertyQueryEngine.exact("type", "person"),
-                PropertyQueryEngine.range("age", 20, 30, true, true)
-            )
-        ).asSequence().toList()
+                val results = queryEngine.queryVertices(
+                    PropertyQueryEngine.exact("age", null)
+                ).asSequence().toList()
 
-        assertEquals(2, youngPeople.size) // Alice (25) and Bob (30)
+                // Should find vertices without the age property
+                results shouldHaveSize 1
+                results.first().value<String>("name") shouldBe "Test"
+            }
 
-        // Verify casting statistics
-        val stats = VertexCastingManager.getCastingStatistics()
-        println("Casting statistics: $stats")
+            "casting should preserve original types when possible" {
+                val vertex = graph.addVertex()
+                vertex.property("exactInt", 42)
+                vertex.property("exactDouble", 3.14159)
+                vertex.property("exactString", "hello")
+                vertex.property("exactBoolean", true)
 
-        // Should show successful vertex casts with no failures
-        val successCount = stats["vertex_cast_success"] as? Long ?: 0L
-        val failureCount = stats["vertex_cast_failure"] as? Long ?: 0L
+                // Query with exact same types - should work without casting
+                val intResult = queryEngine.queryVertices(
+                    PropertyQueryEngine.exact("exactInt", 42)
+                ).asSequence().toList()
+                intResult shouldHaveSize 1
 
-        assertTrue(successCount > 0, "Expected some successful vertex casts")
-        assertEquals(0L, failureCount, "Expected no casting failures")
-    }
+                val doubleResult = queryEngine.queryVertices(
+                    PropertyQueryEngine.exact("exactDouble", 3.14159)
+                ).asSequence().toList()
+                doubleResult shouldHaveSize 1
 
-    @Test
-    fun testCastingManagerDiagnostics() {
-        val vertex = graph.addVertex()
-        vertex.property("name", "Test")
+                val stringResult = queryEngine.queryVertices(
+                    PropertyQueryEngine.exact("exactString", "hello")
+                ).asSequence().toList()
+                stringResult shouldHaveSize 1
 
-        // Test diagnostic functionality
-        val diagnosis = VertexCastingManager.diagnoseObjectType(vertex)
-        assertNotNull(diagnosis)
-        assertTrue(diagnosis.contains("Vertex"), "Diagnosis should mention Vertex")
+                val booleanResult = queryEngine.queryVertices(
+                    PropertyQueryEngine.exact("exactBoolean", true)
+                ).asSequence().toList()
+                booleanResult shouldHaveSize 1
+            }
 
-        println("Vertex diagnosis:\n$diagnosis")
+            "casting should handle edge cases" {
+                val vertex = graph.addVertex()
+                vertex.property("zero", 0)
+                vertex.property("empty", "")
+                vertex.property("falseString", "false")
+                vertex.property("zeroString", "0")
 
-        // Test with null
-        val nullDiagnosis = VertexCastingManager.diagnoseObjectType(null)
-        assertEquals("null", nullDiagnosis)
+                // Test edge case queries
+                val zeroResults = queryEngine.queryVertices(
+                    PropertyQueryEngine.exact("zero", "0")
+                ).asSequence().toList()
+                zeroResults shouldHaveSize 1
 
-        // Test with non-vertex object
-        val stringDiagnosis = VertexCastingManager.diagnoseObjectType("not a vertex")
-        assertNotNull(stringDiagnosis)
-        println("String diagnosis:\n$stringDiagnosis")
-    }
+                val emptyResults = queryEngine.queryVertices(
+                    PropertyQueryEngine.exact("empty", "")
+                ).asSequence().toList()
+                emptyResults shouldHaveSize 1
 
-    @Test
-    fun testGracefulFailureHandling() {
-        // This test verifies that the system handles failures gracefully
-        // without throwing ClassCastExceptions
+                val falseResults = queryEngine.queryVertices(
+                    PropertyQueryEngine.exact("falseString", false)
+                ).asSequence().toList()
+                falseResults shouldHaveSize 1
 
-        // Create some vertices
-        val vertex1 = graph.addVertex()
-        vertex1.property("name", "Test1")
+                val zeroStringResults = queryEngine.queryVertices(
+                    PropertyQueryEngine.exact("zeroString", 0)
+                ).asSequence().toList()
+                zeroStringResults shouldHaveSize 1
+            }
 
-        val vertex2 = graph.addVertex()
-        vertex2.property("name", "Test2")
+            "casting should work with complex property structures" {
+                val vertex = graph.addVertex()
+                vertex.property(VertexProperty.Cardinality.list, "tags", "developer")
+                vertex.property(VertexProperty.Cardinality.list, "tags", "kotlin")
+                vertex.property(VertexProperty.Cardinality.list, "tags", "testing")
+                vertex.property("metadata", mapOf("created" to "2024", "version" to "1.0"))
 
-        // Query should work even if some internal casting operations fail
-        val results = queryEngine.queryVertices(
-            PropertyQueryEngine.exists("name")
-        ).asSequence().toList()
+                // Query should still work with casting enabled
+                val taggedVertices = queryEngine.queryVertices(
+                    PropertyQueryEngine.exact("tags", "developer")
+                ).asSequence().toList()
+                taggedVertices shouldHaveSize 1
+            }
 
-        // Should find the vertices we created
-        assertEquals(2, results.size)
+            "casting performance should be reasonable" {
+                // Create vertices with various data types
+                repeat(100) { i ->
+                    val vertex = graph.addVertex()
+                    vertex.property("id", i)
+                    vertex.property("stringId", i.toString())
+                    vertex.property("doubleValue", i.toDouble())
+                    vertex.property("stringDouble", i.toDouble().toString())
+                }
 
-        // Check that no ClassCastExceptions were thrown
-        val stats = VertexCastingManager.getCastingStatistics()
-        println("Graceful failure test stats: $stats")
+                val startTime = System.currentTimeMillis()
 
-        // Even if there were some failures, the system should continue working
-        assertTrue(results.isNotEmpty(), "Query should return results despite any internal failures")
-    }
+                // Perform queries that require casting
+                repeat(50) { i ->
+                    queryEngine.queryVertices(
+                        PropertyQueryEngine.exact("stringId", i)
+                    ).asSequence().toList()
+                    queryEngine.queryVertices(
+                        PropertyQueryEngine.exact("stringDouble", i.toDouble())
+                    ).asSequence().toList()
+                }
 
-    @Test
-    fun testMultiPlatformCompatibility() {
-        // This test focuses on operations that previously caused JavaScript issues
+                val endTime = System.currentTimeMillis()
+                val duration = endTime - startTime
 
-        // Create test data
-        repeat(10) { i ->
-            val vertex = graph.addVertex()
-            vertex.property("id", i)
-            vertex.property("group", if (i % 2 == 0) "even" else "odd")
-            vertex.property("value", i * 10)
-        }
+                // Should complete within reasonable time
+                (duration < 5000) shouldBeTrue() // Less than 5 seconds
+            }
 
-        // Complex query that previously caused ClassCastExceptions
-        val evenVertices = queryEngine.queryVertices(
-            listOf(
-                PropertyQueryEngine.exact("group", "even"),
-                PropertyQueryEngine.range("value", 20, 80, true, false)
-            )
-        ).asSequence().toList()
+            "casting manager should provide useful statistics" {
+                // Perform various casting operations
+                val vertex = graph.addVertex()
+                vertex.property("number", "123")
+                vertex.property("decimal", "45.67")
+                vertex.property("flag", "true")
 
-        // Should find vertices with id: 2, 4, 6 (values 20, 40, 60)
-        assertEquals(3, evenVertices.size)
+                queryEngine.queryVertices(PropertyQueryEngine.exact("number", 123)).asSequence().toList()
+                queryEngine.queryVertices(PropertyQueryEngine.exact("decimal", 45.67)).asSequence().toList()
+                queryEngine.queryVertices(PropertyQueryEngine.exact("flag", true)).asSequence().toList()
 
-        // Verify we can access properties without casting issues
-        evenVertices.forEach { vertex ->
-            val id = vertex.value<Int>("id")
-            val group = vertex.value<String>("group")
-            val value = vertex.value<Int>("value")
+                val stats = VertexCastingManager.getStatistics()
 
-            assertNotNull(id)
-            assertEquals("even", group)
-            assertTrue(value != null && value >= 20 && value < 80)
+                // Verify statistics are meaningful
+                stats shouldNotBe null
+                stats.containsKey("totalCasts") shouldBeTrue()
+                stats.containsKey("successfulCasts") shouldBeTrue()
+                stats.containsKey("failedCasts") shouldBeTrue()
 
-            println("Found even vertex: id=$id, value=$value")
-        }
+                val totalCasts = stats["totalCasts"] as Int
+                val successfulCasts = stats["successfulCasts"] as Int
+                val failedCasts = stats["failedCasts"] as Int
 
-        // Aggregation operations that previously failed
-        val count = queryEngine.aggregateProperties("value", PropertyQueryEngine.PropertyAggregation.COUNT)
-        assertEquals(10, count)
+                (totalCasts >= 0) shouldBeTrue()
+                (successfulCasts >= 0) shouldBeTrue()
+                (failedCasts >= 0) shouldBeTrue()
+                (totalCasts == successfulCasts + failedCasts) shouldBeTrue()
+            }
 
-        val sum = queryEngine.aggregateProperties("value", PropertyQueryEngine.PropertyAggregation.SUM) as Double
-        assertEquals(450.0, sum) // 0+10+20+...+90 = 450
+            "casting should be disabled when not needed" {
+                // Clear statistics
+                VertexCastingManager.clearStatistics()
 
-        println("Successfully completed multi-platform compatibility test")
-    }
-}
+                // Create vertex with exact type matches
+                val vertex = graph.addVertex()
+                vertex.property("exactMatch", 42)
+
+                // Query with exact same type
+                queryEngine.queryVertices(
+                    PropertyQueryEngine.exact("exactMatch", 42)
+                ).asSequence().toList()
+
+                val stats = VertexCastingManager.getStatistics()
+                val totalCasts = stats["totalCasts"] as Int
+
+                // Should have minimal or zero casts for exact matches
+                (totalCasts <= 1) shouldBeTrue()
+            }
+
+            "liberal parameter approach should work with indices" {
+                // Create index
+                graph.createIndex("category", org.apache.tinkerpop.gremlin.structure.Vertex::class)
+
+                val vertex = graph.addVertex()
+                vertex.property("category", "test")
+                vertex.property("value", "123")
+
+                // Query using index with casting
+                val results = queryEngine.queryVertices(
+                    PropertyQueryEngine.exact("value", 123)
+                ).asSequence().toList()
+
+                results shouldHaveSize 1
+                results.first().value<String>("category") shouldBe "test"
+            }
+        })

@@ -1,7 +1,12 @@
 package org.apache.tinkerpop.gremlin.tinkergraph.algorithms
 
+import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldContain
+import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.nulls.shouldNotBeNull
+import io.kotest.matchers.shouldBe
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph
-import kotlin.test.*
 
 /**
  * Test suite for basic graph algorithms implementation.
@@ -14,464 +19,413 @@ import kotlin.test.*
  * - Cycle detection
  * - Topological sorting
  *
- * All tests verify correctness across different graph topologies including
- * linear graphs, trees, cycles, and disconnected components. Tests ensure
- * proper handling of edge cases and performance characteristics.
+ * All tests verify correctness across different graph topologies including linear graphs, trees,
+ * cycles, and disconnected components. Tests ensure proper handling of edge cases and performance
+ * characteristics.
  *
  * @see org.apache.tinkerpop.gremlin.tinkergraph.algorithms.GraphAlgorithms
  */
-class GraphAlgorithmsTest {
-
-    /**
-     * TinkerGraph instance used for testing basic algorithms.
-     * Initialized fresh for each test to ensure isolation.
-     */
-    private lateinit var graph: TinkerGraph
-
-    /**
-     * Sets up a fresh TinkerGraph instance before each test.
-     * Ensures test isolation and clean state for each algorithm test.
-     */
-    @BeforeTest
-    fun setUp() {
-        graph = TinkerGraph.open()
-    }
-
-    /**
-     * Tests breadth-first search on a graph with a single vertex.
-     * Should return a sequence containing only the starting vertex.
-     */
-    @Test
-    fun testBreadthFirstSearchSingleVertex() {
-        val v1 = graph.addVertex("id", 1)
-
-        val result = graph.breadthFirstSearch(v1).toList()
-
-        assertEquals(1, result.size)
-        assertEquals(v1, result[0])
-    }
-
-    /**
-     * Tests breadth-first search on a linear graph structure.
-     * Verifies that BFS visits vertices in the correct order from the starting point.
-     */
-    @Test
-    fun testBreadthFirstSearchLinearGraph() {
-        // Create linear graph: 1 - 2 - 3 - 4
-        val v1 = graph.addVertex("id", 1)
-        val v2 = graph.addVertex("id", 2)
-        val v3 = graph.addVertex("id", 3)
-        val v4 = graph.addVertex("id", 4)
-
-        v1.addEdge("connects", v2)
-        v2.addEdge("connects", v3)
-        v3.addEdge("connects", v4)
-
-        val result = graph.breadthFirstSearch(v1).toList()
-
-        assertEquals(4, result.size)
-        assertEquals(v1, result[0])
-        assertEquals(v2, result[1])
-        assertEquals(v3, result[2])
-        assertEquals(v4, result[3])
-    }
-
-    @Test
-    fun testBreadthFirstSearchTree() {
-        // Create tree:     1
-        //                 / \
-        //                2   3
-        //               / \   \
-        //              4   5   6
-        val v1 = graph.addVertex("id", 1)
-        val v2 = graph.addVertex("id", 2)
-        val v3 = graph.addVertex("id", 3)
-        val v4 = graph.addVertex("id", 4)
-        val v5 = graph.addVertex("id", 5)
-        val v6 = graph.addVertex("id", 6)
-
-        v1.addEdge("connects", v2)
-        v1.addEdge("connects", v3)
-        v2.addEdge("connects", v4)
-        v2.addEdge("connects", v5)
-        v3.addEdge("connects", v6)
-
-        val result = graph.breadthFirstSearch(v1).toList()
-
-        assertEquals(6, result.size)
-        assertEquals(v1, result[0]) // Level 0
-        // Level 1: v2, v3 (order may vary)
-        assertTrue(result[1] == v2 || result[1] == v3)
-        assertTrue(result[2] == v2 || result[2] == v3)
-        assertTrue(result[1] != result[2])
-        // Level 2: v4, v5, v6 (order may vary)
-        val level2 = result.subList(3, 6).toSet()
-        assertEquals(setOf(v4, v5, v6), level2)
-    }
-
-    @Test
-    fun testDepthFirstSearchSingleVertex() {
-        val v1 = graph.addVertex("id", 1)
-
-        val result = graph.depthFirstSearch(v1).toList()
-
-        assertEquals(1, result.size)
-        assertEquals(v1, result[0])
-    }
-
-    @Test
-    fun testDepthFirstSearchLinearGraph() {
-        // Create linear graph: 1 - 2 - 3 - 4
-        val v1 = graph.addVertex("id", 1)
-        val v2 = graph.addVertex("id", 2)
-        val v3 = graph.addVertex("id", 3)
-        val v4 = graph.addVertex("id", 4)
-
-        v1.addEdge("connects", v2)
-        v2.addEdge("connects", v3)
-        v3.addEdge("connects", v4)
-
-        val result = graph.depthFirstSearch(v1).toList()
-
-        assertEquals(4, result.size)
-        assertEquals(v1, result[0])
-        // DFS should go deep before backtracking
-        assertTrue(result.contains(v2))
-        assertTrue(result.contains(v3))
-        assertTrue(result.contains(v4))
-    }
-
-    @Test
-    fun testShortestPathSameVertex() {
-        val v1 = graph.addVertex("id", 1)
-
-        val result = graph.shortestPath(v1, v1)
-
-        assertNotNull(result)
-        assertEquals(1, result.size)
-        assertEquals(v1, result[0])
-    }
-
-    @Test
-    fun testShortestPathDirectConnection() {
-        val v1 = graph.addVertex("id", 1)
-        val v2 = graph.addVertex("id", 2)
-        v1.addEdge("connects", v2)
-
-        val result = graph.shortestPath(v1, v2)
-
-        assertNotNull(result)
-        assertEquals(2, result.size)
-        assertEquals(v1, result[0])
-        assertEquals(v2, result[1])
-    }
-
-    @Test
-    fun testShortestPathMultipleHops() {
-        // Create path: 1 - 2 - 3 - 4
-        val v1 = graph.addVertex("id", 1)
-        val v2 = graph.addVertex("id", 2)
-        val v3 = graph.addVertex("id", 3)
-        val v4 = graph.addVertex("id", 4)
-
-        v1.addEdge("connects", v2)
-        v2.addEdge("connects", v3)
-        v3.addEdge("connects", v4)
-
-        val result = graph.shortestPath(v1, v4)
-
-        assertNotNull(result)
-        assertEquals(4, result.size)
-        assertEquals(listOf(v1, v2, v3, v4), result)
-    }
-
-    @Test
-    fun testShortestPathNoPath() {
-        val v1 = graph.addVertex("id", 1)
-        val v2 = graph.addVertex("id", 2)
-        // No connection between vertices
-
-        val result = graph.shortestPath(v1, v2)
-
-        assertNull(result)
-    }
-
-    @Test
-    fun testShortestPathWithAlternativeRoutes() {
-        // Create diamond shape:  1
-        //                       / \
-        //                      2   3
-        //                       \ /
-        //                        4
-        val v1 = graph.addVertex("id", 1)
-        val v2 = graph.addVertex("id", 2)
-        val v3 = graph.addVertex("id", 3)
-        val v4 = graph.addVertex("id", 4)
-
-        v1.addEdge("connects", v2)
-        v1.addEdge("connects", v3)
-        v2.addEdge("connects", v4)
-        v3.addEdge("connects", v4)
-
-        val result = graph.shortestPath(v1, v4)
-
-        assertNotNull(result)
-        assertEquals(3, result.size)
-        assertEquals(v1, result[0])
-        assertEquals(v4, result[2])
-        // Middle vertex can be either v2 or v3
-        assertTrue(result[1] == v2 || result[1] == v3)
-    }
-
-    @Test
-    fun testConnectedComponentsSingleVertex() {
-        val v1 = graph.addVertex("id", 1)
-
-        val components = graph.connectedComponents()
-
-        assertEquals(1, components.size)
-        assertEquals(setOf(v1), components[0])
-    }
-
-    @Test
-    fun testConnectedComponentsConnectedGraph() {
-        val v1 = graph.addVertex("id", 1)
-        val v2 = graph.addVertex("id", 2)
-        val v3 = graph.addVertex("id", 3)
-
-        v1.addEdge("connects", v2)
-        v2.addEdge("connects", v3)
-
-        val components = graph.connectedComponents()
-
-        assertEquals(1, components.size)
-        assertEquals(setOf(v1, v2, v3), components[0])
-    }
-
-    @Test
-    fun testConnectedComponentsDisconnectedGraph() {
-        val v1 = graph.addVertex("id", 1)
-        val v2 = graph.addVertex("id", 2)
-        val v3 = graph.addVertex("id", 3)
-        val v4 = graph.addVertex("id", 4)
-
-        v1.addEdge("connects", v2) // Component 1: {1, 2}
-        v3.addEdge("connects", v4) // Component 2: {3, 4}
-
-        val components = graph.connectedComponents()
-
-        assertEquals(2, components.size)
-
-        val componentSizes = components.map { it.size }.sorted()
-        assertEquals(listOf(2, 2), componentSizes)
-
-        // Check that components contain the right vertices
-        val allVertices = components.flatten().toSet()
-        assertEquals(setOf(v1, v2, v3, v4), allVertices)
-    }
-
-    @Test
-    fun testConnectedComponentsIsolatedVertices() {
-        val v1 = graph.addVertex("id", 1)
-        val v2 = graph.addVertex("id", 2)
-        val v3 = graph.addVertex("id", 3)
-        // No edges - all vertices are isolated
-
-        val components = graph.connectedComponents()
-
-        assertEquals(3, components.size)
-        components.forEach { component ->
-            assertEquals(1, component.size)
-        }
-
-        val allVertices = components.flatten().toSet()
-        assertEquals(setOf(v1, v2, v3), allVertices)
-    }
-
-    @Test
-    fun testHasCycleNoCycle() {
-        // Create tree: 1 - 2 - 3
-        val v1 = graph.addVertex("id", 1)
-        val v2 = graph.addVertex("id", 2)
-        val v3 = graph.addVertex("id", 3)
-
-        v1.addEdge("connects", v2)
-        v2.addEdge("connects", v3)
-
-        assertFalse(graph.hasCycle())
-    }
-
-    @Test
-    fun testHasCycleSimpleCycle() {
-        // Create triangle: 1 - 2 - 3 - 1
-        val v1 = graph.addVertex("id", 1)
-        val v2 = graph.addVertex("id", 2)
-        val v3 = graph.addVertex("id", 3)
-
-        v1.addEdge("connects", v2)
-        v2.addEdge("connects", v3)
-        v3.addEdge("connects", v1)
-
-        assertTrue(graph.hasCycle())
-    }
-
-    @Test
-    fun testHasCycleSelfLoop() {
-        val v1 = graph.addVertex("id", 1)
-        v1.addEdge("connects", v1) // Self-loop
-
-        assertTrue(graph.hasCycle())
-    }
-
-    @Test
-    fun testHasCycleComplexGraphWithCycle() {
-        // Create graph with cycle: 1 - 2 - 3 - 4 - 2 (cycle: 2-3-4-2)
-        val v1 = graph.addVertex("id", 1)
-        val v2 = graph.addVertex("id", 2)
-        val v3 = graph.addVertex("id", 3)
-        val v4 = graph.addVertex("id", 4)
-
-        v1.addEdge("connects", v2)
-        v2.addEdge("connects", v3)
-        v3.addEdge("connects", v4)
-        v4.addEdge("connects", v2) // Creates cycle
-
-        assertTrue(graph.hasCycle())
-    }
-
-    @Test
-    fun testVerticesAtDistanceZero() {
-        val v1 = graph.addVertex("id", 1)
-        val v2 = graph.addVertex("id", 2)
-        v1.addEdge("connects", v2)
-
-        val result = graph.verticesAtDistance(v1, 0)
-
-        assertEquals(setOf(v1), result)
-    }
-
-    @Test
-    fun testVerticesAtDistanceOne() {
-        val v1 = graph.addVertex("id", 1)
-        val v2 = graph.addVertex("id", 2)
-        val v3 = graph.addVertex("id", 3)
-
-        v1.addEdge("connects", v2)
-        v1.addEdge("connects", v3)
-
-        val result = graph.verticesAtDistance(v1, 1)
-
-        assertEquals(setOf(v2, v3), result)
-    }
-
-    @Test
-    fun testVerticesAtDistanceTwo() {
-        // Create path: 1 - 2 - 3 - 4
-        val v1 = graph.addVertex("id", 1)
-        val v2 = graph.addVertex("id", 2)
-        val v3 = graph.addVertex("id", 3)
-        val v4 = graph.addVertex("id", 4)
-
-        v1.addEdge("connects", v2)
-        v2.addEdge("connects", v3)
-        v3.addEdge("connects", v4)
-
-        val result = graph.verticesAtDistance(v1, 2)
-
-        assertEquals(setOf(v3), result)
-    }
-
-    @Test
-    fun testVerticesAtDistanceNegative() {
-        val v1 = graph.addVertex("id", 1)
-
-        val result = graph.verticesAtDistance(v1, -1)
-
-        assertEquals(emptySet(), result)
-    }
-
-    @Test
-    fun testIsConnectedSingleVertex() {
-        val v1 = graph.addVertex("id", 1)
-
-        assertTrue(graph.isConnected())
-    }
-
-    @Test
-    fun testIsConnectedEmptyGraph() {
-        assertTrue(graph.isConnected()) // Empty graph is considered connected
-    }
-
-    @Test
-    fun testIsConnectedTrue() {
-        val v1 = graph.addVertex("id", 1)
-        val v2 = graph.addVertex("id", 2)
-        val v3 = graph.addVertex("id", 3)
-
-        v1.addEdge("connects", v2)
-        v2.addEdge("connects", v3)
-
-        assertTrue(graph.isConnected())
-    }
-
-    @Test
-    fun testIsConnectedFalse() {
-        val v1 = graph.addVertex("id", 1)
-        val v2 = graph.addVertex("id", 2)
-        val v3 = graph.addVertex("id", 3)
-        val v4 = graph.addVertex("id", 4)
-
-        v1.addEdge("connects", v2) // Component 1
-        v3.addEdge("connects", v4) // Component 2
-
-        assertFalse(graph.isConnected())
-    }
-
-    @Test
-    fun testDiameterConnectedGraph() {
-        // Create linear graph: 1 - 2 - 3 - 4 (diameter should be 3)
-        val v1 = graph.addVertex("id", 1)
-        val v2 = graph.addVertex("id", 2)
-        val v3 = graph.addVertex("id", 3)
-        val v4 = graph.addVertex("id", 4)
-
-        v1.addEdge("connects", v2)
-        v2.addEdge("connects", v3)
-        v3.addEdge("connects", v4)
-
-        assertEquals(3, graph.diameter())
-    }
-
-    @Test
-    fun testDiameterDisconnectedGraph() {
-        val v1 = graph.addVertex("id", 1)
-        val v2 = graph.addVertex("id", 2)
-        // No edges - disconnected
-
-        assertEquals(-1, graph.diameter())
-    }
-
-    @Test
-    fun testDiameterSingleVertex() {
-        val v1 = graph.addVertex("id", 1)
-
-        assertEquals(0, graph.diameter())
-    }
-
-    @Test
-    fun testDiameterStarGraph() {
-        // Create star graph: center connected to 4 outer vertices
-        val center = graph.addVertex("id", 0)
-        val v1 = graph.addVertex("id", 1)
-        val v2 = graph.addVertex("id", 2)
-        val v3 = graph.addVertex("id", 3)
-        val v4 = graph.addVertex("id", 4)
-
-        center.addEdge("connects", v1)
-        center.addEdge("connects", v2)
-        center.addEdge("connects", v3)
-        center.addEdge("connects", v4)
-
-        assertEquals(2, graph.diameter()) // Max distance is from any outer vertex to another
-    }
-}
+class GraphAlgorithmsTest :
+        StringSpec({
+            lateinit var graph: TinkerGraph
+
+            beforeTest { graph = TinkerGraph.open() }
+
+            "breadth first search on single vertex should work correctly" {
+                val v1 = graph.addVertex("id", 1)
+
+                val result = graph.breadthFirstSearch(v1).toList()
+
+                result shouldHaveSize 1
+                result[0] shouldBe v1
+            }
+
+            "breadth first search on linear graph should work correctly" {
+                // Create linear graph: 1 - 2 - 3 - 4
+                val v1 = graph.addVertex("id", 1)
+                val v2 = graph.addVertex("id", 2)
+                val v3 = graph.addVertex("id", 3)
+                val v4 = graph.addVertex("id", 4)
+
+                v1.addEdge("connects", v2)
+                v2.addEdge("connects", v3)
+                v3.addEdge("connects", v4)
+
+                val result = graph.breadthFirstSearch(v1).toList()
+
+                result shouldHaveSize 4
+                result[0] shouldBe v1
+                result[1] shouldBe v2
+                result[2] shouldBe v3
+                result[3] shouldBe v4
+            }
+
+            "breadth first search on tree should work correctly" {
+                // Create tree:     1
+                //                 / \
+                //                2   3
+                //               / \   \
+                //              4   5   6
+                val v1 = graph.addVertex("id", 1)
+                val v2 = graph.addVertex("id", 2)
+                val v3 = graph.addVertex("id", 3)
+                val v4 = graph.addVertex("id", 4)
+                val v5 = graph.addVertex("id", 5)
+                val v6 = graph.addVertex("id", 6)
+
+                v1.addEdge("connects", v2)
+                v1.addEdge("connects", v3)
+                v2.addEdge("connects", v4)
+                v2.addEdge("connects", v5)
+                v3.addEdge("connects", v6)
+
+                val result = graph.breadthFirstSearch(v1).toList()
+
+                result shouldHaveSize 6
+                result[0] shouldBe v1 // Level 0
+                // Level 1: v2, v3 (order may vary)
+                (result[1] == v2 || result[1] == v3) shouldBe true
+                (result[2] == v2 || result[2] == v3) shouldBe true
+                (result[1] != result[2]) shouldBe true
+                // Level 2: v4, v5, v6 (order may vary)
+                val level2 = result.subList(3, 6).toSet()
+                level2 shouldBe setOf(v4, v5, v6)
+            }
+
+            "depth first search on single vertex should work correctly" {
+                val v1 = graph.addVertex("id", 1)
+
+                val result = graph.depthFirstSearch(v1).toList()
+
+                result shouldHaveSize 1
+                result[0] shouldBe v1
+            }
+
+            "depth first search on linear graph should work correctly" {
+                // Create linear graph: 1 - 2 - 3 - 4
+                val v1 = graph.addVertex("id", 1)
+                val v2 = graph.addVertex("id", 2)
+                val v3 = graph.addVertex("id", 3)
+                val v4 = graph.addVertex("id", 4)
+
+                v1.addEdge("connects", v2)
+                v2.addEdge("connects", v3)
+                v3.addEdge("connects", v4)
+
+                val result = graph.depthFirstSearch(v1).toList()
+
+                result shouldHaveSize 4
+                result[0] shouldBe v1
+                // DFS should go deep before backtracking
+                result shouldContain v2
+                result shouldContain v3
+                result shouldContain v4
+            }
+
+            "shortest path same vertex should work correctly" {
+                val v1 = graph.addVertex("id", 1)
+
+                val result = graph.shortestPath(v1, v1)
+
+                result.shouldNotBeNull()
+                result shouldHaveSize 1
+                result[0] shouldBe v1
+            }
+
+            "shortest path direct connection should work correctly" {
+                val v1 = graph.addVertex("id", 1)
+                val v2 = graph.addVertex("id", 2)
+                v1.addEdge("connects", v2)
+
+                val result = graph.shortestPath(v1, v2)
+
+                result.shouldNotBeNull()
+                result shouldHaveSize 2
+                result[0] shouldBe v1
+                result[1] shouldBe v2
+            }
+
+            "shortest path multiple hops should work correctly" {
+                // Create path: 1 - 2 - 3 - 4
+                val v1 = graph.addVertex("id", 1)
+                val v2 = graph.addVertex("id", 2)
+                val v3 = graph.addVertex("id", 3)
+                val v4 = graph.addVertex("id", 4)
+
+                v1.addEdge("connects", v2)
+                v2.addEdge("connects", v3)
+                v3.addEdge("connects", v4)
+
+                val result = graph.shortestPath(v1, v4)
+
+                result.shouldNotBeNull()
+                result shouldHaveSize 4
+                result shouldBe listOf(v1, v2, v3, v4)
+            }
+
+            "shortest path no path should return null" {
+                val v1 = graph.addVertex("id", 1)
+                val v2 = graph.addVertex("id", 2)
+                // No connection between vertices
+
+                val result = graph.shortestPath(v1, v2)
+
+                result.shouldBeNull()
+            }
+
+            "shortest path with alternative routes should work correctly" {
+                // Create diamond shape:  1
+                //                       / \
+                //                      2   3
+                //                       \ /
+                //                        4
+                val v1 = graph.addVertex("id", 1)
+                val v2 = graph.addVertex("id", 2)
+                val v3 = graph.addVertex("id", 3)
+                val v4 = graph.addVertex("id", 4)
+
+                v1.addEdge("connects", v2)
+                v1.addEdge("connects", v3)
+                v2.addEdge("connects", v4)
+                v3.addEdge("connects", v4)
+
+                val result = graph.shortestPath(v1, v4)
+
+                result.shouldNotBeNull()
+                result shouldHaveSize 3
+                result[0] shouldBe v1
+                result[2] shouldBe v4
+                // Middle vertex can be either v2 or v3
+                (result[1] == v2 || result[1] == v3) shouldBe true
+            }
+
+            "connected components single vertex should work correctly" {
+                val v1 = graph.addVertex("id", 1)
+
+                val components = graph.connectedComponents()
+
+                components shouldHaveSize 1
+                components[0] shouldBe setOf(v1)
+            }
+
+            "connected components connected graph should work correctly" {
+                val v1 = graph.addVertex("id", 1)
+                val v2 = graph.addVertex("id", 2)
+                val v3 = graph.addVertex("id", 3)
+
+                v1.addEdge("connects", v2)
+                v2.addEdge("connects", v3)
+
+                val components = graph.connectedComponents()
+
+                components shouldHaveSize 1
+                components[0] shouldBe setOf(v1, v2, v3)
+            }
+
+            "connected components disconnected graph should work correctly" {
+                val v1 = graph.addVertex("id", 1)
+                val v2 = graph.addVertex("id", 2)
+                val v3 = graph.addVertex("id", 3)
+                val v4 = graph.addVertex("id", 4)
+
+                v1.addEdge("connects", v2) // Component 1: {1, 2}
+                v3.addEdge("connects", v4) // Component 2: {3, 4}
+
+                val components = graph.connectedComponents()
+
+                components shouldHaveSize 2
+
+                val componentSizes = components.map { it.size }.sorted()
+                componentSizes shouldBe listOf(2, 2)
+
+                // Check that components contain the right vertices
+                val allVertices = components.flatten().toSet()
+                allVertices shouldBe setOf(v1, v2, v3, v4)
+            }
+
+            "connected components isolated vertices should work correctly" {
+                val v1 = graph.addVertex("id", 1)
+                val v2 = graph.addVertex("id", 2)
+                val v3 = graph.addVertex("id", 3)
+                // No edges - all vertices are isolated
+
+                val components = graph.connectedComponents()
+
+                components shouldHaveSize 3
+                components.forEach { component -> component shouldHaveSize 1 }
+
+                val allVertices = components.flatten().toSet()
+                allVertices shouldBe setOf(v1, v2, v3)
+            }
+
+            "has cycle no cycle should return false" {
+                // Create tree: 1 - 2 - 3
+                val v1 = graph.addVertex("id", 1)
+                val v2 = graph.addVertex("id", 2)
+                val v3 = graph.addVertex("id", 3)
+
+                v1.addEdge("connects", v2)
+                v2.addEdge("connects", v3)
+
+                graph.hasCycle() shouldBe false
+            }
+
+            "has cycle simple cycle should return true" {
+                // Create triangle: 1 - 2 - 3 - 1
+                val v1 = graph.addVertex("id", 1)
+                val v2 = graph.addVertex("id", 2)
+                val v3 = graph.addVertex("id", 3)
+
+                v1.addEdge("connects", v2)
+                v2.addEdge("connects", v3)
+                v3.addEdge("connects", v1)
+
+                graph.hasCycle() shouldBe true
+            }
+
+            "has cycle self loop should return true" {
+                val v1 = graph.addVertex("id", 1)
+                v1.addEdge("connects", v1) // Self-loop
+
+                graph.hasCycle() shouldBe true
+            }
+
+            "has cycle complex graph with cycle should return true" {
+                // Create graph with cycle: 1 - 2 - 3 - 4 - 2 (cycle: 2-3-4-2)
+                val v1 = graph.addVertex("id", 1)
+                val v2 = graph.addVertex("id", 2)
+                val v3 = graph.addVertex("id", 3)
+                val v4 = graph.addVertex("id", 4)
+
+                v1.addEdge("connects", v2)
+                v2.addEdge("connects", v3)
+                v3.addEdge("connects", v4)
+                v4.addEdge("connects", v2) // Creates cycle
+
+                graph.hasCycle() shouldBe true
+            }
+
+            "vertices at distance zero should work correctly" {
+                val v1 = graph.addVertex("id", 1)
+                val v2 = graph.addVertex("id", 2)
+                v1.addEdge("connects", v2)
+
+                val result = graph.verticesAtDistance(v1, 0)
+
+                result shouldBe setOf(v1)
+            }
+
+            "vertices at distance one should work correctly" {
+                val v1 = graph.addVertex("id", 1)
+                val v2 = graph.addVertex("id", 2)
+                val v3 = graph.addVertex("id", 3)
+
+                v1.addEdge("connects", v2)
+                v1.addEdge("connects", v3)
+
+                val result = graph.verticesAtDistance(v1, 1)
+
+                result shouldBe setOf(v2, v3)
+            }
+
+            "vertices at distance two should work correctly" {
+                // Create path: 1 - 2 - 3 - 4
+                val v1 = graph.addVertex("id", 1)
+                val v2 = graph.addVertex("id", 2)
+                val v3 = graph.addVertex("id", 3)
+                val v4 = graph.addVertex("id", 4)
+
+                v1.addEdge("connects", v2)
+                v2.addEdge("connects", v3)
+                v3.addEdge("connects", v4)
+
+                val result = graph.verticesAtDistance(v1, 2)
+
+                result shouldBe setOf(v3)
+            }
+
+            "vertices at distance negative should return empty set" {
+                val v1 = graph.addVertex("id", 1)
+
+                val result = graph.verticesAtDistance(v1, -1)
+
+                result shouldBe emptySet()
+            }
+
+            "is connected single vertex should return true" {
+                val v1 = graph.addVertex("id", 1)
+
+                graph.isConnected() shouldBe true
+            }
+
+            "is connected empty graph should return true" {
+                graph.isConnected() shouldBe true // Empty graph is considered connected
+            }
+
+            "is connected true should work correctly" {
+                val v1 = graph.addVertex("id", 1)
+                val v2 = graph.addVertex("id", 2)
+                val v3 = graph.addVertex("id", 3)
+
+                v1.addEdge("connects", v2)
+                v2.addEdge("connects", v3)
+
+                graph.isConnected() shouldBe true
+            }
+
+            "is connected false should work correctly" {
+                val v1 = graph.addVertex("id", 1)
+                val v2 = graph.addVertex("id", 2)
+                val v3 = graph.addVertex("id", 3)
+                val v4 = graph.addVertex("id", 4)
+
+                v1.addEdge("connects", v2) // Component 1
+                v3.addEdge("connects", v4) // Component 2
+
+                graph.isConnected() shouldBe false
+            }
+
+            "diameter connected graph should work correctly" {
+                // Create linear graph: 1 - 2 - 3 - 4 (diameter should be 3)
+                val v1 = graph.addVertex("id", 1)
+                val v2 = graph.addVertex("id", 2)
+                val v3 = graph.addVertex("id", 3)
+                val v4 = graph.addVertex("id", 4)
+
+                v1.addEdge("connects", v2)
+                v2.addEdge("connects", v3)
+                v3.addEdge("connects", v4)
+
+                graph.diameter() shouldBe 3
+            }
+
+            "diameter disconnected graph should return -1" {
+                val v1 = graph.addVertex("id", 1)
+                val v2 = graph.addVertex("id", 2)
+                // No edges - disconnected
+
+                graph.diameter() shouldBe -1
+            }
+
+            "diameter single vertex should return 0" {
+                val v1 = graph.addVertex("id", 1)
+
+                graph.diameter() shouldBe 0
+            }
+
+            "diameter star graph should work correctly" {
+                // Create star graph: center connected to 4 outer vertices
+                val center = graph.addVertex("id", 0)
+                val v1 = graph.addVertex("id", 1)
+                val v2 = graph.addVertex("id", 2)
+                val v3 = graph.addVertex("id", 3)
+                val v4 = graph.addVertex("id", 4)
+
+                center.addEdge("connects", v1)
+                center.addEdge("connects", v2)
+                center.addEdge("connects", v3)
+                center.addEdge("connects", v4)
+
+                graph.diameter() shouldBe 2 // Max distance is from any outer vertex to another
+            }
+        })

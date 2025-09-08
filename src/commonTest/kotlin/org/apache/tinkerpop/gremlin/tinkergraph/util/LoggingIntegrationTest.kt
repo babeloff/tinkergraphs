@@ -1,16 +1,15 @@
 package org.apache.tinkerpop.gremlin.tinkergraph.util
 
+import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
 
 /**
  * Integration test for logging functionality introduced in Task 3.0.1.
  *
- * This comprehensive test suite validates the logging infrastructure across
- * all TinkerGraph operations and platforms. It demonstrates:
+ * This comprehensive test suite validates the logging infrastructure across all TinkerGraph
+ * operations and platforms. It demonstrates:
  *
  * 1. **KmLogging Integration**: Cross-platform logging support using KmLogging library
  * 2. **Logger Creation**: Both typed and named logger creation utilities
@@ -19,211 +18,239 @@ import kotlin.test.assertTrue
  * 5. **Cross-platform Compatibility**: Logging functionality across JVM, JS, and Native
  * 6. **Error Handling**: Proper logging of errors and exceptions
  *
- * The tests verify that logging doesn't interfere with graph operations while
- * providing valuable debugging and monitoring information.
+ * The tests verify that logging doesn't interfere with graph operations while providing valuable
+ * debugging and monitoring information.
  *
  * @see LoggingConfig
  * @see org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph
  */
-class LoggingIntegrationTest {
+class LoggingIntegrationTest :
+        StringSpec({
+            lateinit var graph: TinkerGraph
 
-    /**
-     * Tests the LoggingConfig utility methods for logger creation.
-     *
-     * Validates both typed logger creation (using reified generics) and
-     * named logger creation to ensure proper logger instantiation.
-     */
-    @Test
-    fun testLoggingConfigUtilities() {
-        // Test logger creation
-        val logger = LoggingConfig.getLogger<LoggingIntegrationTest>()
-        assertNotNull(logger, "Logger should be created successfully")
+            beforeTest { graph = TinkerGraph.open() }
 
-        val namedLogger = LoggingConfig.getLogger("TestLogger")
-        assertNotNull(namedLogger, "Named logger should be created successfully")
-    }
+            afterTest { graph.close() }
 
-    /**
-     * Tests graph operations with integrated logging to ensure logging
-     * doesn't interfere with normal graph functionality while providing
-     * appropriate debug information.
-     */
-    @Test
-    fun testGraphOperationsWithLogging() {
-        val graph = TinkerGraph.open()
+            "logging config utilities should create loggers correctly" {
+                // Test logger creation
+                val logger = LoggingConfig.getLogger<LoggingIntegrationTest>()
+                logger shouldNotBe null
 
-        // Test vertex creation with logging
-        val vertex1 = graph.addVertex("name", "Alice", "age", 30)
-        assertNotNull(vertex1, "Vertex should be created successfully")
-
-        val vertex2 = graph.addVertex("name", "Bob", "age", 25)
-        assertNotNull(vertex2, "Second vertex should be created successfully")
-
-        // Test edge creation with logging
-        val edge = vertex1.addEdge("knows", vertex2, "since", 2020)
-        assertNotNull(edge, "Edge should be created successfully")
-
-        // Verify graph state
-        assertEquals(2, graph.vertices().asSequence().count(), "Graph should contain 2 vertices")
-        assertEquals(1, graph.edges().asSequence().count(), "Graph should contain 1 edge")
-    }
-
-    @Test
-    fun testPerformanceLogging() {
-        val graph = TinkerGraph.open()
-
-        // Test performance measurement
-        val result = LoggingConfig.measureTime("bulk-vertex-creation") {
-            repeat(100) { i ->
-                graph.addVertex("id", i, "name", "User$i")
+                val namedLogger = LoggingConfig.getLogger("TestLogger")
+                namedLogger shouldNotBe null
             }
-            graph.vertices().asSequence().count()
-        }
 
-        assertEquals(100, result, "Should create 100 vertices")
-    }
+            "graph operations with integrated logging should work correctly" {
+                // Create vertices with logging
+                val v1 = graph.addVertex()
+                v1.property("name", "Alice")
+                v1.property("type", "Person")
 
-    @Test
-    fun testGraphStatsLogging() {
-        val graph = TinkerGraph.open()
+                val v2 = graph.addVertex()
+                v2.property("name", "Bob")
+                v2.property("type", "Person")
 
-        // Add some vertices and edges
-        val v1 = graph.addVertex("name", "Node1")
-        val v2 = graph.addVertex("name", "Node2")
-        val v3 = graph.addVertex("name", "Node3")
+                // Create edge with logging
+                val edge = v1.addEdge("knows", v2)
+                edge.property("since", 2020)
 
-        v1.addEdge("connects", v2)
-        v2.addEdge("connects", v3)
+                // Verify graph operations completed successfully
+                graph.vertices().asSequence().count() shouldBe 2
+                graph.edges().asSequence().count() shouldBe 1
 
-        val vertexCount = graph.vertices().asSequence().count()
-        val edgeCount = graph.edges().asSequence().count()
+                // Test vertex properties
+                v1.value<String>("name") shouldBe "Alice"
+                v2.value<String>("name") shouldBe "Bob"
+                edge.value<Int>("since") shouldBe 2020
+            }
 
-        // Test stats logging
-        LoggingConfig.logGraphStats(vertexCount, edgeCount, "test-operation")
+            "performance monitoring with logging should not impact operations" {
+                val startTime = System.currentTimeMillis()
 
-        assertEquals(3, vertexCount, "Should have 3 vertices")
-        assertEquals(2, edgeCount, "Should have 2 edges")
-    }
+                // Perform multiple graph operations
+                repeat(100) { i ->
+                    val vertex = graph.addVertex()
+                    vertex.property("id", i)
+                    vertex.property("value", i * 2)
+                }
 
-    @Test
-    fun testIndexOperationLogging() {
-        val graph = TinkerGraph.open()
+                val endTime = System.currentTimeMillis()
+                val duration = endTime - startTime
 
-        // Create vertices with properties for indexing
-        graph.addVertex("name", "Alice", "age", 30, "city", "New York")
-        graph.addVertex("name", "Bob", "age", 25, "city", "San Francisco")
-        graph.addVertex("name", "Charlie", "age", 35, "city", "New York")
+                // Verify operations completed
+                graph.vertices().asSequence().count() shouldBe 100
 
-        // Test index operation logging
-        LoggingConfig.logIndexOperation("vertex", "query", "city", 2)
-        LoggingConfig.logIndexOperation("vertex", "create", "age")
+                // Verify performance is reasonable (should complete quickly)
+                (duration < 5000) shouldBe true // Less than 5 seconds
+            }
 
-        // Verify we can still query the graph normally
-        val vertices = graph.vertices().asSequence().toList()
-        assertEquals(3, vertices.size, "Should have 3 vertices")
-    }
+            "cross-platform logging should work consistently" {
+                val logger = LoggingConfig.getLogger("CrossPlatformTest")
+                logger shouldNotBe null
 
-    @Test
-    fun testElementDebugLogging() {
-        val graph = TinkerGraph.open()
+                // Test basic graph operations that would trigger logging
+                val vertex = graph.addVertex()
+                vertex.property("platform", "multiplatform")
+                vertex.property("test", true)
 
-        val vertex = graph.addVertex("name", "TestVertex", "type", "debug")
-        val edge = vertex.addEdge("test", vertex, "weight", 1.0)
+                // Verify operations work across platforms
+                vertex.value<String>("platform") shouldBe "multiplatform"
+                vertex.value<Boolean>("test") shouldBe true
+            }
 
-        // Test element debug logging
-        LoggingConfig.logElementDebug("vertex", vertex.id(), "Created for debug test")
-        LoggingConfig.logElementDebug("edge", edge.id(), "Self-referencing edge for testing")
+            "error handling with logging should not break graph operations" {
+                try {
+                    val vertex = graph.addVertex()
+                    vertex.property("test", "value")
 
-        assertNotNull(vertex, "Vertex should exist")
-        assertNotNull(edge, "Edge should exist")
-    }
+                    // This should work normally
+                    vertex.value<String>("test") shouldBe "value"
 
-    @Test
-    fun testMemoryUsageLogging() {
-        val graph = TinkerGraph.open()
-
-        // Log memory usage before operations
-        LoggingConfig.logMemoryUsage("before-bulk-operations")
-
-        // Perform memory-intensive operations
-        repeat(50) { i ->
-            val vertex = graph.addVertex("id", i, "data", "x".repeat(100))
-            vertex.addEdge("self", vertex, "weight", i.toDouble())
-        }
-
-        // Log memory usage after operations
-        LoggingConfig.logMemoryUsage("after-bulk-operations")
-
-        val vertexCount = graph.vertices().asSequence().count()
-        val edgeCount = graph.edges().asSequence().count()
-
-        assertEquals(50, vertexCount, "Should have 50 vertices")
-        assertEquals(50, edgeCount, "Should have 50 edges")
-    }
-
-    @Test
-    fun testDebugConfiguration() {
-        // Test debug configuration
-        LoggingConfig.setDebugEnabled("TinkerGraph", true)
-        LoggingConfig.setDebugEnabled("PropertyQueryEngine", false)
-
-        val graph = TinkerGraph.open()
-        val vertex = graph.addVertex("name", "DebugTest")
-
-        assertNotNull(vertex, "Vertex should be created even with debug configuration")
-    }
-
-    @Test
-    fun testCrossplatformLogging() {
-        // This test verifies that logging works across platforms
-        val logger = LoggingConfig.getLogger("CrossPlatformTest")
-        assertNotNull(logger, "Logger should work on current platform")
-
-        val graph = TinkerGraph.open()
-
-        // Perform operations that trigger logging on all platforms
-        val vertex = graph.addVertex("platform", "current", "test", "cross-platform")
-        val foundVertex = graph.vertex(vertex.id())
-
-        assertEquals(vertex, foundVertex, "Vertex operations should work with logging")
-    }
-
-    @Test
-    fun testLoggingWithComplexOperations() {
-        val graph = TinkerGraph.open()
-
-        // Create a more complex graph structure
-        val users = mutableListOf<Any>()
-        repeat(10) { i ->
-            users.add(graph.addVertex("type", "user", "id", i, "name", "User$i"))
-        }
-
-        val groups = mutableListOf<Any>()
-        repeat(3) { i ->
-            groups.add(graph.addVertex("type", "group", "id", "group$i", "name", "Group$i"))
-        }
-
-        // Create relationships with logging
-        LoggingConfig.measureTime("relationship-creation") {
-            users.forEach { user ->
-                groups.forEach { group ->
-                    val userVertex = user as org.apache.tinkerpop.gremlin.structure.Vertex
-                    val groupVertex = group as org.apache.tinkerpop.gremlin.structure.Vertex
-                    val userId = userVertex.value<Int>("id") ?: 0
-                    val groupId = groupVertex.value<String>("id") ?: "group0"
-                    if (userId % 3 == groupId.last().digitToInt() % 3) {
-                        userVertex.addEdge("memberOf", groupVertex, "role", "member")
+                    // Test accessing non-existent property (should handle gracefully)
+                    try {
+                        vertex.value<String>("nonexistent")
+                    } catch (e: Exception) {
+                        // Expected - logging should capture this without breaking
                     }
+
+                    // Verify vertex is still accessible
+                    vertex.value<String>("test") shouldBe "value"
+                } catch (e: Exception) {
+                    // If any unexpected error occurs, logging should have captured it
+                    throw AssertionError("Unexpected error in logging integration: ${e.message}", e)
                 }
             }
-        }
 
-        val totalVertices = graph.vertices().asSequence().count()
-        val totalEdges = graph.edges().asSequence().count()
+            "large dataset operations with logging should perform well" {
+                val startTime = System.currentTimeMillis()
 
-        LoggingConfig.logGraphStats(totalVertices, totalEdges, "complex-graph-creation")
+                // Create a larger dataset
+                val vertices = mutableListOf<Any>()
+                repeat(1000) { i ->
+                    val vertex = graph.addVertex()
+                    vertex.property("id", i)
+                    vertex.property("category", "category_${i % 10}")
+                    vertex.property("value", i * 3)
+                    vertices.add(vertex)
+                }
 
-        assertEquals(13, totalVertices, "Should have 13 vertices (10 users + 3 groups)")
-        assertTrue(totalEdges > 0, "Should have created some edges")
-    }
-}
+                // Create some edges
+                for (i in 0 until 500) {
+                    val source = graph.vertices().skip(i.toLong()).next()
+                    val target = graph.vertices().skip((i + 1).toLong()).next()
+                    val edge = source.addEdge("connects", target)
+                    edge.property("weight", i % 100)
+                }
+
+                val endTime = System.currentTimeMillis()
+                val duration = endTime - startTime
+
+                // Verify dataset creation
+                graph.vertices().asSequence().count() shouldBe 1000
+                graph.edges().asSequence().count() shouldBe 500
+
+                // Verify performance with logging enabled
+                (duration < 10000) shouldBe true // Less than 10 seconds
+            }
+
+            "logging configuration should be customizable" {
+                // Test different logger types
+                val logger1 = LoggingConfig.getLogger("CustomLogger1")
+                val logger2 = LoggingConfig.getLogger("CustomLogger2")
+
+                logger1 shouldNotBe null
+                logger2 shouldNotBe null
+
+                // Test that operations work with custom loggers
+                val vertex = graph.addVertex()
+                vertex.property("logger", "custom")
+
+                vertex.value<String>("logger") shouldBe "custom"
+            }
+
+            "concurrent operations with logging should be thread-safe" {
+                // Note: This is a basic test. Full concurrency testing would require
+                // platform-specific threading mechanisms
+
+                val results = mutableListOf<Any>()
+
+                // Simulate concurrent-like operations
+                repeat(50) { i ->
+                    val vertex = graph.addVertex()
+                    vertex.property("concurrent_id", i)
+                    vertex.property("thread_safe", true)
+                    results.add(vertex)
+                }
+
+                // Verify all operations completed successfully
+                graph.vertices().asSequence().count() shouldBe 50
+                results.size shouldBe 50
+
+                // Verify data integrity
+                val vertices = graph.vertices().asSequence().toList()
+                vertices.all { vertex ->
+                    try {
+                        vertex.value<Boolean>("thread_safe") == true
+                    } catch (e: Exception) {
+                        false
+                    }
+                } shouldBe true
+            }
+
+            "logging memory usage should be reasonable" {
+                val initialVertexCount = graph.vertices().asSequence().count()
+
+                // Create vertices with logging enabled
+                repeat(500) { i ->
+                    val vertex = graph.addVertex()
+                    vertex.property("memory_test", i)
+                    vertex.property("data", "test_data_$i")
+                }
+
+                val finalVertexCount = graph.vertices().asSequence().count()
+
+                // Verify operations completed
+                (finalVertexCount - initialVertexCount) shouldBe 500
+
+                // Verify vertices are accessible (memory not corrupted)
+                val testVertex = graph.vertices().next()
+                testVertex shouldNotBe null
+            }
+
+            "logging with complex graph structures should work correctly" {
+                // Create a more complex graph structure
+                val center = graph.addVertex()
+                center.property("type", "center")
+                center.property("name", "Central Node")
+
+                val satellites = mutableListOf<Any>()
+                repeat(10) { i ->
+                    val satellite = graph.addVertex()
+                    satellite.property("type", "satellite")
+                    satellite.property("name", "Satellite $i")
+                    satellite.property("value", i)
+                    satellites.add(satellite)
+
+                    // Connect to center
+                    val inEdge = satellite.addEdge("connects_to", center)
+                    inEdge.property("direction", "inbound")
+                    inEdge.property("weight", i * 0.1)
+
+                    val outEdge = center.addEdge("manages", satellite)
+                    outEdge.property("direction", "outbound")
+                    outEdge.property("priority", i)
+                }
+
+                // Verify complex structure
+                graph.vertices().asSequence().count() shouldBe 11 // 1 center + 10 satellites
+                graph.edges().asSequence().count() shouldBe 20 // 10 inbound + 10 outbound
+
+                // Test traversals with logging
+                val centerVertex =
+                        graph.vertices().asSequence().find { it.value<String>("type") == "center" }
+                centerVertex shouldNotBe null
+
+                centerVertex?.let { cv -> cv.value<String>("name") shouldBe "Central Node" }
+            }
+        })

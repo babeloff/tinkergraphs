@@ -86,7 +86,8 @@ kotlin {
         }
         val commonTest by getting {
             dependencies {
-                implementation(kotlin("test"))
+                implementation("io.kotest:kotest-framework-engine:5.8.0")
+                implementation("io.kotest:kotest-assertions-core:5.8.0")
             }
         }
         val jvmMain by getting {
@@ -102,6 +103,8 @@ kotlin {
         val jvmTest by getting {
             dependencies {
                 implementation("org.junit.jupiter:junit-jupiter:5.11.0")
+                implementation("io.kotest:kotest-runner-junit5:5.8.0")
+                implementation("io.kotest:kotest-assertions-core:5.8.0")
             }
         }
         val jsMain by getting {
@@ -112,7 +115,8 @@ kotlin {
         }
         val jsTest by getting {
             dependencies {
-                implementation(kotlin("test"))
+                implementation("io.kotest:kotest-framework-engine:5.8.0")
+                implementation("io.kotest:kotest-assertions-core:5.8.0")
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
             }
         }
@@ -121,7 +125,12 @@ kotlin {
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
             }
         }
-        val nativeTest by getting
+        val nativeTest by getting {
+            dependencies {
+                implementation("io.kotest:kotest-framework-engine:5.8.0")
+                implementation("io.kotest:kotest-assertions-core:5.8.0")
+            }
+        }
     }
 }
 

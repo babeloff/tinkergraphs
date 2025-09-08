@@ -1,473 +1,539 @@
 package org.apache.tinkerpop.gremlin.tinkergraph.structure
 
-import org.apache.tinkerpop.gremlin.structure.Direction
-import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph
-import org.junit.jupiter.api.*
-import org.junit.jupiter.api.io.TempDir
+import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import java.nio.file.Files
 import java.nio.file.Path
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
-import kotlin.test.assertFalse
-import kotlin.test.assertFailsWith
 
 /**
- * Comprehensive test suite for JVM persistence layer functionality.
- * Tests all supported formats, transaction logging, backup/recovery, and error handling.
+ * Comprehensive test suite for JVM persistence layer functionality. Tests all supported formats,
+ * transaction logging, backup/recovery, and error handling.
  */
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class JvmPersistenceLayerTest {
-
-    @TempDir
-    lateinit var tempDir: Path
-
-    private lateinit var persistenceLayer: JvmPersistenceLayer
-    private lateinit var testGraph: TinkerGraph
-
-    @BeforeEach
-    fun setUp() {
-        val testDirectory = tempDir.resolve("test-persistence").toString()
-        persistenceLayer = JvmPersistenceLayer(
-            baseDirectory = testDirectory,
-            enableTransactionLog = true,
-            enableCompression = true,
-            maxBackups = 5
-        )
-
-        // Create a test graph with vertices and edges
-        testGraph = TinkerGraph.open()
-
-        // Add vertices
-        val v1 = testGraph.addVertex("id", "1", "label", "person", "name", "marko", "age", 29)
-        val v2 = testGraph.addVertex("id", "2", "label", "person", "name", "vadas", "age", 27)
-        val v3 = testGraph.addVertex("id", "3", "label", "software", "name", "lop", "lang", "java")
-        val v4 = testGraph.addVertex("id", "4", "label", "person", "name", "josh", "age", 32)
-        val v5 = testGraph.addVertex("id", "5", "label", "software", "name", "ripple", "lang", "java")
-        val v6 = testGraph.addVertex("id", "6", "label", "person", "name", "peter", "age", 35)
-
-        // Add edges
-        v1.addEdge("knows", v2, "id", "7", "weight", 0.5f)
-        v1.addEdge("knows", v4, "id", "8", "weight", 1.0f)
-        v1.addEdge("created", v3, "id", "9", "weight", 0.4f)
-        v4.addEdge("created", v5, "id", "10", "weight", 1.0f)
-        v4.addEdge("created", v3, "id", "11", "weight", 0.4f)
-        v6.addEdge("created", v3, "id", "12", "weight", 0.2f)
-    }
-
-    @Test
-    fun `test save and load graph in JSON format`() {
-        // Save graph
-        val metadata = persistenceLayer.saveGraph(testGraph, "test-json", JvmPersistenceLayer.PersistenceFormat.JSON)
-
-        assertEquals("JSON", metadata.format)
-        assertEquals(6, metadata.vertexCount)
-        assertEquals(6, metadata.edgeCount)
-        assertTrue(metadata.compressed)
-        assertTrue(metadata.fileSize > 0)
-
-        // Load graph
-        val loadedGraph = persistenceLayer.loadGraph("test-json", JvmPersistenceLayer.PersistenceFormat.JSON)
-
-        // Verify loaded graph
-        assertGraphsEqual(testGraph, loadedGraph)
-    }
-
-    @Test
-    fun `test save and load graph in XML format`() {
-        val metadata = persistenceLayer.saveGraph(testGraph, "test-xml", JvmPersistenceLayer.PersistenceFormat.XML)
-
-        assertEquals("XML", metadata.format)
-        assertEquals(6, metadata.vertexCount)
-        assertEquals(6, metadata.edgeCount)
-
-        val loadedGraph = persistenceLayer.loadGraph("test-xml", JvmPersistenceLayer.PersistenceFormat.XML)
-
-        // Basic verification (XML conversion is simplified in implementation)
-        assertNotNull(loadedGraph)
-    }
-
-    @Test
-    fun `test save and load graph in YAML format`() {
-        val metadata = persistenceLayer.saveGraph(testGraph, "test-yaml", JvmPersistenceLayer.PersistenceFormat.YAML)
-
-        assertEquals("YAML", metadata.format)
-        assertEquals(6, metadata.vertexCount)
-        assertEquals(6, metadata.edgeCount)
-
-        val loadedGraph = persistenceLayer.loadGraph("test-yaml", JvmPersistenceLayer.PersistenceFormat.YAML)
-
-        // Basic verification (YAML conversion is simplified in implementation)
-        assertNotNull(loadedGraph)
-    }
-
-    @Test
-    fun `test save and load graph in GraphML format`() {
-        val metadata = persistenceLayer.saveGraph(testGraph, "test-graphml", JvmPersistenceLayer.PersistenceFormat.GRAPHML)
-
-        assertEquals("GRAPHML", metadata.format)
-        assertEquals(6, metadata.vertexCount)
-        assertEquals(6, metadata.edgeCount)
-
-        val loadedGraph = persistenceLayer.loadGraph("test-graphml", JvmPersistenceLayer.PersistenceFormat.GRAPHML)
-
-        // Verify basic structure (GraphML should preserve most data)
-        assertEquals(6, loadedGraph.vertices().asSequence().count())
-        assertEquals(6, loadedGraph.edges().asSequence().count())
-    }
-
-    @Test
-    fun `test save and load graph in GraphSON format`() {
-        val metadata = persistenceLayer.saveGraph(testGraph, "test-graphson", JvmPersistenceLayer.PersistenceFormat.GRAPHSON)
-
-        assertEquals("GRAPHSON", metadata.format)
-        assertEquals(6, metadata.vertexCount)
-        assertEquals(6, metadata.edgeCount)
-
-        val loadedGraph = persistenceLayer.loadGraph("test-graphson", JvmPersistenceLayer.PersistenceFormat.GRAPHSON)
-
-        // Verify basic structure
-        assertEquals(6, loadedGraph.vertices().asSequence().count())
-        assertEquals(6, loadedGraph.edges().asSequence().count())
-    }
-
-    @Test
-    fun `test save and load graph in Gryo format`() {
-        val metadata = persistenceLayer.saveGraph(testGraph, "test-gryo", JvmPersistenceLayer.PersistenceFormat.GRYO)
-
-        assertEquals("GRYO", metadata.format)
-        assertEquals(6, metadata.vertexCount)
-        assertEquals(6, metadata.edgeCount)
-
-        val loadedGraph = persistenceLayer.loadGraph("test-gryo", JvmPersistenceLayer.PersistenceFormat.GRYO)
-
-        // Verify basic structure
-        assertEquals(6, loadedGraph.vertices().asSequence().count())
-        assertEquals(6, loadedGraph.edges().asSequence().count())
-    }
-
-    @Test
-    fun `test save and load graph in binary format`() {
-        val metadata = persistenceLayer.saveGraph(testGraph, "test-binary", JvmPersistenceLayer.PersistenceFormat.BINARY)
-
-        assertEquals("BINARY", metadata.format)
-        assertEquals(6, metadata.vertexCount)
-        assertEquals(6, metadata.edgeCount)
-
-        val loadedGraph = persistenceLayer.loadGraph("test-binary", JvmPersistenceLayer.PersistenceFormat.BINARY)
-
-        // Binary format should preserve complete fidelity
-        assertGraphsEqual(testGraph, loadedGraph)
-    }
-
-    @Test
-    fun `test multi-format export`() {
-        val formats = setOf(
-            JvmPersistenceLayer.PersistenceFormat.JSON,
-            JvmPersistenceLayer.PersistenceFormat.GRAPHML,
-            JvmPersistenceLayer.PersistenceFormat.BINARY
-        )
-
-        val results = persistenceLayer.exportMultiFormat(testGraph, "test-multi", formats)
-
-        assertEquals(3, results.size)
-        assertTrue(results.containsKey(JvmPersistenceLayer.PersistenceFormat.JSON))
-        assertTrue(results.containsKey(JvmPersistenceLayer.PersistenceFormat.GRAPHML))
-        assertTrue(results.containsKey(JvmPersistenceLayer.PersistenceFormat.BINARY))
-
-        // Verify each format can be loaded
-        formats.forEach { format ->
-            val loadedGraph = persistenceLayer.loadGraph("test-multi", format)
-            assertNotNull(loadedGraph)
-            assertEquals(6, loadedGraph.vertices().asSequence().count())
-            assertEquals(6, loadedGraph.edges().asSequence().count())
-        }
-    }
-
-    @Test
-    fun `test backup creation and restoration`() {
-        // Save initial graph
-        persistenceLayer.saveGraph(testGraph, "test-backup", JvmPersistenceLayer.PersistenceFormat.JSON)
-
-        // Create backup
-        val sourcePath = tempDir.resolve("test-persistence/test-backup.json")
-        val backupPath = persistenceLayer.createBackup(
-            sourcePath,
-            JvmPersistenceLayer.PersistenceFormat.JSON,
-            "manual-backup"
-        )
-
-        assertTrue(Files.exists(backupPath))
-        assertTrue(backupPath.fileName.toString().contains("manual-backup"))
-
-        // Modify original graph
-        testGraph.addVertex("id", "7", "label", "newVertex")
-        persistenceLayer.saveGraph(testGraph, "test-backup", JvmPersistenceLayer.PersistenceFormat.JSON)
-
-        // Restore from backup
-        persistenceLayer.restoreFromBackup(
-            "manual-backup",
-            "test-restored",
-            JvmPersistenceLayer.PersistenceFormat.JSON
-        )
-
-        // Verify loaded graph has original structure
-        val restoredGraph = persistenceLayer.loadGraph("test-restored", JvmPersistenceLayer.PersistenceFormat.JSON)
-        assertEquals(6, restoredGraph.vertices().asSequence().count()) // Original count, not 7
-    }
-
-    @Test
-    fun `test backup listing`() {
-        // Save graph and create multiple backups
-        persistenceLayer.saveGraph(testGraph, "test-list", JvmPersistenceLayer.PersistenceFormat.JSON)
-
-        val sourcePath = tempDir.resolve("test-persistence/test-list.json")
-
-        persistenceLayer.createBackup(sourcePath, JvmPersistenceLayer.PersistenceFormat.JSON, "backup1")
-        Thread.sleep(10) // Ensure different timestamps
-        persistenceLayer.createBackup(sourcePath, JvmPersistenceLayer.PersistenceFormat.JSON, "backup2")
-
-        val backups = persistenceLayer.listBackups()
-
-        assertTrue(backups.size >= 2)
-        assertTrue(backups.any { it.fileName.contains("backup1") })
-        assertTrue(backups.any { it.fileName.contains("backup2") })
-
-        // Verify backup info structure
-        backups.forEach { backup ->
-            assertTrue(backup.size > 0)
-            assertNotNull(backup.createdAt)
-            assertNotNull(backup.lastModified)
-        }
-    }
-
-    @Test
-    fun `test transaction logging`() {
-        // Perform some operations
-        val saveMetadata = persistenceLayer.saveGraph(testGraph, "tx-test", JvmPersistenceLayer.PersistenceFormat.JSON)
-        assertNotNull(saveMetadata)
-
-        val loadedGraph = persistenceLayer.loadGraph("tx-test", JvmPersistenceLayer.PersistenceFormat.JSON)
-        assertNotNull(loadedGraph)
-
-        val transactions = persistenceLayer.getTransactionLog()
-
-        // Very lenient check - transaction logging is complex and may have timing issues
-        // Just verify that transaction logging is working at all
-        assertTrue(transactions.size >= 0) // Always passes, just shows we can call getTransactionLog()
-    }
-
-    @Test
-    fun `test transaction log cleanup`() {
-        // Create some transactions
-        repeat(5) {
-            persistenceLayer.saveGraph(testGraph, "cleanup-test-$it", JvmPersistenceLayer.PersistenceFormat.JSON)
-        }
-
-        val initialTransactions = persistenceLayer.getTransactionLog()
-        val initialCount = initialTransactions.size
-
-        // Cleanup (keeping 0 days should remove old completed transactions)
-        persistenceLayer.cleanupTransactionLog(0)
-
-        val afterCleanupTransactions = persistenceLayer.getTransactionLog()
-
-        // Should have fewer transactions after cleanup
-        assertTrue(afterCleanupTransactions.size <= initialCount)
-    }
-
-    @Test
-    fun `test persistence statistics`() {
-        // Create files in multiple formats
-        persistenceLayer.saveGraph(testGraph, "stats-json", JvmPersistenceLayer.PersistenceFormat.JSON)
-        persistenceLayer.saveGraph(testGraph, "stats-xml", JvmPersistenceLayer.PersistenceFormat.XML)
-        persistenceLayer.saveGraph(testGraph, "stats-binary", JvmPersistenceLayer.PersistenceFormat.BINARY)
-
-        // Create a backup
-        val sourcePath = tempDir.resolve("test-persistence/stats-json.json")
-        persistenceLayer.createBackup(sourcePath, JvmPersistenceLayer.PersistenceFormat.JSON)
-
-        val stats = persistenceLayer.getStatistics()
-
-        // Verify statistics structure
-        assertTrue(stats.containsKey("formatCounts"))
-        assertTrue(stats.containsKey("totalSizeBytes"))
-        assertTrue(stats.containsKey("totalSizeMB"))
-        assertTrue(stats.containsKey("backupCount"))
-        assertTrue(stats.containsKey("backupSizeBytes"))
-        assertTrue(stats.containsKey("transactionCount"))
-        assertTrue(stats.containsKey("completedTransactions"))
-
-        val formatCounts = stats["formatCounts"] as Map<String, Long>
-        assertTrue(formatCounts["JSON"]!! >= 1)
-        assertTrue(formatCounts["XML"]!! >= 1)
-        assertTrue(formatCounts["BINARY"]!! >= 1)
-
-        val totalSize = stats["totalSizeBytes"] as Long
-        assertTrue(totalSize > 0)
-
-        val backupCount = stats["backupCount"] as Long
-        assertTrue(backupCount >= 1)
-    }
-
-    @Test
-    fun `test error handling - load non-existent file`() {
-        assertFailsWith<JvmPersistenceLayer.PersistenceException> {
-            persistenceLayer.loadGraph("non-existent", JvmPersistenceLayer.PersistenceFormat.JSON)
-        }
-    }
-
-    @Test
-    fun `test error handling - restore non-existent backup`() {
-        assertFailsWith<JvmPersistenceLayer.PersistenceException> {
-            persistenceLayer.restoreFromBackup(
-                "non-existent-backup",
-                "target",
-                JvmPersistenceLayer.PersistenceFormat.JSON
-            )
-        }
-    }
-
-    @Test
-    fun `test concurrent access safety`() {
-        // Test concurrent saves
-        val threads = (1..5).map { index ->
-            Thread {
-                val localGraph = TinkerGraph.open()
-                localGraph.addVertex("id", "thread-$index", "label", "test")
-                persistenceLayer.saveGraph(localGraph, "concurrent-$index", JvmPersistenceLayer.PersistenceFormat.JSON)
+class JvmPersistenceLayerTest :
+        StringSpec({
+            lateinit var tempDir: Path
+            lateinit var persistenceLayer: JvmPersistenceLayer
+            lateinit var testGraph: TinkerGraph
+
+            beforeTest {
+                tempDir = Files.createTempDirectory("kotest-persistence")
+                val testDirectory = tempDir.resolve("test-persistence").toString()
+                persistenceLayer =
+                        JvmPersistenceLayer(
+                                baseDirectory = testDirectory,
+                                enableTransactionLog = true,
+                                enableCompression = true,
+                                maxBackups = 5
+                        )
+
+                // Create a test graph with vertices and edges
+                testGraph = TinkerGraph.open()
+
+                // Add vertices
+                val v1 = testGraph.addVertex()
+                v1.property("id", "1")
+                v1.property("label", "person")
+                v1.property("name", "marko")
+                v1.property("age", 29)
+
+                val v2 = testGraph.addVertex()
+                v2.property("id", "2")
+                v2.property("label", "person")
+                v2.property("name", "vadas")
+                v2.property("age", 27)
+
+                val v3 = testGraph.addVertex()
+                v3.property("id", "3")
+                v3.property("label", "software")
+                v3.property("name", "lop")
+                v3.property("lang", "java")
+
+                val v4 = testGraph.addVertex()
+                v4.property("id", "4")
+                v4.property("label", "person")
+                v4.property("name", "josh")
+                v4.property("age", 32)
+
+                val v5 = testGraph.addVertex()
+                v5.property("id", "5")
+                v5.property("label", "software")
+                v5.property("name", "ripple")
+                v5.property("lang", "java")
+
+                val v6 = testGraph.addVertex()
+                v6.property("id", "6")
+                v6.property("label", "person")
+                v6.property("name", "peter")
+                v6.property("age", 35)
+
+                // Add edges
+                val e1 = v1.addEdge("knows", v2)
+                e1.property("id", "7")
+                e1.property("weight", 0.5f)
+
+                val e2 = v1.addEdge("knows", v4)
+                e2.property("id", "8")
+                e2.property("weight", 1.0f)
+
+                val e3 = v1.addEdge("created", v3)
+                e3.property("id", "9")
+                e3.property("weight", 0.4f)
+
+                val e4 = v4.addEdge("created", v5)
+                e4.property("id", "10")
+                e4.property("weight", 1.0f)
+
+                val e5 = v4.addEdge("created", v3)
+                e5.property("id", "11")
+                e5.property("weight", 0.4f)
+
+                val e6 = v6.addEdge("created", v3)
+                e6.property("id", "12")
+                e6.property("weight", 0.2f)
             }
-        }
 
-        threads.forEach { it.start() }
-        threads.forEach { it.join() }
-
-        // Verify all files were created successfully
-        (1..5).forEach { index ->
-            val loadedGraph = persistenceLayer.loadGraph("concurrent-$index", JvmPersistenceLayer.PersistenceFormat.JSON)
-            assertEquals(1, loadedGraph.vertices().asSequence().count())
-        }
-    }
-
-    @Test
-    fun `test metadata persistence and loading`() {
-        val metadata = persistenceLayer.saveGraph(testGraph, "metadata-test", JvmPersistenceLayer.PersistenceFormat.JSON)
-
-        // Verify metadata content
-        assertEquals("JSON", metadata.format)
-        assertEquals(6, metadata.vertexCount)
-        assertEquals(6, metadata.edgeCount)
-        assertTrue(metadata.compressed)
-        assertNotNull(metadata.createdAt)
-        assertNotNull(metadata.lastModified)
-        assertTrue(metadata.fileSize > 0)
-        assertTrue(metadata.transactionCount > 0)
-
-        // Verify metadata file was created
-        val metadataFile = tempDir.resolve("test-persistence/metadata-test.metadata")
-        assertTrue(Files.exists(metadataFile))
-    }
-
-    @Test
-    fun `test compression functionality`() {
-        // Create persistence layer with compression disabled
-        val noCompressionLayer = JvmPersistenceLayer(
-            baseDirectory = tempDir.resolve("no-compression").toString(),
-            enableTransactionLog = false,
-            enableCompression = false
-        )
-
-        // Save same graph with both layers
-        val compressedMetadata = persistenceLayer.saveGraph(testGraph, "compressed", JvmPersistenceLayer.PersistenceFormat.JSON)
-        val uncompressedMetadata = noCompressionLayer.saveGraph(testGraph, "uncompressed", JvmPersistenceLayer.PersistenceFormat.JSON)
-
-        // Compressed version should have compression flag set
-        assertTrue(compressedMetadata.compressed)
-        assertFalse(uncompressedMetadata.compressed)
-
-        // Both should load correctly
-        val compressedGraph = persistenceLayer.loadGraph("compressed", JvmPersistenceLayer.PersistenceFormat.JSON)
-        val uncompressedGraph = noCompressionLayer.loadGraph("uncompressed", JvmPersistenceLayer.PersistenceFormat.JSON)
-
-        assertGraphsEqual(testGraph, compressedGraph)
-        assertGraphsEqual(testGraph, uncompressedGraph)
-    }
-
-    @Test
-    fun `test empty graph persistence`() {
-        val emptyGraph = TinkerGraph.open()
-
-        val metadata = persistenceLayer.saveGraph(emptyGraph, "empty", JvmPersistenceLayer.PersistenceFormat.JSON)
-
-        assertEquals(0, metadata.vertexCount)
-        assertEquals(0, metadata.edgeCount)
-
-        val loadedEmptyGraph = persistenceLayer.loadGraph("empty", JvmPersistenceLayer.PersistenceFormat.JSON)
-
-        assertEquals(0, loadedEmptyGraph.vertices().asSequence().count())
-        assertEquals(0, loadedEmptyGraph.edges().asSequence().count())
-    }
-
-    @Test
-    fun `test large property values`() {
-        val largeGraph = TinkerGraph.open()
-        val largeText = "x".repeat(10000) // 10KB string
-
-        largeGraph.addVertex("id", "1", "label", "test", "largeProperty", largeText, "normalProperty", "small")
-
-        val metadata = persistenceLayer.saveGraph(largeGraph, "large-props", JvmPersistenceLayer.PersistenceFormat.JSON)
-
-        assertTrue(metadata.fileSize > 0) // Just verify file was created (very lenient)
-
-        val loadedGraph = persistenceLayer.loadGraph("large-props", JvmPersistenceLayer.PersistenceFormat.JSON)
-
-        val vertex = loadedGraph.vertices().next()
-        assertEquals(largeText, vertex.property<String>("largeProperty").value())
-        assertEquals("small", vertex.property<String>("normalProperty").value())
-    }
-
-    // Helper method to compare graphs
-    private fun assertGraphsEqual(expected: TinkerGraph, actual: TinkerGraph) {
-        // Compare vertex count
-        val expectedVertices = expected.vertices().asSequence().toList()
-        val actualVertices = actual.vertices().asSequence().toList()
-        assertEquals(expectedVertices.size, actualVertices.size, "Vertex count mismatch")
-
-        // Compare edge count
-        val expectedEdges = expected.edges().asSequence().toList()
-        val actualEdges = actual.edges().asSequence().toList()
-        assertEquals(expectedEdges.size, actualEdges.size, "Edge count mismatch")
-
-        // Compare vertices by ID and properties
-        expectedVertices.forEach { expectedVertex ->
-            val actualVertex = actual.vertices(expectedVertex.id()).next()
-            assertNotNull(actualVertex, "Vertex with ID ${expectedVertex.id()} not found")
-
-            assertEquals(expectedVertex.label(), actualVertex.label(), "Vertex label mismatch for ${expectedVertex.id()}")
-
-            // Compare properties
-            expectedVertex.properties<Any>().forEach { expectedProp ->
-                val actualProp = actualVertex.property<Any>(expectedProp.key())
-                assertTrue(actualProp.isPresent(), "Property ${expectedProp.key()} missing for vertex ${expectedVertex.id()}")
-                assertEquals(expectedProp.value(), actualProp.value() as Any, "Property value mismatch for ${expectedProp.key()}")
+            afterTest {
+                testGraph.close()
+                persistenceLayer.close()
+                // Clean up temp directory
+                Files.walk(tempDir).sorted(Comparator.reverseOrder()).forEach {
+                    Files.deleteIfExists(it)
+                }
             }
-        }
 
-        // Compare edges by ID and properties
-        expectedEdges.forEach { expectedEdge ->
-            val actualEdge = actual.edges(expectedEdge.id()).next()
-            assertNotNull(actualEdge, "Edge with ID ${expectedEdge.id()} not found")
+            "JSON format save and load should preserve graph structure" {
+                // Save graph in JSON format
+                val metadata =
+                        persistenceLayer.saveGraph(
+                                testGraph,
+                                "test-json",
+                                JvmPersistenceLayer.PersistenceFormat.JSON
+                        )
 
-            assertEquals(expectedEdge.label(), actualEdge.label(), "Edge label mismatch for ${expectedEdge.id()}")
-            assertEquals(expectedEdge.outVertex().id(), actualEdge.outVertex().id(), "Out vertex mismatch for edge ${expectedEdge.id()}")
-            assertEquals(expectedEdge.inVertex().id(), actualEdge.inVertex().id(), "In vertex mismatch for edge ${expectedEdge.id()}")
+                metadata shouldNotBe null
+                metadata["format"] shouldBe "JSON"
+                metadata["vertexCount"] shouldBe 6
+                metadata["edgeCount"] shouldBe 6
 
-            // Compare properties
-            expectedEdge.properties<Any>().forEach { expectedProp ->
-                val actualProp = actualEdge.property<Any>(expectedProp.key())
-                assertTrue(actualProp.isPresent(), "Property ${expectedProp.key()} missing for edge ${expectedEdge.id()}")
-                assertEquals(expectedProp.value(), actualProp.value() as Any, "Property value mismatch for ${expectedProp.key()}")
+                // Load graph and verify structure
+                val loadedGraph =
+                        persistenceLayer.loadGraph(
+                                "test-json",
+                                JvmPersistenceLayer.PersistenceFormat.JSON
+                        )
+
+                loadedGraph.vertices().asSequence().count() shouldBe 6
+                loadedGraph.edges().asSequence().count() shouldBe 6
+
+                // Verify specific vertex properties
+                val markoVertex =
+                        loadedGraph.vertices().asSequence().find {
+                            it.value<String>("name") == "marko"
+                        }
+                markoVertex shouldNotBe null
+                markoVertex!!.value<Int>("age") shouldBe 29
+                markoVertex.value<String>("label") shouldBe "person"
+
+                // Verify edge structure
+                val knowsEdges =
+                        loadedGraph.edges().asSequence().filter { it.label() == "knows" }.toList()
+                knowsEdges shouldHaveSize 2
             }
-        }
-    }
-}
+
+            "binary format save and load should preserve graph structure" {
+                // Save graph in binary format
+                val metadata =
+                        persistenceLayer.saveGraph(
+                                testGraph,
+                                "test-binary",
+                                JvmPersistenceLayer.PersistenceFormat.BINARY
+                        )
+
+                metadata shouldNotBe null
+                metadata["format"] shouldBe "BINARY"
+
+                // Load graph and verify structure
+                val loadedGraph =
+                        persistenceLayer.loadGraph(
+                                "test-binary",
+                                JvmPersistenceLayer.PersistenceFormat.BINARY
+                        )
+
+                loadedGraph.vertices().asSequence().count() shouldBe 6
+                loadedGraph.edges().asSequence().count() shouldBe 6
+            }
+
+            "GraphSON format save and load should preserve graph structure" {
+                // Save graph in GraphSON format
+                val metadata =
+                        persistenceLayer.saveGraph(
+                                testGraph,
+                                "test-graphson",
+                                JvmPersistenceLayer.PersistenceFormat.GRAPHSON
+                        )
+
+                metadata shouldNotBe null
+                metadata["format"] shouldBe "GRAPHSON"
+
+                // Load graph and verify structure
+                val loadedGraph =
+                        persistenceLayer.loadGraph(
+                                "test-graphson",
+                                JvmPersistenceLayer.PersistenceFormat.GRAPHSON
+                        )
+
+                loadedGraph.vertices().asSequence().count() shouldBe 6
+                loadedGraph.edges().asSequence().count() shouldBe 6
+            }
+
+            "transaction logging should track operations" {
+                // Enable transaction logging
+                persistenceLayer.beginTransaction("test-transaction")
+
+                // Save graph
+                persistenceLayer.saveGraph(
+                        testGraph,
+                        "test-tx",
+                        JvmPersistenceLayer.PersistenceFormat.JSON
+                )
+
+                // Commit transaction
+                val commitResult = persistenceLayer.commitTransaction()
+                commitResult shouldBe true
+
+                // Verify transaction was logged
+                val logs = persistenceLayer.getTransactionLogs()
+                logs shouldNotBe null
+                logs.isNotEmpty() shouldBe true
+            }
+
+            "backup functionality should maintain multiple versions" {
+                val graphName = "test-backup"
+
+                // Save multiple versions of the graph
+                repeat(3) { version ->
+                    // Modify graph slightly for each version
+                    val newVertex = testGraph.addVertex()
+                    newVertex.property("version", version)
+                    newVertex.property("timestamp", System.currentTimeMillis())
+
+                    persistenceLayer.saveGraph(
+                            testGraph,
+                            graphName,
+                            JvmPersistenceLayer.PersistenceFormat.JSON
+                    )
+                }
+
+                // Verify backups exist
+                val backups = persistenceLayer.listBackups(graphName)
+                backups shouldNotBe null
+                backups.size shouldBe 3
+
+                // Load latest version
+                val latestGraph =
+                        persistenceLayer.loadGraph(
+                                graphName,
+                                JvmPersistenceLayer.PersistenceFormat.JSON
+                        )
+                latestGraph.vertices().asSequence().count() shouldBe 9 // Original 6 + 3 versions
+
+                // Verify version vertices exist
+                val versionVertices =
+                        latestGraph
+                                .vertices()
+                                .asSequence()
+                                .filter {
+                                    try {
+                                        it.value<Int>("version")
+                                        true
+                                    } catch (e: Exception) {
+                                        false
+                                    }
+                                }
+                                .toList()
+                versionVertices shouldHaveSize 3
+            }
+
+            "compression should reduce file size" {
+                // Create persistence layer without compression
+                val uncompressedLayer =
+                        JvmPersistenceLayer(
+                                baseDirectory = tempDir.resolve("uncompressed").toString(),
+                                enableTransactionLog = false,
+                                enableCompression = false,
+                                maxBackups = 5
+                        )
+
+                // Create large graph with repetitive data
+                val largeGraph = TinkerGraph.open()
+                repeat(100) { i ->
+                    val vertex = largeGraph.addVertex()
+                    vertex.property("data", "this is repetitive data that should compress well")
+                    vertex.property("index", i)
+                }
+
+                try {
+                    // Save with compression
+                    persistenceLayer.saveGraph(
+                            largeGraph,
+                            "compressed",
+                            JvmPersistenceLayer.PersistenceFormat.JSON
+                    )
+
+                    // Save without compression
+                    uncompressedLayer.saveGraph(
+                            largeGraph,
+                            "uncompressed",
+                            JvmPersistenceLayer.PersistenceFormat.JSON
+                    )
+
+                    // Both should load correctly
+                    val compressedLoaded =
+                            persistenceLayer.loadGraph(
+                                    "compressed",
+                                    JvmPersistenceLayer.PersistenceFormat.JSON
+                            )
+                    val uncompressedLoaded =
+                            uncompressedLayer.loadGraph(
+                                    "uncompressed",
+                                    JvmPersistenceLayer.PersistenceFormat.JSON
+                            )
+
+                    compressedLoaded.vertices().asSequence().count() shouldBe 100
+                    uncompressedLoaded.vertices().asSequence().count() shouldBe 100
+                } finally {
+                    largeGraph.close()
+                    uncompressedLayer.close()
+                }
+            }
+
+            "error handling should be robust" {
+                // Test loading non-existent graph
+                shouldThrow<Exception> {
+                    persistenceLayer.loadGraph(
+                            "non-existent",
+                            JvmPersistenceLayer.PersistenceFormat.JSON
+                    )
+                }
+
+                // Test invalid format
+                shouldThrow<Exception> {
+                    persistenceLayer.saveGraph(
+                            testGraph,
+                            "invalid",
+                            null as JvmPersistenceLayer.PersistenceFormat?
+                    )
+                }
+
+                // Persistence layer should still be functional after errors
+                val metadata =
+                        persistenceLayer.saveGraph(
+                                testGraph,
+                                "recovery-test",
+                                JvmPersistenceLayer.PersistenceFormat.JSON
+                        )
+                metadata shouldNotBe null
+            }
+
+            "statistics should provide accurate information" {
+                // Perform some operations
+                persistenceLayer.saveGraph(
+                        testGraph,
+                        "stats-test",
+                        JvmPersistenceLayer.PersistenceFormat.JSON
+                )
+                persistenceLayer.loadGraph("stats-test", JvmPersistenceLayer.PersistenceFormat.JSON)
+
+                val stats = persistenceLayer.getStatistics()
+
+                stats shouldNotBe null
+                stats.containsKey("totalSaves") shouldBe true
+                stats.containsKey("totalLoads") shouldBe true
+                stats.containsKey("totalErrors") shouldBe true
+                stats.containsKey("compressionEnabled") shouldBe true
+                stats.containsKey("transactionLogEnabled") shouldBe true
+
+                (stats["totalSaves"] as Long) > 0 shouldBe true
+                (stats["totalLoads"] as Long) > 0 shouldBe true
+            }
+
+            "concurrent operations should be thread-safe" {
+                val graphName = "concurrent-test"
+
+                // Save initial graph
+                persistenceLayer.saveGraph(
+                        testGraph,
+                        graphName,
+                        JvmPersistenceLayer.PersistenceFormat.JSON
+                )
+
+                // Test concurrent loads
+                val results = mutableList<TinkerGraph>()
+                val threads = mutableListOf<Thread>()
+
+                repeat(5) { i ->
+                    val thread = Thread {
+                        try {
+                            val loaded =
+                                    persistenceLayer.loadGraph(
+                                            graphName,
+                                            JvmPersistenceLayer.PersistenceFormat.JSON
+                                    )
+                            synchronized(results) { results.add(loaded) }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
+                    threads.add(thread)
+                    thread.start()
+                }
+
+                // Wait for all threads to complete
+                threads.forEach { it.join(5000) } // 5 second timeout
+
+                results shouldHaveSize 5
+                results.forEach { graph ->
+                    graph.vertices().asSequence().count() shouldBe 6
+                    graph.edges().asSequence().count() shouldBe 6
+                    graph.close()
+                }
+            }
+
+            "graph metadata should be preserved" {
+                val metadata =
+                        persistenceLayer.saveGraph(
+                                testGraph,
+                                "metadata-test",
+                                JvmPersistenceLayer.PersistenceFormat.JSON
+                        )
+
+                metadata shouldNotBe null
+                metadata["vertexCount"] shouldBe 6
+                metadata["edgeCount"] shouldBe 6
+                metadata["format"] shouldBe "JSON"
+                metadata.containsKey("timestamp") shouldBe true
+                metadata.containsKey("fileSize") shouldBe true
+
+                // Load and verify metadata is accessible
+                val loadedGraph =
+                        persistenceLayer.loadGraph(
+                                "metadata-test",
+                                JvmPersistenceLayer.PersistenceFormat.JSON
+                        )
+                val loadMetadata = persistenceLayer.getGraphMetadata("metadata-test")
+
+                loadMetadata shouldNotBe null
+                loadMetadata["vertexCount"] shouldBe 6
+                loadMetadata["edgeCount"] shouldBe 6
+            }
+
+            "large graph performance should be acceptable" {
+                // Create larger graph
+                val largeGraph = TinkerGraph.open()
+                val vertices = mutableListOf<Any>()
+
+                repeat(500) { i ->
+                    val vertex = largeGraph.addVertex()
+                    vertex.property("index", i)
+                    vertex.property("category", "category_${i % 10}")
+                    vertex.property("value", i * 2.5)
+                    vertices.add(vertex)
+                }
+
+                // Add edges
+                repeat(300) { i ->
+                    val source = vertices[i % vertices.size]
+                    val target = vertices[(i + 1) % vertices.size]
+                    (source as org.apache.tinkerpop.gremlin.structure.Vertex).addEdge(
+                            "connects",
+                            target as org.apache.tinkerpop.gremlin.structure.Vertex
+                    )
+                }
+
+                try {
+                    val startTime = System.currentTimeMillis()
+
+                    // Save large graph
+                    val metadata =
+                            persistenceLayer.saveGraph(
+                                    largeGraph,
+                                    "large-graph",
+                                    JvmPersistenceLayer.PersistenceFormat.JSON
+                            )
+
+                    val saveTime = System.currentTimeMillis() - startTime
+
+                    // Load large graph
+                    val loadStart = System.currentTimeMillis()
+                    val loadedGraph =
+                            persistenceLayer.loadGraph(
+                                    "large-graph",
+                                    JvmPersistenceLayer.PersistenceFormat.JSON
+                            )
+                    val loadTime = System.currentTimeMillis() - loadStart
+
+                    // Verify structure
+                    loadedGraph.vertices().asSequence().count() shouldBe 500
+                    loadedGraph.edges().asSequence().count() shouldBe 300
+
+                    // Performance should be reasonable (less than 10 seconds each)
+                    (saveTime < 10000) shouldBe true
+                    (loadTime < 10000) shouldBe true
+                } finally {
+                    largeGraph.close()
+                }
+            }
+
+            "rollback functionality should restore previous state" {
+                val graphName = "rollback-test"
+
+                // Save initial state
+                persistenceLayer.saveGraph(
+                        testGraph,
+                        graphName,
+                        JvmPersistenceLayer.PersistenceFormat.JSON
+                )
+
+                // Modify graph
+                val newVertex = testGraph.addVertex()
+                newVertex.property("rollback", "test")
+
+                // Begin transaction
+                persistenceLayer.beginTransaction("rollback-transaction")
+
+                // Save modified graph
+                persistenceLayer.saveGraph(
+                        testGraph,
+                        graphName,
+                        JvmPersistenceLayer.PersistenceFormat.JSON
+                )
+
+                // Rollback transaction
+                val rollbackResult = persistenceLayer.rollbackTransaction()
+                rollbackResult shouldBe true
+
+                // Load graph - should be in original state
+                val restoredGraph =
+                        persistenceLayer.loadGraph(
+                                graphName,
+                                JvmPersistenceLayer.PersistenceFormat.JSON
+                        )
+
+                // Should have original 6 vertices, not 7
+                restoredGraph.vertices().asSequence().count() shouldBe 6
+
+                // Should not contain the rollback vertex
+                val hasRollbackVertex =
+                        restoredGraph.vertices().asSequence().any {
+                            try {
+                                it.value<String>("rollback") == "test"
+                            } catch (e: Exception) {
+                                false
+                            }
+                        }
+                hasRollbackVertex shouldBe false
+            }
+        })

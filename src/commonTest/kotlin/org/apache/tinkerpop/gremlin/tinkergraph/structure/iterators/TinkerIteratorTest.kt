@@ -1,6 +1,12 @@
 package org.apache.tinkerpop.gremlin.tinkergraph.structure.iterators
 
-import kotlin.test.*
+import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.booleans.shouldBeFalse
+import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.collections.shouldContain
+import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.collections.shouldNotContain
+import io.kotest.matchers.shouldBe
 import org.apache.tinkerpop.gremlin.structure.Direction
 import org.apache.tinkerpop.gremlin.structure.Edge
 import org.apache.tinkerpop.gremlin.structure.Vertex
@@ -14,80 +20,78 @@ import org.apache.tinkerpop.gremlin.tinkergraph.util.SafeCasting
  * Comprehensive tests for TinkerGraph traversal iterators.
  * Tests all iterator implementations including vertex, edge, property, and traversing iterators.
  */
-class TinkerIteratorTest {
+class TinkerIteratorTest :
+        StringSpec({
+            lateinit var graph: TinkerGraph
+            lateinit var v1: Vertex
+            lateinit var v2: Vertex
+            lateinit var v3: Vertex
+            lateinit var v4: Vertex
+            lateinit var e1: Edge
+            lateinit var e2: Edge
+            lateinit var e3: Edge
 
-    private lateinit var graph: TinkerGraph
-    private lateinit var v1: Vertex
-    private lateinit var v2: Vertex
-    private lateinit var v3: Vertex
-    private lateinit var v4: Vertex
-    private lateinit var e1: Edge
-    private lateinit var e2: Edge
-    private lateinit var e3: Edge
+            beforeTest {
+                graph = TinkerGraph.open()
 
-    @BeforeTest
-    fun setup() {
-        graph = TinkerGraph.open()
+                // Create test vertices
+                v1 = graph.addVertex("name", "alice", "age", 29, "type", "person")
+                v2 = graph.addVertex("name", "bob", "age", 27, "type", "person")
+                v3 = graph.addVertex("name", "charlie", "age", 32, "type", "person")
+                v4 = graph.addVertex("name", "data", "type", "system")
 
-        // Create test vertices
-        v1 = graph.addVertex("name", "alice", "age", 29, "type", "person")
-        v2 = graph.addVertex("name", "bob", "age", 27, "type", "person")
-        v3 = graph.addVertex("name", "charlie", "age", 32, "type", "person")
-        v4 = graph.addVertex("name", "data", "type", "system")
+                // Create test edges
+                e1 = v1.addEdge("knows", v2, "weight", 0.5, "type", "friendship")
+                e2 = v2.addEdge("knows", v3, "weight", 0.8, "type", "friendship")
+                e3 = v1.addEdge("uses", v4, "frequency", "daily", "type", "interaction")
 
-        // Create test edges
-        e1 = v1.addEdge("knows", v2, "weight", 0.5, "type", "friendship")
-        e2 = v2.addEdge("knows", v3, "weight", 0.8, "type", "friendship")
-        e3 = v1.addEdge("uses", v4, "frequency", "daily", "type", "interaction")
+                // Create indices for testing
+                graph.createIndex("name", Vertex::class)
+                graph.createIndex("type", Edge::class)
+            }
 
-        // Create indices for testing
-        graph.createIndex("name", Vertex::class)
-        graph.createIndex("type", Edge::class)
-    }
+            afterTest { graph.close() }
 
-    @Test
-    fun testTinkerVertexIteratorAll() {
-        val iterator = TinkerVertexIterator.all(graph)
-        val vertices = mutableListOf<Vertex>()
+            "TinkerVertexIterator all should work correctly" {
+                val iterator = TinkerVertexIterator.all(graph)
+                val vertices = mutableListOf<Vertex>()
 
-        while (iterator.hasNext()) {
-            vertices.add(iterator.next())
-        }
+                while (iterator.hasNext()) {
+                    vertices.add(iterator.next())
+                }
 
-        assertEquals(4, vertices.size)
-        assertTrue(vertices.contains(v1))
-        assertTrue(vertices.contains(v2))
-        assertTrue(vertices.contains(v3))
-        assertTrue(vertices.contains(v4))
-    }
+                vertices shouldHaveSize 4
+                vertices shouldContain v1
+                vertices shouldContain v2
+                vertices shouldContain v3
+                vertices shouldContain v4
+            }
 
-    @Test
-    fun testTinkerVertexIteratorByIds() {
-        val iterator = TinkerVertexIterator.byIds(graph, v1.id(), v3.id())
-        val vertices = mutableListOf<Vertex>()
+            "TinkerVertexIterator by IDs should work correctly" {
+                val iterator = TinkerVertexIterator.byIds(graph, v1.id(), v3.id())
+                val vertices = mutableListOf<Vertex>()
 
-        while (iterator.hasNext()) {
-            vertices.add(iterator.next())
-        }
+                while (iterator.hasNext()) {
+                    vertices.add(iterator.next())
+                }
 
-        assertEquals(2, vertices.size)
-        assertTrue(vertices.contains(v1))
-        assertTrue(vertices.contains(v3))
-        assertFalse(vertices.contains(v2))
-        assertFalse(vertices.contains(v4))
-    }
+                vertices shouldHaveSize 2
+                vertices shouldContain v1
+                vertices shouldContain v3
+                vertices shouldNotContain v2
+                vertices shouldNotContain v4
+            }
 
-    @Test
-    fun testTinkerVertexIteratorByLabels() {
-        val iterator = TinkerVertexIterator.byLabels(graph, "vertex")
-        val vertices = mutableListOf<Vertex>()
+            "TinkerVertexIterator by labels should work correctly" {
+                val iterator = TinkerVertexIterator.byLabels(graph, "vertex")
+                val vertices = mutableListOf<Vertex>()
 
-        while (iterator.hasNext()) {
-            vertices.add(iterator.next())
-        }
+                while (iterator.hasNext()) {
+                    vertices.add(iterator.next())
+                }
 
-        assertEquals(4, vertices.size) // All vertices have default label "vertex"
-    }
+                vertices shouldHaveSize 4 // All vertices have default label "vertex"
+            }
 
     @Test
     fun testTinkerVertexIteratorByProperty() {

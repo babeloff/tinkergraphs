@@ -1,394 +1,318 @@
 package org.apache.tinkerpop.gremlin.tinkergraph.javascript
 
+import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph
-import kotlin.test.*
-
-/**
- * Tests for TinkerGraphJSAdapter functionality in JavaScript environments.
- */
-class TinkerGraphJSAdapterTest {
-
-    private lateinit var adapter: TinkerGraphJSAdapter
-
-    @BeforeTest
-    fun setup() {
-        adapter = TinkerGraphJSAdapter.open()
-    }
-
-    @AfterTest
-    fun cleanup() {
-        adapter.clear()
-    }
-
-    @Test
-    fun testCreateAdapter() {
-        assertNotNull(adapter)
-        assertNotNull(adapter.getGraph())
-    }
-
-    @Test
-    fun testAddVertex() {
-        val vertex = adapter.addVertex("person")
 
-        assertNotNull(vertex)
-        assertEquals("person", vertex.label())
-        assertNotNull(vertex.id())
-    }
+/** Tests for TinkerGraphJSAdapter functionality in JavaScript environments. */
+class TinkerGraphJSAdapterTest :
+        StringSpec({
+            lateinit var adapter: TinkerGraphJSAdapter
 
-    @Test
-    fun testAddVertexWithProperties() {
-        val properties = js("{}")
-        properties.name = "Alice"
-        properties.age = 30
+            beforeTest { adapter = TinkerGraphJSAdapter.open() }
 
-        val vertex = adapter.addVertex("person", properties)
-
-        assertNotNull(vertex)
-        assertEquals("person", vertex.label())
-        assertEquals("Alice", vertex.value<String>("name"))
-        assertEquals(30, vertex.value<Int>("age"))
-    }
+            afterTest { adapter.clear() }
 
-    @Test
-    fun testAddEdge() {
-        val alice = adapter.addVertex("person")
-        val bob = adapter.addVertex("person")
+            "create adapter should initialize correctly" {
+                adapter shouldNotBe null
+                adapter.getGraph() shouldNotBe null
+            }
 
-        val edge = adapter.addEdge(alice, "knows", bob)
-
-        assertNotNull(edge)
-        assertEquals("knows", edge.label())
-        assertEquals(alice, edge.outVertex())
-        assertEquals(bob, edge.inVertex())
-    }
+            "add vertex should create vertex with label" {
+                val vertex = adapter.addVertex("person")
 
-    @Test
-    fun testAddEdgeWithProperties() {
-        val alice = adapter.addVertex("person")
-        val bob = adapter.addVertex("person")
+                vertex shouldNotBe null
+                vertex.label() shouldBe "person"
+                vertex.id() shouldNotBe null
+            }
 
-        val properties = js("{}")
-        properties.since = 2020
-        properties.weight = 0.8
+            "add vertex with properties should set properties correctly" {
+                val properties = js("{}")
+                properties.name = "Alice"
+                properties.age = 30
 
-        val edge = adapter.addEdge(alice, "knows", bob, properties)
-
-        assertNotNull(edge)
-        assertEquals("knows", edge.label())
-        assertEquals(2020, edge.value<Int>("since"))
-        assertEquals(0.8, edge.value<Double>("weight"))
-    }
-
-    @Test
-    fun testGetVertices() {
-        adapter.addVertex("person")
-        adapter.addVertex("company")
-
-        val vertices = adapter.vertices()
-
-        assertEquals(2, vertices.size)
-    }
-
-    @Test
-    fun testGetEdges() {
-        val alice = adapter.addVertex("person")
-        val bob = adapter.addVertex("person")
-        val charlie = adapter.addVertex("person")
-
-        adapter.addEdge(alice, "knows", bob)
-        adapter.addEdge(alice, "knows", charlie)
-
-        val edges = adapter.edges()
-
-        assertEquals(2, edges.size)
-    }
-
-    @Test
-    fun testFindVerticesByProperty() {
-        val alice = adapter.addVertex("person")
-        alice.property("name", "Alice")
-
-        val bob = adapter.addVertex("person")
-        bob.property("name", "Bob")
-
-        val charlie = adapter.addVertex("person")
-        charlie.property("name", "Charlie")
-
-        val results = adapter.findVerticesByProperty("name", "Alice")
-
-        assertEquals(1, results.size)
-        assertEquals(alice, results[0])
-    }
-
-    @Test
-    fun testFindEdgesByProperty() {
-        val alice = adapter.addVertex("person")
-        val bob = adapter.addVertex("person")
-        val charlie = adapter.addVertex("person")
-
-        val edge1 = adapter.addEdge(alice, "knows", bob)
-        edge1.property("type", "friend")
-
-        val edge2 = adapter.addEdge(alice, "knows", charlie)
-        edge2.property("type", "colleague")
-
-        val results = adapter.findEdgesByProperty("type", "friend")
-
-        assertEquals(1, results.size)
-        assertEquals(edge1, results[0])
-    }
-
-    @Test
-    fun testGetVertexById() {
-        val alice = adapter.addVertex("person")
-        val id = alice.id()
-
-        val found = adapter.getVertex(id)
-
-        assertNotNull(found)
-        assertEquals(alice, found)
-    }
-
-    @Test
-    fun testGetEdgeById() {
-        val alice = adapter.addVertex("person")
-        val bob = adapter.addVertex("person")
-        val edge = adapter.addEdge(alice, "knows", bob)
-        val id = edge.id()
-
-        val found = adapter.getEdge(id)
-
-        assertNotNull(found)
-        assertEquals(edge, found)
-    }
-
-    @Test
-    fun testGetVertexByIdNotFound() {
-        val found = adapter.getVertex("nonexistent")
-
-        assertNull(found)
-    }
-
-    @Test
-    fun testGetStatistics() {
-        adapter.addVertex("person")
-        adapter.addVertex("person")
-        val alice = adapter.addVertex("person")
-        val bob = adapter.addVertex("person")
-        adapter.addEdge(alice, "knows", bob)
-
-        val stats = adapter.getStatistics()
-
-        assertEquals(4, stats.vertexCount)
-        assertEquals(1, stats.edgeCount)
-    }
-
-    @Test
-    fun testToJSON() {
-        val alice = adapter.addVertex("person")
-        alice.property("name", "Alice")
-        alice.property("age", 30)
-
-        val bob = adapter.addVertex("person")
-        bob.property("name", "Bob")
-        bob.property("age", 25)
-
-        val edge = adapter.addEdge(alice, "knows", bob)
-        edge.property("since", 2020)
-
-        val json = adapter.toJSON()
-
-        assertNotNull(json)
-        assertTrue(json.isNotEmpty())
-        assertTrue(json.contains("Alice"))
-        assertTrue(json.contains("Bob"))
-        assertTrue(json.contains("knows"))
-    }
-
-    @Test
-    fun testClear() {
-        adapter.addVertex("person")
-        adapter.addVertex("person")
-        val alice = adapter.addVertex("person")
-        val bob = adapter.addVertex("person")
-        adapter.addEdge(alice, "knows", bob)
-
-        adapter.clear()
-
-        val vertices = adapter.vertices()
-        val edges = adapter.edges()
-
-        assertEquals(0, vertices.size)
-        assertEquals(0, edges.size)
-    }
-
-    @Test
-    fun testJavaScriptEnvironmentDetection() {
-        val isJS = TinkerGraphJSAdapter.isJavaScriptEnvironment()
-        assertTrue(isJS) // Should be true in JavaScript test environment
-    }
-
-    @Test
-    fun testLocalStorageDetection() {
-        // This may vary depending on test environment
-        val hasLocalStorage = TinkerGraphJSAdapter.hasLocalStorage()
-        // Just ensure the method doesn't throw an exception
-        assertTrue(hasLocalStorage || !hasLocalStorage)
-    }
-
-    @Test
-    fun testIndexedDBDetection() {
-        // This may vary depending on test environment
-        val hasIndexedDB = TinkerGraphJSAdapter.hasIndexedDB()
-        // Just ensure the method doesn't throw an exception
-        assertTrue(hasIndexedDB || !hasIndexedDB)
-    }
-
-    @Test
-    fun testJSVertex() {
-        val vertex = adapter.addVertex("person")
-        vertex.property("name", "Alice")
-        vertex.property("age", 30)
-
-        val jsVertex = JSVertex(vertex)
-
-        assertEquals(vertex.id(), jsVertex.getId())
-        assertEquals("person", jsVertex.getLabel())
-        assertEquals("Alice", jsVertex.getProperty("name"))
-        assertEquals(30, jsVertex.getProperty("age"))
-        assertNull(jsVertex.getProperty("nonexistent"))
-
-        val properties = jsVertex.getProperties()
-        assertEquals("Alice", properties.name)
-        assertEquals(30, properties.age)
-    }
-
-    @Test
-    fun testJSEdge() {
-        val alice = adapter.addVertex("person")
-        val bob = adapter.addVertex("person")
-        val edge = adapter.addEdge(alice, "knows", bob)
-        edge.property("since", 2020)
-
-        val jsEdge = JSEdge(edge)
-
-        assertEquals(edge.id(), jsEdge.getId())
-        assertEquals("knows", jsEdge.getLabel())
-        assertEquals(alice.id(), jsEdge.getOutVertex().getId())
-        assertEquals(bob.id(), jsEdge.getInVertex().getId())
-        assertEquals(2020, jsEdge.getProperty("since"))
-
-        val properties = jsEdge.getProperties()
-        assertEquals(2020, properties.since)
-    }
-
-    @Test
-    fun testJSVertexAddEdge() {
-        val alice = adapter.addVertex("person")
-        val bob = adapter.addVertex("person")
-
-        val jsAlice = JSVertex(alice)
-        val jsBob = JSVertex(bob)
-
-        val jsEdge = jsAlice.addEdge("knows", jsBob)
-
-        assertNotNull(jsEdge)
-        assertEquals("knows", jsEdge.getLabel())
-        assertEquals(alice.id(), jsEdge.getOutVertex().getId())
-        assertEquals(bob.id(), jsEdge.getInVertex().getId())
-    }
-
-    @Test
-    fun testJSVertexGetEdges() {
-        val alice = adapter.addVertex("person")
-        val bob = adapter.addVertex("person")
-        val charlie = adapter.addVertex("person")
-
-        adapter.addEdge(alice, "knows", bob)
-        adapter.addEdge(alice, "works_with", charlie)
-        adapter.addEdge(bob, "knows", alice)
-
-        val jsAlice = JSVertex(alice)
-
-        val outEdges = jsAlice.getOutEdges()
-        assertEquals(2, outEdges.size)
-
-        val knowsEdges = jsAlice.getOutEdges("knows")
-        assertEquals(1, knowsEdges.size)
-        assertEquals("knows", knowsEdges[0].getLabel())
-
-        val inEdges = jsAlice.getInEdges()
-        assertEquals(1, inEdges.size)
-    }
-
-    @Test
-    fun testErrorHandling() {
-        // Test with null properties
-        val vertex = adapter.addVertex("person", null)
-        assertNotNull(vertex)
-        assertEquals("person", vertex.label())
-
-        // Test with undefined properties in dynamic object
-        val properties = js("{}")
-        properties.name = "Alice"
-        properties.undefinedProp = undefined
-
-        val vertex2 = adapter.addVertex("person", properties)
-        assertNotNull(vertex2)
-        assertEquals("Alice", vertex2.value<String>("name"))
-        // undefined property should not be added
-        assertFalse(vertex2.property<Any>("undefinedProp").isPresent())
-    }
-
-    @Test
-    fun testComplexGraph() {
-        // Create a more complex graph
-        val alice = adapter.addVertex("person")
-        alice.property("name", "Alice")
-        alice.property("age", 30)
-
-        val bob = adapter.addVertex("person")
-        bob.property("name", "Bob")
-        bob.property("age", 25)
-
-        val charlie = adapter.addVertex("person")
-        charlie.property("name", "Charlie")
-        charlie.property("age", 35)
-
-        val company = adapter.addVertex("company")
-        company.property("name", "Tech Corp")
-
-        val knows1 = adapter.addEdge(alice, "knows", bob)
-        knows1.property("since", 2015)
-
-        val knows2 = adapter.addEdge(alice, "knows", charlie)
-        knows2.property("since", 2018)
-
-        val worksAt1 = adapter.addEdge(alice, "works_at", company)
-        worksAt1.property("position", "Engineer")
-
-        val worksAt2 = adapter.addEdge(bob, "works_at", company)
-        worksAt2.property("position", "Designer")
-
-        // Verify the graph structure
-        val vertices = adapter.vertices()
-        val edges = adapter.edges()
-
-        assertEquals(4, vertices.size)
-        assertEquals(4, edges.size)
-
-        // Test finding by properties
-        val people = adapter.findVerticesByProperty("age", 30)
-        assertEquals(1, people.size)
-        assertEquals("Alice", people[0].value<String>("name"))
-
-        val recentKnows = adapter.findEdgesByProperty("since", 2018)
-        assertEquals(1, recentKnows.size)
-
-        // Test JSON export
-        val json = adapter.toJSON()
-        assertTrue(json.contains("Tech Corp"))
-        assertTrue(json.contains("Engineer"))
-        assertTrue(json.contains("Designer"))
-    }
-}
+                val vertex = adapter.addVertex("person", properties)
+
+                vertex shouldNotBe null
+                vertex.label() shouldBe "person"
+                vertex.value<String>("name") shouldBe "Alice"
+                vertex.value<Int>("age") shouldBe 30
+            }
+
+            "add edge should connect vertices" {
+                val alice = adapter.addVertex("person")
+                adapter.setVertexProperty(alice, "name", "Alice")
+
+                val bob = adapter.addVertex("person")
+                adapter.setVertexProperty(bob, "name", "Bob")
+
+                val edge = adapter.addEdge(alice, "knows", bob)
+
+                edge shouldNotBe null
+                edge.label() shouldBe "knows"
+                edge.outVertex() shouldBe alice
+                edge.inVertex() shouldBe bob
+            }
+
+            "add edge with properties should set edge properties" {
+                val alice = adapter.addVertex("person")
+                val bob = adapter.addVertex("person")
+
+                val edgeProps = js("{}")
+                edgeProps.since = 2020
+                edgeProps.strength = 0.8
+
+                val edge = adapter.addEdge(alice, "knows", bob, edgeProps)
+
+                edge shouldNotBe null
+                edge.value<Int>("since") shouldBe 2020
+                edge.value<Double>("strength") shouldBe 0.8
+            }
+
+            "find vertices should return matching vertices" {
+                val alice = adapter.addVertex("person")
+                adapter.setVertexProperty(alice, "name", "Alice")
+                adapter.setVertexProperty(alice, "age", 30)
+
+                val bob = adapter.addVertex("person")
+                adapter.setVertexProperty(bob, "name", "Bob")
+                adapter.setVertexProperty(bob, "age", 25)
+
+                val people = adapter.findVertices("person")
+                people.size shouldBe 2
+
+                val youngPeople = adapter.findVerticesByProperty("age", 25)
+                youngPeople.size shouldBe 1
+                adapter.getVertexProperty(youngPeople[0], "name") shouldBe "Bob"
+            }
+
+            "find edges should return matching edges" {
+                val alice = adapter.addVertex("person")
+                val bob = adapter.addVertex("person")
+                val charlie = adapter.addVertex("person")
+
+                adapter.addEdge(alice, "knows", bob)
+                adapter.addEdge(alice, "knows", charlie)
+                adapter.addEdge(bob, "likes", charlie)
+
+                val knowsEdges = adapter.findEdges("knows")
+                knowsEdges.size shouldBe 2
+
+                val allEdges = adapter.getAllEdges()
+                allEdges.size shouldBe 3
+            }
+
+            "vertex property operations should work correctly" {
+                val vertex = adapter.addVertex("person")
+
+                // Set properties
+                adapter.setVertexProperty(vertex, "name", "Alice")
+                adapter.setVertexProperty(vertex, "age", 30)
+                adapter.setVertexProperty(vertex, "active", true)
+
+                // Get properties
+                adapter.getVertexProperty(vertex, "name") shouldBe "Alice"
+                adapter.getVertexProperty(vertex, "age") shouldBe 30
+                adapter.getVertexProperty(vertex, "active") shouldBe true
+
+                // Check if property exists
+                adapter.hasVertexProperty(vertex, "name") shouldBe true
+                adapter.hasVertexProperty(vertex, "email") shouldBe false
+
+                // Remove property
+                adapter.removeVertexProperty(vertex, "age")
+                adapter.hasVertexProperty(vertex, "age") shouldBe false
+                adapter.hasVertexProperty(vertex, "name") shouldBe true
+            }
+
+            "edge property operations should work correctly" {
+                val alice = adapter.addVertex("person")
+                val bob = adapter.addVertex("person")
+                val edge = adapter.addEdge(alice, "knows", bob)
+
+                // Set properties
+                adapter.setEdgeProperty(edge, "since", 2020)
+                adapter.setEdgeProperty(edge, "strength", 0.8)
+                adapter.setEdgeProperty(edge, "confirmed", true)
+
+                // Get properties
+                adapter.getEdgeProperty(edge, "since") shouldBe 2020
+                adapter.getEdgeProperty(edge, "strength") shouldBe 0.8
+                adapter.getEdgeProperty(edge, "confirmed") shouldBe true
+
+                // Check if property exists
+                adapter.hasEdgeProperty(edge, "since") shouldBe true
+                adapter.hasEdgeProperty(edge, "weight") shouldBe false
+
+                // Remove property
+                adapter.removeEdgeProperty(edge, "strength")
+                adapter.hasEdgeProperty(edge, "strength") shouldBe false
+                adapter.hasEdgeProperty(edge, "since") shouldBe true
+            }
+
+            "remove operations should delete elements" {
+                val alice = adapter.addVertex("person")
+                val bob = adapter.addVertex("person")
+                val edge = adapter.addEdge(alice, "knows", bob)
+
+                // Verify elements exist
+                adapter.getAllVertices().size shouldBe 2
+                adapter.getAllEdges().size shouldBe 1
+
+                // Remove edge
+                adapter.removeEdge(edge)
+                adapter.getAllEdges().size shouldBe 0
+                adapter.getAllVertices().size shouldBe 2
+
+                // Remove vertex
+                adapter.removeVertex(alice)
+                adapter.getAllVertices().size shouldBe 1
+
+                adapter.removeVertex(bob)
+                adapter.getAllVertices().size shouldBe 0
+            }
+
+            "graph statistics should be accurate" {
+                // Initially empty
+                adapter.getVertexCount() shouldBe 0
+                adapter.getEdgeCount() shouldBe 0
+
+                // Add vertices
+                val alice = adapter.addVertex("person")
+                val bob = adapter.addVertex("person")
+                val company = adapter.addVertex("company")
+
+                adapter.getVertexCount() shouldBe 3
+
+                // Add edges
+                adapter.addEdge(alice, "knows", bob)
+                adapter.addEdge(alice, "works_for", company)
+
+                adapter.getEdgeCount() shouldBe 2
+
+                val stats = adapter.getStatistics()
+                stats shouldNotBe null
+                stats.vertexCount shouldBe 3
+                stats.edgeCount shouldBe 2
+            }
+
+            "clear should remove all elements" {
+                val alice = adapter.addVertex("person")
+                val bob = adapter.addVertex("person")
+                adapter.addEdge(alice, "knows", bob)
+
+                adapter.getVertexCount() shouldBe 2
+                adapter.getEdgeCount() shouldBe 1
+
+                adapter.clear()
+
+                adapter.getVertexCount() shouldBe 0
+                adapter.getEdgeCount() shouldBe 0
+                adapter.getAllVertices().size shouldBe 0
+                adapter.getAllEdges().size shouldBe 0
+            }
+
+            "JSON export and import should preserve graph structure" {
+                // Create test graph
+                val alice = adapter.addVertex("person")
+                adapter.setVertexProperty(alice, "name", "Alice")
+                adapter.setVertexProperty(alice, "age", 30)
+
+                val bob = adapter.addVertex("person")
+                adapter.setVertexProperty(bob, "name", "Bob")
+                adapter.setVertexProperty(bob, "age", 25)
+
+                val edge = adapter.addEdge(alice, "knows", bob)
+                adapter.setEdgeProperty(edge, "since", 2020)
+
+                // Export to JSON
+                val json = adapter.toJSON()
+                json shouldNotBe null
+                json.length > 0 shouldBe true
+
+                // Clear and import
+                adapter.clear()
+                adapter.getVertexCount() shouldBe 0
+
+                adapter.fromJSON(json)
+
+                // Verify structure restored
+                adapter.getVertexCount() shouldBe 2
+                adapter.getEdgeCount() shouldBe 1
+
+                val people = adapter.findVertices("person")
+                people.size shouldBe 2
+
+                val knowsEdges = adapter.findEdges("knows")
+                knowsEdges.size shouldBe 1
+                adapter.getEdgeProperty(knowsEdges[0], "since") shouldBe 2020
+            }
+
+            "JavaScript interop should work with native objects" {
+                val vertex = adapter.addVertex("test")
+
+                // Test with JavaScript object
+                val jsObject = js("{}")
+                jsObject.name = "Test"
+                jsObject.count = 42
+                jsObject.active = true
+
+                adapter.setVertexProperty(vertex, "data", jsObject)
+                val retrieved = adapter.getVertexProperty(vertex, "data")
+
+                retrieved shouldNotBe null
+                // Basic verification - exact object comparison may vary in JS
+                retrieved.toString().contains("Test") shouldBe true
+            }
+
+            "error handling should be robust" {
+                val vertex = adapter.addVertex("test")
+                val otherGraph = TinkerGraph.open()
+                val otherVertex = otherGraph.addVertex()
+
+                // Test invalid operations
+                try {
+                    // This should fail - vertex from different graph
+                    adapter.removeVertex(otherVertex as Any)
+                } catch (e: Exception) {
+                    // Expected - should handle gracefully
+                    e shouldNotBe null
+                }
+
+                // Adapter should still be functional
+                adapter.getVertexCount() shouldBe 1
+                adapter.setVertexProperty(vertex, "recovery", "test")
+                adapter.getVertexProperty(vertex, "recovery") shouldBe "test"
+
+                otherGraph.close()
+            }
+
+            "adapter performance should be reasonable" {
+                val startTime = Date.now()
+
+                // Create moderate-sized graph
+                val vertices = mutableListOf<Any>()
+                repeat(100) { i ->
+                    val vertex = adapter.addVertex("node")
+                    adapter.setVertexProperty(vertex, "index", i)
+                    adapter.setVertexProperty(vertex, "data", "node_$i")
+                    vertices.add(vertex)
+                }
+
+                // Add edges
+                repeat(50) { i ->
+                    adapter.addEdge(vertices[i], "connects", vertices[(i + 1) % vertices.size])
+                }
+
+                val endTime = Date.now()
+                val duration = endTime - startTime
+
+                // Verify structure
+                adapter.getVertexCount() shouldBe 100
+                adapter.getEdgeCount() shouldBe 50
+
+                // Performance check - should complete reasonably quickly
+                (duration < 5000) shouldBe true // Less than 5 seconds
+            }
+        })

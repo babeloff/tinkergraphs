@@ -1,0 +1,65 @@
+[versions]
+kotlin = "2.1.0"
+dokka = "1.9.20"
+kotlinx-serialization = "1.7.3"
+kotlinx-coroutines = "1.8.1"
+kotlinx-datetime = "0.6.1"
+kotlin-logging = "7.0.0"
+logback = "1.4.14"
+tinkerpop = "3.7.0"
+junit = "5.11.0"
+kotest = "5.8.0"
+
+[libraries]
+# Kotlin and KotlinX
+kotlinx-serialization-core = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core", version.ref = "kotlinx-serialization" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
+
+# Logging
+kotlin-logging = { module = "io.github.oshai:kotlin-logging", version.ref = "kotlin-logging" }
+logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
+
+# TinkerPop
+tinkerpop-gremlin-core = { module = "org.apache.tinkerpop:gremlin-core", version.ref = "tinkerpop" }
+tinkerpop-tinkergraph-gremlin = { module = "org.apache.tinkerpop:tinkergraph-gremlin", version.ref = "tinkerpop" }
+tinkerpop-gremlin-groovy = { module = "org.apache.tinkerpop:gremlin-groovy", version.ref = "tinkerpop" }
+
+# Testing - JUnit
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+
+# Testing - Kotest
+kotest-framework-engine = { module = "io.kotest:kotest-framework-engine", version.ref = "kotest" }
+kotest-assertions-core = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
+kotest-runner-junit5 = { module = "io.kotest:kotest-runner-junit5", version.ref = "kotest" }
+kotest-framework-datatest = { module = "io.kotest:kotest-framework-datatest", version.ref = "kotest" }
+kotest-property = { module = "io.kotest:kotest-property", version.ref = "kotest" }
+
+[bundles]
+# Common runtime dependencies
+common-main = ["kotlinx-serialization-core", "kotlinx-coroutines-core", "kotlinx-datetime", "kotlin-logging"]
+
+# JVM-specific dependencies
+jvm-main = ["kotlinx-serialization-json", "kotlinx-coroutines-core", "logback-classic", "tinkerpop-gremlin-core", "tinkerpop-tinkergraph-gremlin", "tinkerpop-gremlin-groovy"]
+
+# JS-specific dependencies
+js-main = ["kotlinx-coroutines-core", "kotlinx-serialization-json"]
+
+# Native-specific dependencies
+native-main = ["kotlinx-coroutines-core"]
+
+# Test dependencies - JUnit-based (for migration compatibility)
+test-junit = ["junit-jupiter"]
+
+# Test dependencies - Kotest
+test-kotest-common = ["kotest-framework-engine", "kotest-assertions-core"]
+test-kotest-jvm = ["junit-jupiter", "kotest-runner-junit5", "kotest-assertions-core", "kotest-framework-datatest", "kotest-property"]
+test-kotest-js = ["kotest-framework-engine", "kotest-assertions-core", "kotlinx-coroutines-test"]
+test-kotest-native = ["kotest-framework-engine", "kotest-assertions-core"]
+
+[plugins]
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
