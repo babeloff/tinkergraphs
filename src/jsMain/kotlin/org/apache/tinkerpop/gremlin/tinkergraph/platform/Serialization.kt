@@ -2,6 +2,8 @@ package org.apache.tinkerpop.gremlin.tinkergraph.platform
 
 import org.apache.tinkerpop.gremlin.structure.*
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.*
+import org.apache.tinkerpop.gremlin.tinkergraph.io.graphson.GraphSONMapper
+import org.apache.tinkerpop.gremlin.tinkergraph.io.graphson.GraphSONException
 import org.apache.tinkerpop.gremlin.tinkergraph.util.SafeCasting
 import kotlin.js.Promise
 
@@ -15,6 +17,11 @@ import kotlin.js.Promise
 object GraphSerializer {
 
     private const val FORMAT_VERSION = "1.0"
+    private const val GRAPHSON_VERSION = "3.0"
+    private val graphsonMapper = GraphSONMapper.create()
+
+    // Configuration flag to enable GraphSON v3.0 by default
+    var useGraphSONv3 = true
 
     /**
      * Serialize a TinkerGraph to a JavaScript object.
@@ -23,6 +30,35 @@ object GraphSerializer {
      * @return A JavaScript object containing all graph data
      */
     fun serialize(graph: TinkerGraph): dynamic {
+        return if (useGraphSONv3) {
+            try {
+                serializeWithGraphSON(graph)
+            } catch (e: Exception) {
+                console.warn("GraphSON v3.0 serialization failed, falling back to legacy format", e)
+                serializeWithLegacyFormat(graph)
+            }
+        } else {
+            serializeWithLegacyFormat(graph)
+        }
+    }
+
+    private fun serializeWithGraphSON(graph: TinkerGraph): dynamic {
+        val graphsonString = graphsonMapper.writeGraph(graph)
+        val graphsonObject = JSON.parse(graphsonString)
+
+        // Wrap in compatibility envelope
+        val result = js("{}")
+        result._format = "graphson-v3.0"
+        result._version = GRAPHSON_VERSION
+        result._type = "TinkerGraph"
+        result._timestamp = JSDate().toISOString()
+        result._legacy_compatible = true
+        result.data = graphsonObject
+
+        return result
+    }
+
+    private fun serializeWithLegacyFormat(graph: TinkerGraph): dynamic {
         val result = js("{}")
 
         result._version = FORMAT_VERSION
@@ -56,6 +92,24 @@ object GraphSerializer {
     fun deserialize(data: dynamic): Promise<TinkerGraph> {
         return Promise { resolve, reject ->
             try {
+                // Check if this is GraphSON v3.0 format
+                val format = js("data._format") as? String
+                val version = js("data._version") as? String
+
+                if (format == "graphson-v3.0" && version == GRAPHSON_VERSION) {
+                    // Use GraphSON v3.0 deserializer
+                    deserializeWithGraphSON(data).then(
+                        onFulfilled = { graph -> resolve(graph) },
+                        onRejected = { error ->
+                            console.warn("GraphSON v3.0 deserialization failed, trying legacy format", error)
+                            deserializeWithLegacyFormat(data).then(
+                                onFulfilled = { graph -> resolve(graph) },
+                                onRejected = { fallbackError -> reject(error) }
+                            )
+                        }
+                    )
+                    return@Promise
+                }
                 validateFormat(data)
 
                 val graph = TinkerGraph.open()
@@ -88,7 +142,7 @@ object GraphSerializer {
                 resolve(graph)
 
             } catch (e: Exception) {
-                reject(StorageException("Failed to deserialize graph: ${e.message}", e))
+                reject(StorageException("Failed to deserialize legacy graph: ${e.message}", e))
             }
         }
     }
@@ -98,6 +152,78 @@ object GraphSerializer {
      */
     fun toJson(graph: TinkerGraph): String {
         return JSON.stringify(serialize(graph))
+    }
+
+    /**
+     * Force serialization using GraphSON v3.0 format.
+     */
+    fun toGraphSON(graph: TinkerGraph): String {
+        return graphsonMapper.writeGraph(graph)
+    }
+
+    /**
+     * Force deserialization using GraphSON v3.0 format.
+     */
+    fun fromGraphSON(graphsonString: String): Promise<TinkerGraph> {
+        return Promise { resolve, reject ->
+            try {
+                val graph = graphsonMapper.readGraph(graphsonString)
+                resolve(graph)
+            } catch (e: Exception) {
+                reject(GraphSONException("GraphSON deserialization failed: ${e.message}", e))
+            }
+        }
+    }
+
+    private fun deserializeWithGraphSON(data: dynamic): Promise<TinkerGraph> {
+        return Promise { resolve, reject ->
+            try {
+                val graphsonData = js("data.data")
+                val graphsonString = JSON.stringify(graphsonData)
+                val graph = graphsonMapper.readGraph(graphsonString)
+                resolve(graph)
+            } catch (e: Exception) {
+                reject(GraphSONException("GraphSON v3.0 deserialization failed: ${e.message}", e))
+            }
+        }
+    }
+
+    private fun deserializeWithLegacyFormat(data: dynamic): Promise<TinkerGraph> {
+        return Promise { resolve, reject ->
+            try {
+                validateFormat(data)
+
+                val graph = TinkerGraph.open()
+                val vertexMap = mutableMapOf<String, TinkerVertex>()
+
+                // Deserialize vertices first
+                if (data.vertices != null) {
+                    val verticesArray = data.vertices.unsafeCast<Array<dynamic>>()
+                    verticesArray.forEach { vertexData ->
+                        val vertex = deserializeVertex(graph, vertexData)
+                        vertexMap[vertex.id().toString()] = vertex
+                    }
+                }
+
+                // Deserialize edges
+                if (data.edges != null) {
+                    val edgesArray = data.edges.unsafeCast<Array<dynamic>>()
+                    edgesArray.forEach { edgeData ->
+                        deserializeEdge(graph, edgeData, vertexMap)
+                    }
+                }
+
+                // Deserialize variables
+                if (data.variables != null) {
+                    deserializeVariables(graph.variables(), data.variables)
+                }
+
+                resolve(graph)
+
+            } catch (e: Exception) {
+                reject(StorageException("Failed to deserialize legacy graph: ${e.message}", e))
+            }
+        }
     }
 
     /**

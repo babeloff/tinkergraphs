@@ -2,6 +2,8 @@ package org.apache.tinkerpop.gremlin.tinkergraph.structure
 
 import org.apache.tinkerpop.gremlin.structure.*
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph
+import org.apache.tinkerpop.gremlin.tinkergraph.io.graphson.GraphSONMapper
+import org.apache.tinkerpop.gremlin.tinkergraph.io.graphson.GraphSONException
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.decodeFromString
@@ -561,23 +563,29 @@ class JvmPersistenceLayer(
     }
 
     private fun saveAsGraphSON(graph: TinkerGraph, path: Path): PersistenceMetadata {
-        // Use JSON internally for GraphSON until proper GraphSON parsing is implemented
-        val graphData = convertGraphToSerializableData(graph)
-        val jsonString = json.encodeToString(graphData)
-        Files.write(path, jsonString.toByteArray())
+        // Use native GraphSON v3.0 implementation
+        val mapper = GraphSONMapper.create()
+        val graphsonString = mapper.writeGraph(graph)
+        Files.write(path, graphsonString.toByteArray())
         return createMetadata(PersistenceFormat.GRAPHSON, convertGraphToSerializableMap(graph), path)
     }
 
     private fun loadFromGraphSON(path: Path): TinkerGraph {
-        // Use JSON internally for GraphSON until proper GraphSON parsing is implemented
-        val jsonString = Files.readString(path)
+        // Use native GraphSON v3.0 implementation
+        val graphsonString = Files.readString(path)
         return try {
-            val graphData = json.decodeFromString<SerializableGraphData>(jsonString)
-            convertSerializableDataToGraph(graphData)
-        } catch (e: Exception) {
-            // Fallback to old format
-            val graphData = convertJsonToMap(jsonString)
-            convertSerializableMapToGraph(graphData)
+            val mapper = GraphSONMapper.create()
+            mapper.readGraph(graphsonString)
+        } catch (e: GraphSONException) {
+            // If GraphSON parsing fails, try JSON fallback for backward compatibility
+            try {
+                val graphData = json.decodeFromString<SerializableGraphData>(graphsonString)
+                convertSerializableDataToGraph(graphData)
+            } catch (fallbackException: Exception) {
+                // Try old map format
+                val graphData = convertJsonToMap(graphsonString)
+                convertSerializableMapToGraph(graphData)
+            }
         }
     }
 
