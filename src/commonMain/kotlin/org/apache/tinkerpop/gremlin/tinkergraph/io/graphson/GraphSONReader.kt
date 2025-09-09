@@ -3,6 +3,7 @@ package org.apache.tinkerpop.gremlin.tinkergraph.io.graphson
 import kotlinx.serialization.json.*
 import org.apache.tinkerpop.gremlin.structure.*
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.*
+import org.apache.tinkerpop.gremlin.tinkergraph.util.LoggingConfig
 
 /**
  * GraphSON v3.0 reader implementation for deserializing TinkerGraph structures.
@@ -18,10 +19,19 @@ class GraphSONReader {
         ignoreUnknownKeys = true
     }
 
+    private val logger = LoggingConfig.getLogger<GraphSONReader>()
+
     /**
      * Deserializes a TinkerGraph from a GraphSON v3.0 JSON string.
      */
     fun readGraph(graphsonString: String): TinkerGraph {
+        return readGraph(graphsonString, IdConflictStrategy.DEFAULT)
+    }
+
+    /**
+     * Deserializes a TinkerGraph from a GraphSON v3.0 JSON string with specified ID conflict strategy.
+     */
+    fun readGraph(graphsonString: String, idConflictStrategy: IdConflictStrategy): TinkerGraph {
         val graphObject = try {
             json.parseToJsonElement(graphsonString).jsonObject
         } catch (e: Exception) {
@@ -29,25 +39,43 @@ class GraphSONReader {
         }
 
         val graph = TinkerGraph.open()
+        return readGraphInto(graphsonString, graph, idConflictStrategy)
+    }
+
+    /**
+     * Deserializes GraphSON v3.0 data into an existing TinkerGraph.
+     */
+    fun readGraphInto(graphsonString: String, targetGraph: TinkerGraph, idConflictStrategy: IdConflictStrategy): TinkerGraph {
+        val graphObject = try {
+            json.parseToJsonElement(graphsonString).jsonObject
+        } catch (e: Exception) {
+            throw GraphSONException("Failed to parse GraphSON JSON", e)
+        }
+
+        logger.i { "Reading GraphSON into graph with ${targetGraph.vertices().asSequence().count()} existing vertices using strategy: ${idConflictStrategy.name}" }
+
+        // Track ID remapping for edges that reference remapped vertices
+        val vertexIdRemapping = mutableMapOf<Any, Any>()
+        val vertexMap = mutableMapOf<Any, TinkerVertex>()
 
         // Read vertices first
-        val vertexMap = mutableMapOf<Any, TinkerVertex>()
         graphObject["vertices"]?.jsonArray?.forEach { vertexElement ->
-            val vertex = readVertex(graph, vertexElement.jsonObject)
+            val vertex = readVertex(targetGraph, vertexElement.jsonObject, idConflictStrategy, vertexIdRemapping)
             vertexMap[vertex.id()] = vertex
         }
 
         // Read edges
         graphObject["edges"]?.jsonArray?.forEach { edgeElement ->
-            readEdge(graph, edgeElement.jsonObject, vertexMap)
+            readEdge(targetGraph, edgeElement.jsonObject, vertexMap, vertexIdRemapping, idConflictStrategy)
         }
 
         // Read variables
         graphObject["variables"]?.jsonObject?.let { variablesObject ->
-            readVariables(graph.variables(), variablesObject)
+            readVariables(targetGraph.variables(), variablesObject)
         }
 
-        return graph
+        logger.i { "Completed GraphSON import. Graph now has ${targetGraph.vertices().asSequence().count()} vertices and ${targetGraph.edges().asSequence().count()} edges" }
+        return targetGraph
     }
 
     /**
@@ -89,6 +117,15 @@ class GraphSONReader {
     // === Private Deserialization Methods ===
 
     private fun readVertex(graph: TinkerGraph, vertexObject: JsonObject): TinkerVertex {
+        return readVertex(graph, vertexObject, IdConflictStrategy.DEFAULT, mutableMapOf())
+    }
+
+    private fun readVertex(
+        graph: TinkerGraph,
+        vertexObject: JsonObject,
+        idConflictStrategy: IdConflictStrategy,
+        vertexIdRemapping: MutableMap<Any, Any>
+    ): TinkerVertex {
         val type = vertexObject[GraphSONTypes.TYPE_KEY]?.jsonPrimitive?.content
         if (type != GraphSONTypes.TYPE_VERTEX) {
             throw MalformedGraphSONException("Expected vertex type, got: $type")
@@ -99,11 +136,12 @@ class GraphSONReader {
 
         val id = readTypedValue(valueObject["id"]
             ?: throw MalformedGraphSONException("Missing vertex id"))
+            ?: throw MalformedGraphSONException("Vertex id cannot be null")
 
         val label = valueObject["label"]?.jsonPrimitive?.content
             ?: throw MalformedGraphSONException("Missing vertex label")
 
-        val vertex = graph.addVertex("id", id, "label", label)
+        val vertex = createVertexWithConflictResolution(graph, id, label, idConflictStrategy, vertexIdRemapping)
 
         // Read properties
         valueObject["properties"]?.jsonObject?.forEach { (propKey, propArrayElement) ->
@@ -123,6 +161,16 @@ class GraphSONReader {
     }
 
     private fun readEdge(graph: TinkerGraph, edgeObject: JsonObject, vertexMap: Map<Any, TinkerVertex>): TinkerEdge {
+        return readEdge(graph, edgeObject, vertexMap, mutableMapOf(), IdConflictStrategy.DEFAULT)
+    }
+
+    private fun readEdge(
+        graph: TinkerGraph,
+        edgeObject: JsonObject,
+        vertexMap: Map<Any, TinkerVertex>,
+        vertexIdRemapping: Map<Any, Any>,
+        idConflictStrategy: IdConflictStrategy
+    ): TinkerEdge {
         val type = edgeObject[GraphSONTypes.TYPE_KEY]?.jsonPrimitive?.content
         if (type != GraphSONTypes.TYPE_EDGE) {
             throw MalformedGraphSONException("Expected edge type, got: $type")
@@ -133,23 +181,32 @@ class GraphSONReader {
 
         val id = readTypedValue(valueObject["id"]
             ?: throw MalformedGraphSONException("Missing edge id"))
+            ?: throw MalformedGraphSONException("Edge id cannot be null")
 
         val label = valueObject["label"]?.jsonPrimitive?.content
             ?: throw MalformedGraphSONException("Missing edge label")
 
-        val inVId = readTypedValue(valueObject["inV"]
+        val originalInVId = readTypedValue(valueObject["inV"]
             ?: throw MalformedGraphSONException("Missing inV in edge"))
+            ?: throw MalformedGraphSONException("InV id cannot be null")
 
-        val outVId = readTypedValue(valueObject["outV"]
+        val originalOutVId = readTypedValue(valueObject["outV"]
             ?: throw MalformedGraphSONException("Missing outV in edge"))
+            ?: throw MalformedGraphSONException("OutV id cannot be null")
+
+        // Apply vertex ID remapping if vertices were remapped during conflict resolution
+        val inVId = vertexIdRemapping[originalInVId] ?: originalInVId
+        val outVId = vertexIdRemapping[originalOutVId] ?: originalOutVId
 
         val inVertex = vertexMap[inVId]
+            ?: graph.vertex(inVId) as? TinkerVertex
             ?: throw GraphSONException("Cannot find inVertex with id: $inVId")
 
         val outVertex = vertexMap[outVId]
+            ?: graph.vertex(outVId) as? TinkerVertex
             ?: throw GraphSONException("Cannot find outVertex with id: $outVId")
 
-        val edge = outVertex.addEdge(label, inVertex, "id", id)
+        val edge = createEdgeWithConflictResolution(outVertex, inVertex, label, id, idConflictStrategy)
 
         // Read properties
         valueObject["properties"]?.jsonObject?.forEach { (propKey, propElement) ->
@@ -385,6 +442,104 @@ class GraphSONReader {
             }
 
             else -> null
+        }
+    }
+
+    /**
+     * Creates a vertex with conflict resolution based on the specified strategy.
+     */
+    private fun createVertexWithConflictResolution(
+            graph: TinkerGraph,
+            originalId: Any,
+            label: String,
+            strategy: IdConflictStrategy,
+            vertexIdRemapping: MutableMap<Any, Any>
+        ): TinkerVertex {
+            val existingVertex = graph.vertex(originalId) as? TinkerVertex
+
+            if (existingVertex == null) {
+                // No conflict - create vertex with original ID
+                logger.d { "Creating vertex with original ID: $originalId" }
+                return graph.addVertex("id", originalId, "label", label) as TinkerVertex
+            }
+
+            // Handle conflict based on strategy
+            return when (strategy) {
+                IdConflictStrategy.STRICT -> {
+                    logger.w { "Vertex ID conflict: $originalId (STRICT mode)" }
+                    throw Graph.Exceptions.vertexWithIdAlreadyExists(originalId)
+                }
+
+                IdConflictStrategy.GENERATE_NEW_ID -> {
+                    val newId = (graph as TinkerGraph).getNextId()
+                    vertexIdRemapping[originalId] = newId
+                    logger.i { "Vertex ID conflict resolved: $originalId -> $newId (GENERATE_NEW_ID)" }
+                    graph.addVertex("id", newId, "label", label) as TinkerVertex
+                }
+
+                IdConflictStrategy.MERGE_PROPERTIES -> {
+                    logger.i { "Vertex ID conflict resolved: merging properties for ID $originalId (MERGE_PROPERTIES)" }
+                    // Return existing vertex - properties will be merged in readVertex
+                    existingVertex
+                }
+
+                IdConflictStrategy.REPLACE_ELEMENT -> {
+                    logger.i { "Vertex ID conflict resolved: replacing vertex with ID $originalId (REPLACE_ELEMENT)" }
+                    // Remove existing vertex and all its edges
+                    existingVertex.edges(org.apache.tinkerpop.gremlin.structure.Direction.BOTH).asSequence().toList().forEach { edge ->
+                        edge.remove()
+                    }
+                    existingVertex.remove()
+                    // Create new vertex with same ID
+                    graph.addVertex("id", originalId, "label", label) as TinkerVertex
+                }
+            }
+        }
+
+    /**
+     * Creates an edge with conflict resolution based on the specified strategy.
+     */
+    private fun createEdgeWithConflictResolution(
+            outVertex: TinkerVertex,
+            inVertex: TinkerVertex,
+            label: String,
+            originalId: Any,
+            strategy: IdConflictStrategy
+        ): TinkerEdge {
+        val graph = outVertex.graph() as TinkerGraph
+        val existingEdge = graph.edge(originalId) as? TinkerEdge
+
+        if (existingEdge == null) {
+            // No conflict - create edge with original ID
+            logger.d { "Creating edge with original ID: $originalId" }
+            return outVertex.addEdge(label, inVertex, "id", originalId) as TinkerEdge
+        }
+
+        // Handle conflict based on strategy
+        return when (strategy) {
+            IdConflictStrategy.STRICT -> {
+                logger.w { "Edge ID conflict: $originalId (STRICT mode)" }
+                throw Graph.Exceptions.edgeWithIdAlreadyExists(originalId)
+            }
+
+            IdConflictStrategy.GENERATE_NEW_ID -> {
+                val newId = graph.getNextId()
+                logger.i { "Edge ID conflict resolved: $originalId -> $newId (GENERATE_NEW_ID)" }
+                outVertex.addEdge(label, inVertex, "id", newId) as TinkerEdge
+            }
+
+            IdConflictStrategy.MERGE_PROPERTIES -> {
+                logger.i { "Edge ID conflict resolved: merging properties for ID $originalId (MERGE_PROPERTIES)" }
+                // Return existing edge - properties will be merged in readEdge
+                existingEdge
+            }
+
+            IdConflictStrategy.REPLACE_ELEMENT -> {
+                logger.i { "Edge ID conflict resolved: replacing edge with ID $originalId (REPLACE_ELEMENT)" }
+                // Remove existing edge and create new one
+                existingEdge.remove()
+                outVertex.addEdge(label, inVertex, "id", originalId) as TinkerEdge
+            }
         }
     }
 

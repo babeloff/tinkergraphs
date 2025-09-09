@@ -20,7 +20,6 @@ kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.
 
 # Logging
 kermit = { module = "co.touchlab:kermit", version.ref = "kermit" }
-logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
 
 # TinkerPop
 tinkerpop-gremlin-core = { module = "org.apache.tinkerpop:gremlin-core", version.ref = "tinkerpop" }
@@ -42,7 +41,7 @@ kotest-property = { module = "io.kotest:kotest-property", version.ref = "kotest"
 common-main = ["kotlinx-serialization-core", "kotlinx-coroutines-core", "kotlinx-datetime", "kermit"]
 
 # JVM-specific dependencies
-jvm-main = ["kotlinx-serialization-json", "kotlinx-coroutines-core", "logback-classic", "tinkerpop-gremlin-core", "tinkerpop-tinkergraph-gremlin", "tinkerpop-gremlin-groovy"]
+jvm-main = ["kotlinx-serialization-json", "kotlinx-coroutines-core", "tinkerpop-gremlin-core", "tinkerpop-tinkergraph-gremlin", "tinkerpop-gremlin-groovy"]
 
 # JS-specific dependencies
 js-main = ["kotlinx-coroutines-core", "kotlinx-serialization-json"]

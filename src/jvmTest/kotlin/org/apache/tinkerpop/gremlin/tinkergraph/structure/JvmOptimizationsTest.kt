@@ -64,17 +64,21 @@ class JvmOptimizationsTest :
 
                 // Test Java Stream integration
                 val adultVertices = verticesList.stream()
-                    .filter { vertex -> vertex.value<Int>("age") >= 30 }
+                    .filter { vertex -> vertex.value<Int>("age")?.let { it >= 30 } == true }
                     .toList()
 
                 adultVertices shouldHaveSize 2
-                val adultNames = adultVertices.map { it.value<String>("name") }.sorted()
-                adultNames shouldBe listOf("Alice", "Charlie")
+                val adultNames = adultVertices.mapNotNull { it.value<String>("name") }.sorted()
+                adultNames.shouldBe(listOf("Alice", "Charlie"))
 
                 // Test with Java HashMap integration
                 val nameAgeMap = HashMap<String, Int>()
                 verticesList.forEach { vertex ->
-                    nameAgeMap[vertex.value<String>("name")] = vertex.value<Int>("age")
+                    val name = vertex.value<String>("name")
+                    val age = vertex.value<Int>("age")
+                    if (name != null && age != null) {
+                        nameAgeMap[name] = age
+                    }
                 }
 
                 nameAgeMap.size shouldBe 3
@@ -205,7 +209,7 @@ class JvmOptimizationsTest :
                 graph.edges().asSequence().count() shouldBe 500
 
                 // Performance check - should complete within reasonable time
-                (duration < 10000) shouldBeTrue() // Less than 10 seconds
+                (duration < 10000) shouldBe true // Less than 10 seconds
 
                 // Test query performance on large dataset
                 val queryStart = System.currentTimeMillis()
@@ -220,7 +224,7 @@ class JvmOptimizationsTest :
                 val queryEnd = System.currentTimeMillis()
 
                 category5Vertices shouldHaveSize 100 // 1000 vertices / 10 categories
-                (queryEnd - queryStart < 1000) shouldBeTrue() // Query should be fast
+                (queryEnd - queryStart < 1000) shouldBe true // Query should be fast
             }
 
             "JVM-specific performance optimizations should be effective" {
@@ -284,16 +288,16 @@ class JvmOptimizationsTest :
                 evenVertices shouldHaveSize 10
 
                 val highScores = vertices.stream()
-                    .filter { vertex -> vertex.value<Double>("score") > 25.0 }
-                    .mapToDouble { vertex -> vertex.value<Double>("score") }
+                    .filter { vertex -> vertex.value<Double>("score")?.let { it > 25.0 } == true }
+                    .mapToDouble { vertex -> vertex.value<Double>("score") ?: 0.0 }
                     .average()
                     .orElse(0.0)
 
-                (highScores > 25.0) shouldBeTrue()
+                (highScores > 25.0) shouldBe true
 
                 // Test parallel stream processing
                 val parallelSum = vertices.parallelStream()
-                    .mapToInt { vertex -> vertex.value<Int>("index") }
+                    .mapToInt { vertex -> vertex.value<Int>("id") ?: 0 }
                     .sum()
 
                 parallelSum shouldBe (0..19).sum() // Sum of 0 to 19
@@ -324,7 +328,7 @@ class JvmOptimizationsTest :
                 val memoryIncrease = finalMemory - initialMemory
 
                 // Memory usage should be reasonable (less than 50MB increase)
-                (memoryIncrease < 50 * 1024 * 1024) shouldBeTrue()
+                (memoryIncrease < 50 * 1024 * 1024) shouldBe true
 
                 // Verify all vertices were created
                 graph.vertices().asSequence().count() shouldBe 1000

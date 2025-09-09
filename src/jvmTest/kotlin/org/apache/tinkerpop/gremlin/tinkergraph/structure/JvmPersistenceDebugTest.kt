@@ -37,9 +37,7 @@ class JvmPersistenceDebugTest :
 
                 // Create simple test graph
                 val graph = TinkerGraph.open()
-                val vertex = graph.addVertex()
-                vertex.property("id", "1")
-                vertex.property("name", "test")
+                val vertex = graph.addVertex("id", "1", "name", "test")
 
                 println("Created graph with ${graph.vertices().asSequence().count()} vertices")
 
@@ -69,7 +67,7 @@ class JvmPersistenceDebugTest :
                     loadedGraph.vertices().asSequence().count() shouldBe 1
 
                     val loadedVertex = loadedGraph.vertices().next()
-                    loadedVertex.value<String>("id") shouldBe "1"
+                    loadedVertex.id() shouldBe "1"
                     loadedVertex.value<String>("name") shouldBe "test"
 
                     println("Debug test completed successfully!")
@@ -315,12 +313,48 @@ class JvmPersistenceDebugTest :
                 val versions =
                         loaded.vertices()
                                 .asSequence()
-                                .map { it.value<Int>("version") }
+                                .map { it.value<Int>("version") ?: 0 }
                                 .sorted()
                                 .toList()
 
                 versions shouldBe listOf(0, 1, 2)
 
                 println("Backup debug test completed successfully!")
+            }
+
+            "debug serialization issue" {
+                // Create a simple graph
+                val simpleGraph = TinkerGraph.open()
+                val v1 = simpleGraph.addVertex("id", "1", "label", "person", "name", "marko", "age", 29)
+                val v2 = simpleGraph.addVertex("id", "2", "label", "person", "name", "vadas", "age", 27)
+
+                val edge = v1.addEdge("knows", v2, "id", "7", "weight", 0.5f)
+
+                println("Original graph:")
+                println("Vertices: ${simpleGraph.vertices().asSequence().count()}")
+                println("Edges: ${simpleGraph.edges().asSequence().count()}")
+                println("V1 label property: ${v1.value<String>("label")}")
+                println("V1 actual label: ${v1.label()}")
+
+                // Save the graph
+                persistenceLayer.saveGraph(simpleGraph, "debug-test", JvmPersistenceLayer.PersistenceFormat.JSON)
+
+                // Load the graph
+                val loadedGraph = persistenceLayer.loadGraph("debug-test", JvmPersistenceLayer.PersistenceFormat.JSON)
+
+                println("Loaded graph:")
+                println("Vertices: ${loadedGraph.vertices().asSequence().count()}")
+                println("Edges: ${loadedGraph.edges().asSequence().count()}")
+
+                val loadedV1 = loadedGraph.vertices().asSequence().find { it.value<String>("name") == "marko" }
+                if (loadedV1 != null) {
+                    println("Loaded V1 label property: ${loadedV1.value<String>("label")}")
+                    println("Loaded V1 actual label: ${loadedV1.label()}")
+                } else {
+                    println("Could not find marko vertex in loaded graph")
+                }
+
+                simpleGraph.close()
+                loadedGraph.close()
             }
         })

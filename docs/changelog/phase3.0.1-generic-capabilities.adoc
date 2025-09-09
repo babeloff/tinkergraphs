@@ -16,7 +16,7 @@ This document details the complete implementation of **Task 3.0.1: Generic Capab
 
 |KmLogging Integration
 |✅ Complete
-|Cross-platform logging framework integrated with kotlin-logging 7.0.0
+|Cross-platform logging framework integrated with kermit
 
 |KDoc Documentation
 |✅ Complete
@@ -32,7 +32,7 @@ This document details the complete implementation of **Task 3.0.1: Generic Capab
 === Dependencies Added
 
 ==== Common Platform
-- `kotlin-logging:7.0.0` - Cross-platform logging abstraction
+- `kermit` - Cross-platform logging abstraction
 - KmLogging integration for multiplatform support
 
 ==== JVM Platform
@@ -184,7 +184,7 @@ Comprehensive test coverage including:
 ----
 commonMain {
     dependencies {
-        implementation("io.github.oshai:kotlin-logging:7.0.0")
+        implementation("co.touchlab:kermit:2.0.8")
     }
 }
 

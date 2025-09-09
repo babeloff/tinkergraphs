@@ -1,0 +1,9 @@
+= Proper AsciiDoc
+
+Asciidoc is a markup language that allows you to write documents in a simple and intuitive way.
+It is designed to be easy to read and write, and
+it produces high-quality output that is suitable for a wide range of applications.
+
+* Blocks should not use the markdown syntax.
+* Lists should not use the markdown syntax.
+* Lists should be preceeded by a single blank line.

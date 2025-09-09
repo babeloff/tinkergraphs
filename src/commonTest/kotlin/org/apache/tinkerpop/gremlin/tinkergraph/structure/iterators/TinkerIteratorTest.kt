@@ -258,11 +258,11 @@ class TinkerIteratorTest :
             */
 
             "TinkerPropertyIterator all should return all properties" {
-                val iterator = TinkerPropertyIterator.all(v1)
+                val iterator = TinkerPropertyIterator.all<Any>(v1)
                 val properties = mutableListOf<VertexProperty<*>>()
 
                 while (iterator.hasNext()) {
-                    properties.add(iterator.next())
+                    properties.add(iterator.next() as VertexProperty<*>)
                 }
 
                 properties.size shouldBe 3 // name, type, age properties
@@ -273,7 +273,7 @@ class TinkerIteratorTest :
                 val properties = mutableListOf<VertexProperty<*>>()
 
                 while (iterator.hasNext()) {
-                    properties.add(iterator.next())
+                    properties.add(iterator.next() as VertexProperty<*>)
                 }
 
                 properties.size shouldBe 1

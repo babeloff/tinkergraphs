@@ -1,9 +1,10 @@
 plugins {
-    kotlin("multiplatform") version "2.2.0"
-    kotlin("plugin.serialization") version "2.2.0"
-    id("org.jetbrains.dokka") version "1.9.20"
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.dokka)
     `maven-publish`
 }
+
 
 // Note: There is a known deprecation warning from the Kotlin/JS plugin:
 // "Invocation of Task.project at execution time has been deprecated"
@@ -64,7 +65,7 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 implementation(libs.kotlinx.serialization.core)
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+                implementation(libs.kotlinx.serialization.json)
                 implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.kotlinx.datetime)
                 implementation(libs.kermit)
@@ -72,38 +73,37 @@ kotlin {
         }
         val commonTest by getting {
             dependencies {
-                implementation("io.kotest:kotest-framework-engine:5.8.0")
-                implementation("io.kotest:kotest-assertions-core:5.8.0")
+                implementation(libs.kotest.framework.engine)
+                implementation(libs.kotest.assertions.core)
             }
         }
         val jvmMain by getting {
             dependencies {
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+                implementation(libs.kotlinx.serialization.json)
                 implementation(libs.kotlinx.coroutines.core)
-                implementation("ch.qos.logback:logback-classic:1.4.14")
-                implementation("org.apache.tinkerpop:gremlin-core:3.7.0")
-                implementation("org.apache.tinkerpop:tinkergraph-gremlin:3.7.0")
-                implementation("org.apache.tinkerpop:gremlin-groovy:3.7.0")
+                implementation(libs.tinkerpop.gremlin.core)
+                implementation(libs.tinkerpop.tinkergraph.gremlin)
+                implementation(libs.tinkerpop.gremlin.groovy)
             }
         }
         val jvmTest by getting {
             dependencies {
-                implementation("org.junit.jupiter:junit-jupiter:5.11.0")
-                implementation("io.kotest:kotest-runner-junit5:5.8.0")
-                implementation("io.kotest:kotest-assertions-core:5.8.0")
+                implementation(libs.junit.jupiter)
+                implementation(libs.kotest.runner.junit5)
+                implementation(libs.kotest.assertions.core)
             }
         }
         val jsMain by getting {
             dependencies {
                 implementation(libs.kotlinx.coroutines.core)
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+                implementation(libs.kotlinx.serialization.json)
             }
         }
         val jsTest by getting {
             dependencies {
-                implementation("io.kotest:kotest-framework-engine:5.8.0")
-                implementation("io.kotest:kotest-assertions-core:5.8.0")
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
+                implementation(libs.kotest.framework.engine)
+                implementation(libs.kotest.assertions.core)
+                implementation(libs.kotlinx.coroutines.test)
             }
         }
         val nativeMain by getting {
@@ -111,8 +111,8 @@ kotlin {
         }
         val nativeTest by getting {
             dependencies {
-                implementation("io.kotest:kotest-framework-engine:5.8.0")
-                implementation("io.kotest:kotest-assertions-core:5.8.0")
+                implementation(libs.kotest.framework.engine)
+                implementation(libs.kotest.assertions.core)
             }
         }
     }
@@ -158,43 +158,8 @@ publishing {
 // Documentation generation tasks
 tasks.register("generateDocs") {
     group = "documentation"
-    description = "Generate all documentation including KDoc and AsciiDoc"
-    dependsOn("dokkaHtml", "buildAsciiDoc")
-}
-
-tasks.register<Exec>("buildAsciiDoc") {
-    group = "documentation"
-    description = "Build AsciiDoc documentation using external tools"
-
-    doFirst { mkdir("build/docs") }
-
-    commandLine(
-            "bash",
-            "-c",
-            """
-        if command -v asciidoctor >/dev/null 2>&1; then
-            echo "Building HTML documentation..."
-            asciidoctor -r asciidoctor-diagram docs/roadmap.adoc -o build/docs/roadmap.html
-
-            if command -v asciidoctor-pdf >/dev/null 2>&1; then
-                echo "Building PDF documentation..."
-                asciidoctor-pdf -r asciidoctor-diagram docs/roadmap.adoc -o build/docs/roadmap.pdf
-            else
-                echo "Warning: asciidoctor-pdf not found, skipping PDF generation"
-            fi
-
-            if command -v asciidoctor-revealjs >/dev/null 2>&1; then
-                echo "Building reveal.js presentation..."
-                asciidoctor-revealjs docs/roadmap.adoc -o build/docs/roadmap-slides.html
-            else
-                echo "Warning: asciidoctor-revealjs not found, skipping slides generation"
-            fi
-        else
-            echo "Warning: asciidoctor not found, skipping AsciiDoc documentation generation"
-            echo "Install using: pixi run docs-setup"
-        fi
-    """.trimIndent()
-    )
+    description = "Generate KDoc documentation"
+    dependsOn("dokkaHtml")
 }
 
 // Configure Dokka for KDoc generation

@@ -14,7 +14,8 @@ import org.apache.tinkerpop.gremlin.tinkergraph.structure.*
  */
 class GraphSONMapper private constructor(
     private val writer: GraphSONWriter,
-    private val reader: GraphSONReader
+    private val reader: GraphSONReader,
+    private val idConflictStrategy: IdConflictStrategy = IdConflictStrategy.DEFAULT
 ) {
 
     companion object {
@@ -24,7 +25,8 @@ class GraphSONMapper private constructor(
         fun create(): GraphSONMapper {
             return GraphSONMapper(
                 writer = GraphSONWriter(),
-                reader = GraphSONReader()
+                reader = GraphSONReader(),
+                idConflictStrategy = IdConflictStrategy.DEFAULT
             )
         }
 
@@ -33,6 +35,17 @@ class GraphSONMapper private constructor(
          */
         fun build(): Builder {
             return Builder()
+        }
+
+        /**
+         * Creates a new GraphSONMapper with the specified ID conflict strategy.
+         */
+        fun create(idConflictStrategy: IdConflictStrategy): GraphSONMapper {
+            return GraphSONMapper(
+                writer = GraphSONWriter(),
+                reader = GraphSONReader(),
+                idConflictStrategy = idConflictStrategy
+            )
         }
     }
 
@@ -47,7 +60,14 @@ class GraphSONMapper private constructor(
      * Deserializes a TinkerGraph from GraphSON v3.0 format.
      */
     fun readGraph(graphsonString: String): TinkerGraph {
-        return reader.readGraph(graphsonString)
+        return reader.readGraph(graphsonString, idConflictStrategy)
+    }
+
+    /**
+     * Deserializes a TinkerGraph from GraphSON v3.0 format into an existing graph.
+     */
+    fun readGraphInto(graphsonString: String, targetGraph: TinkerGraph): TinkerGraph {
+        return reader.readGraphInto(graphsonString, targetGraph, idConflictStrategy)
     }
 
     /**
@@ -99,6 +119,7 @@ class GraphSONMapper private constructor(
         private var prettyPrint: Boolean = true
         private var typeInfo: Boolean = true
         private var embedTypes: Boolean = true
+        private var idConflictStrategy: IdConflictStrategy = IdConflictStrategy.DEFAULT
 
         /**
          * Configure whether to pretty-print the JSON output.
@@ -128,6 +149,15 @@ class GraphSONMapper private constructor(
         }
 
         /**
+         * Configure the ID conflict resolution strategy.
+         * Default is GENERATE_NEW_ID for user-friendly behavior.
+         */
+        fun idConflictStrategy(strategy: IdConflictStrategy): Builder {
+            this.idConflictStrategy = strategy
+            return this
+        }
+
+        /**
          * Creates the configured GraphSONMapper.
          */
         fun create(): GraphSONMapper {
@@ -136,7 +166,8 @@ class GraphSONMapper private constructor(
             // In the future, these could be used to customize behavior.
             return GraphSONMapper(
                 writer = GraphSONWriter(),
-                reader = GraphSONReader()
+                reader = GraphSONReader(),
+                idConflictStrategy = idConflictStrategy
             )
         }
     }
@@ -160,6 +191,14 @@ object GraphSON {
      */
     fun graphFromGraphSON(graphsonString: String): TinkerGraph {
         return defaultMapper.readGraph(graphsonString)
+    }
+
+    /**
+     * Quick method to deserialize a graph from GraphSON v3.0 with specific ID conflict strategy.
+     */
+    fun graphFromGraphSON(graphsonString: String, idConflictStrategy: IdConflictStrategy): TinkerGraph {
+        val mapper = GraphSONMapper.create(idConflictStrategy)
+        return mapper.readGraph(graphsonString)
     }
 
     /**
