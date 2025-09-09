@@ -300,6 +300,8 @@ The roadmap uses the following status indicators to track progress:
 === 1.1 Complete Basic Element Classes
 
 **Task 1.1.1: Implement TinkerVertex** [✅ COMPLETED]
+*Managed using `pixi` (wraps `gradle`)*
+*Key tasks: `pixi run build`, `pixi run compile`, `pixi run test`, `pixi run gradle jvmTest`*
 
 Create TinkerVertex class that implements the Vertex interface. This should include:
 
@@ -313,6 +315,8 @@ Create TinkerVertex class that implements the Vertex interface. This should incl
 Reference the JavaScript implementation structure from tinkergraph-js for API design patterns.
 
 **Task 1.1.2: Implement TinkerEdge** [✅ COMPLETED]
+*Managed using `pixi` (wraps `gradle`)*
+*Key tasks: `pixi run build`, `pixi run compile`, `pixi run test`, `pixi run gradle jvmTest`*
 
 Create TinkerEdge class that implements the Edge interface. This should include:
 
@@ -323,6 +327,8 @@ Create TinkerEdge class that implements the Edge interface. This should include:
 - Proper cleanup when removed from graph
 
 **Task 1.1.3: Implement TinkerVertexProperty** [✅ COMPLETED]
+*Managed using `pixi` (wraps `gradle`)*
+*Key tasks: `pixi run build`, `pixi run compile`, `pixi run test`, `pixi run gradle jvmTest`*
 
 Create TinkerVertexProperty class that implements VertexProperty interface. This should include:
 
@@ -334,6 +340,8 @@ Create TinkerVertexProperty class that implements VertexProperty interface. This
 === 1.2 Helper and Utility Classes
 
 **Task 1.2.1: Create ElementHelper utility** [✅ COMPLETED]
+*Managed using `pixi` (wraps `gradle`)*
+*Key tasks: `pixi run build`, `pixi run compile`, `pixi run test`*
 
 Create ElementHelper utility class with static methods for:
 
@@ -346,6 +354,8 @@ Create ElementHelper utility class with static methods for:
 This mirrors the ElementHelper from the Java TinkerPop implementation.
 
 **Task 1.2.2: Implement TinkerIndex** [✅ COMPLETED]
+*Managed using `pixi` (wraps `gradle`)*
+*Key tasks: `pixi run build`, `pixi run compile`, `pixi run test`*
 
 Create TinkerIndex class for property indexing:
 
@@ -358,6 +368,8 @@ Create TinkerIndex class for property indexing:
 This should support the indexing functionality seen in the JavaScript version.
 
 **Task 1.2.3: Create TinkerGraphVariables** [✅ COMPLETED]
+*Managed using `pixi` (wraps `gradle`)*
+*Key tasks: `pixi run build`, `pixi run compile`, `pixi run test`*
 
 Implement TinkerGraphVariables class for graph metadata:
 
@@ -371,6 +383,8 @@ Implement TinkerGraphVariables class for graph metadata:
 === 2.1 Graph Traversal Support
 
 **Task 2.1.1: Implement graph traversal iterators** [✅ COMPLETED]
+*Managed using `pixi` (wraps `gradle`)*
+*Key tasks: `pixi run build`, `pixi run test`, `pixi run gradle allTests`*
 
 Create efficient iterators for graph traversal:
 
@@ -392,6 +406,8 @@ Create efficient iterators for graph traversal:
 - Comprehensive test coverage and performance optimization
 
 **Task 2.1.2: Add graph algorithms support** [✅ COMPLETED]
+*Managed using `pixi` (wraps `gradle`)*
+*Key tasks: `pixi run build`, `pixi run test`, `pixi run gradle allTests`*
 
 Implement basic graph algorithms:
 
@@ -413,6 +429,8 @@ GraphAlgorithms.kt: Complete implementation of core graph algorithms as Graph ex
 - Detailed documentation with Wikipedia references and complexity analysis
 
 **Task 2.1.3: Advanced graph algorithms support** [✅ COMPLETED]
+*Managed using `pixi` (wraps `gradle`)*
+*Key tasks: `pixi run build`, `pixi run test`, `pixi run gradle allTests`*
 
 Implement advanced graph algorithms:
 
@@ -452,6 +470,8 @@ This major enhancement implements multi-property and meta-property support for T
 === 2.2 Advanced Property Management
 
 **Task 2.2.1: Multi-property and Meta-property support** [✅ COMPLETED]
+*Managed using `pixi` (wraps `gradle`)*
+*Key tasks: `pixi run build`, `pixi run test`, `pixi run gradle allTests`*
 
 Enhanced property system with comprehensive support for:
 
@@ -477,6 +497,8 @@ Enhanced property system with comprehensive support for:
 - Full multiplatform compatibility maintained
 
 **Task 2.2.2: Property indexing and querying** [✅ COMPLETED]
+*Managed using `pixi` (wraps `gradle`)*
+*Key tasks: `pixi run build`, `pixi run test`, `pixi run gradle allTests`*
 
 Enhanced indexing system with comprehensive capabilities:
 
@@ -505,6 +527,8 @@ Enhanced indexing system with comprehensive capabilities:
 == Phase 3: Platform-Specific Implementations
 
 **Task 3.0.1: Generic Capabilities** [✅ COMPLETED]
+*Managed using `pixi` (wraps `gradle`)*
+*Key tasks: `pixi run build`, `pixi run docs`, `pixi run docs-all`*
 
 - ✅ Cross-platform logging framework migration: KotlinLogging → Kermit
   * ✅ Successfully migrated from kotlin-logging (7.0.0) to Kermit (2.0.8)
@@ -537,6 +561,8 @@ Enhanced indexing system with comprehensive capabilities:
 === 3.1 JVM Platform Support
 
 **Task 3.1.1: JVM-specific optimizations** [✅ COMPLETED]
+*Managed using `pixi` (wraps `gradle`)*
+*Key tasks: `pixi run build`, `pixi run gradle jvmTest`, `pixi run gradle jvmJar`*
 
 Implement JVM-specific features:
 
@@ -554,6 +580,8 @@ Implement JVM-specific features:
 - Full backward compatibility maintained - all features are opt-in
 
 **Task 3.1.2: JVM persistence layer** [✅ COMPLETED]
+*Managed using `pixi` (wraps `gradle`)*
+*Key tasks: `pixi run build`, `pixi run gradle jvmTest`, `pixi run gradle jvmJar`*
 
 Add JVM persistence capabilities:
 Implement phase 3.1.2
@@ -578,6 +606,8 @@ Implement phase 3.1.2
 === 3.2 JavaScript Platform Support
 
 **Task 3.2.1: Fix Tinkergraphs JavaScript Tests Compilation** [✅ COMPLETED]
+*Managed using `pixi` (wraps `gradle`)*
+*Key tasks: `pixi run build`, `pixi run gradle jsTest`, `pixi run gradle jsNodeTest`*
 
 JavaScript tests compilation and type preservation fixes:
 
@@ -614,6 +644,8 @@ JavaScript tests compilation and type preservation fixes:
 - ✅ Implementation summary documented in ./docs/changelog/ as phase3.2.1-js-tests-fix.adoc
 
 **Task 3.2.2: TypeScript definitions** [⏸️ TODO]
+*Managed using `pixi` (wraps `gradle`)*
+*Key tasks: `pixi run build`, `pixi run gradle jsJar`, `pixi run gradle jsPackageJson`*
 
 Generate comprehensive TypeScript definitions:
 
@@ -627,6 +659,8 @@ Generate comprehensive TypeScript definitions:
 === 3.3 Native Platform Support
 
 **Task 3.3.1: Native platform implementations** [✅ COMPLETED]
+*Managed using `pixi` (wraps `gradle`)*
+*Key tasks: `pixi run build`, `pixi run gradle nativeTest`, `pixi run gradle linkNative`*
 
 Implement native platform support:
 
@@ -651,6 +685,8 @@ Implement native platform support:
 - Status: ✅ All AdvancedIndexingTest assertion errors resolved
 
 **Task 3.3.2: Native performance optimizations** [⏸️ TODO]
+*Managed using `pixi` (wraps `gradle`)*
+*Key tasks: `pixi run build`, `pixi run gradle nativeTest`, `pixi run gradle nativeBinaries`*
 
 Add native-specific optimizations:
 
@@ -664,9 +700,12 @@ Add native-specific optimizations:
 === 3.4 Python Platform Support
 
 **Task 3.4.1: Python platform implementations** [⏸️ TODO]
+*Managed using `pixi`*
+*Key tasks: `pixi run gradle linkNative`, `pixi run gradle nativeBinaries`*
 
 Implement python platform support:
 
+- The implementation should be under the control of `pixi` (not `gradle`).
 - In the Python code, use a library like ctypes to load the dynamic library.
 - Use the C header as a reference to declare the function signatures in your Python wrapper code.
 - This allows the call to the Kotlin functions as if they were native Python functions.
@@ -675,6 +714,8 @@ Implement python platform support:
 === 3.5 Jank on LLVM Support
 
 **Task 3.5.1: Jank platform implementations** [⏸️ TODO]
+*Managed using `pixi`*
+*Key tasks: `pixi run gradle linkNative`, `pixi run gradle nativeBinaries`*
 
 Implement Jank platform support:
 
@@ -686,6 +727,8 @@ Implement Jank platform support:
 === 3.6 Cross-Platform I/O Format Improvements
 
 **Task 3.6.1: JavaScript ClassCastException Resolution** [✅ COMPLETED]
+*Managed using `pixi` (wraps `gradle`)*
+*Key tasks: `pixi run build`, `pixi run gradle jsTest`, `pixi run gradle allTests`*
 
 **Status**: Successfully completed via liberal parameters architecture implementation.
 
@@ -709,6 +752,8 @@ Implement Jank platform support:
 ---
 
 **Task 3.6.2: Native GraphSON v3.0 Parser Implementation** [✅ COMPLETED]
+*Managed using `pixi` (wraps `gradle`)*
+*Key tasks: `pixi run build`, `pixi run test`, `pixi run gradle allTests`*
 
 **Status**: ✅ **COMPLETED** - Full production-ready GraphSON v3.0 parser with comprehensive functionality
 
@@ -783,6 +828,8 @@ Reference information:
 ---
 
 **Task 3.6.3: GraphSON ID Conflict Resolution Implementation** [✅ COMPLETED]
+*Managed using `pixi` (wraps `gradle`)*
+*Key tasks: `pixi run build`, `pixi run test`, `pixi run gradle allTests`*
 
 **Status**: ✅ COMPLETED - ID conflict resolution framework fully implemented and tested
 
@@ -877,6 +924,8 @@ mapper.readGraphInto(graphsonString, existingGraph)
 === 4.0 Testing Framework Migration
 
 **Task 4.0.1: Migrate from kotlin.test to kotest** [⏸️ TODO]
+*Managed using `pixi` (wraps `gradle`)*
+*Key tasks: `pixi run build`, `pixi run test`, `pixi run gradle allTests`*
 
 Migrate the entire test suite from kotlin.test to kotest framework:
 
@@ -902,6 +951,8 @@ Migrate the entire test suite from kotlin.test to kotest framework:
 - Enhanced error reporting and debugging capabilities
 
 **Task 4.0.2: Incorporate Property based testing with kotest-property** [⏸️ TODO]
+*Managed using `pixi` (wraps `gradle`)*
+*Key tasks: `pixi run build`, `pixi run test`, `pixi run gradle allTests`*
 
 Incorporate Property based testing with kotest-property.
 
@@ -911,6 +962,8 @@ Incorporate Property based testing with kotest-property.
 === 4.1 Comprehensive Test Suite
 
 **Task 4.1.1: Core functionality tests**Corrected build issues [⏸️ TODO]
+*Managed using `pixi` (wraps `gradle`)*
+*Key tasks: `pixi run test`, `pixi run gradle allTests`, `pixi run gradle check`*
 
 Create comprehensive test suite:
 
@@ -922,6 +975,8 @@ Create comprehensive test suite:
 - Place the implementation summary in ./docs/changelog/ as phase4.1.1-qa.adoc
 
 **Task 4.1.2: TinkerPop compliance tests** [⏸️ TODO]
+*Managed using `pixi` (wraps `gradle`)*
+*Key tasks: `pixi run test`, `pixi run gradle allTests`, `pixi run gradle check`*
 
 Implement TinkerPop compliance testing:
 
@@ -935,6 +990,8 @@ Implement TinkerPop compliance testing:
 === 4.2 Performance Testing
 
 **Task 4.2.1: Benchmarking framework** [⏸️ TODO]
+*Managed using `pixi` (wraps `gradle`)*
+*Key tasks: `pixi run build`, `pixi run test`, `pixi run gradle jvmRun`*
 
 Create performance benchmarking framework:
 
@@ -946,6 +1003,8 @@ Create performance benchmarking framework:
 - Place the implementation summary in ./docs/changelog/ as phase4.2.1-qa-benchmarks.adoc
 
 **Task 4.2.2: Performance optimizations** [⏸️ TODO]
+*Managed using `pixi` (wraps `gradle`)*
+*Key tasks: `pixi run build`, `pixi run test`, `pixi run gradle jvmRun`*
 
 Implement performance optimizations based on benchmarks:
 
@@ -961,6 +1020,8 @@ Implement performance optimizations based on benchmarks:
 === 5.1 API Documentation
 
 **Task 5.1.1: Comprehensive API documentation** [⏸️ TODO]
+*Managed using `pixi` (wraps `gradle`)*
+*Key tasks: `pixi run docs`, `pixi run docs-all`, `pixi run gradle dokkaHtml`*
 
 Create complete API documentation:
 
@@ -984,6 +1045,8 @@ Reference:
 
 
 **Task 5.1.2: Tutorial and guides** [⏸️ TODO]
+*Managed using `pixi` (wraps `gradle`)*
+*Key tasks: `pixi run docs-adoc`, `pixi run docs-pdf`, `pixi run docs-slides`*
 
 Write comprehensive tutorials:
 
@@ -997,6 +1060,8 @@ Write comprehensive tutorials:
 === 5.2 Example Applications
 
 **Task 5.2.1: Sample applications** [⏸️ TODO]
+*Managed using `pixi` (wraps `gradle`)*
+*Key tasks: `pixi run build`, `pixi run gradle jvmRun`, `pixi run gradle jsNodeProductionRun`*
 
 Create sample applications for each platform:
 
@@ -1007,6 +1072,8 @@ Create sample applications for each platform:
 - Place the implementation summary in ./docs/changelog/ as phase5.2.1-docs-samples.adoc
 
 **Task 5.2.2: Integration examples** [⏸️ TODO]
+*Managed using `pixi` (wraps `gradle`)*
+*Key tasks: `pixi run build`, `pixi run docs-all`, `pixi run gradle jvmRun`*
 
 Provide integration examples:
 
@@ -1022,6 +1089,8 @@ Provide integration examples:
 === 6.1 Production Features
 
 **Task 6.1.1: Monitoring and observability** [⏸️ TODO]
+*Managed using `pixi` (wraps `gradle`)*
+*Key tasks: `pixi run build`, `pixi run gradle jvmRun`, `pixi run gradle check`*
 
 Add production monitoring features:
 
@@ -1033,6 +1102,8 @@ Add production monitoring features:
 - Place the implementation summary in ./docs/changelog/ as phase6.1.1-prod-telemetry.adoc
 
 **Task 6.1.2: Configuration management** [⏸️ TODO]
+*Managed using `pixi` (wraps `gradle`)*
+*Key tasks: `pixi run build`, `pixi run test`, `pixi run gradle check`*
 
 Implement comprehensive configuration:
 
@@ -1046,6 +1117,8 @@ Implement comprehensive configuration:
 === 6.2 Release and Distribution
 
 **Task 6.2.1: Release automation** [⏸️ TODO]
+*Managed using `pixi` (wraps `gradle`)*
+*Key tasks: `pixi run build`, `pixi run gradle publish`, `pixi run gradle publishToMavenLocal`*
 
 Set up release processes:
 
@@ -1057,6 +1130,8 @@ Set up release processes:
 - Place the implementation summary in ./docs/changelog/ as phase6.2.1-prod-ci.adoc
 
 **Task 6.2.2: Packaging and distribution** [⏸️ TODO]
+*Managed using `pixi` (wraps `gradle`)*
+*Key tasks: `pixi run build`, `pixi run gradle assemble`, `pixi run gradle publish`*
 
 Create distribution packages:
 
