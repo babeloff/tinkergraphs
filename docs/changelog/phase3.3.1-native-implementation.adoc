@@ -190,23 +190,27 @@ The existing `Platform.kt` implementation has been significantly enhanced:
 == Usage Examples
 
 === Memory-Optimized Graph Creation
-```kotlin
+
+[source,kotlin]
+----
 val graph = TinkerGraph.open()
 
-+// Memory tracking automatically enabled
-+val vertex = graph.addVertex("person") // Tracked allocation
-+val edge = vertex1.addEdge("knows", vertex2) // Tracked allocation
-+
-+// Monitor memory usage and get recommendations
-+val stats = Platform.getNativePerformanceStatistics()
-+val recommendations = Platform.getOptimizationRecommendations()
-+
-+// Explicit cleanup when needed
-+Platform.forceNativeCleanup()
-```
+// Memory tracking automatically enabled
+val vertex = graph.addVertex("person") // Tracked allocation
+val edge = vertex1.addEdge("knows", vertex2) // Tracked allocation
+
+// Monitor memory usage and get recommendations
+val stats = Platform.getNativePerformanceStatistics()
+val recommendations = Platform.getOptimizationRecommendations()
+
+// Explicit cleanup when needed
+Platform.forceNativeCleanup()
+----
 
 === Enhanced Platform Operations
-```kotlin
+
+[source,kotlin]
+----
 // Use enhanced sleep with GC yield
 Platform.sleep(1000) // Optimized sleep implementation
 
@@ -218,10 +222,12 @@ println("Platform: ${perfStats.platformInfo.osFamily}")
 // Get optimization recommendations
 val recommendations = Platform.getOptimizationRecommendations()
 recommendations.forEach { println("Recommendation: $it") }
-```
+----
 
 === Optimized Collections
-```kotlin
+
+[source,kotlin]
+----
 // Use enhanced sorted map creation
 val sortedProps: MutableMap<String, Any> = Platform.createSortedMap()
 
@@ -232,18 +238,20 @@ val optimizedSet = NativeCollections.Factory.createHashSet<String>(500)
 // Get collection performance statistics
 val collectionStats = NativeCollections.getCollectionStatistics()
 println("Recommended capacity: ${collectionStats.recommendedHashMapCapacity}")
-```
+----
 
 === Performance Monitoring
-```kotlin
+
+[source,kotlin]
+----
 val stats = Platform.getNativePerformanceStatistics()
 println("Memory leak detected: ${stats.memoryStats.memoryLeakDetected}")
-println("Total allocations: ${stats.memoryStats.totalAllocated}")
-println("Platform cores: ${stats.platformInfo.availableCores}")
+println("GC pressure: ${stats.gcStats.gcPressureLevel}")
 
+// Get specific recommendations
 val recommendations = Platform.getOptimizationRecommendations()
 recommendations.forEach { println("Recommendation: $it") }
-```
+----
 
 == Benchmarks and Validation
 

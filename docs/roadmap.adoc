@@ -807,18 +807,20 @@ This task has been successfully completed, implementing a comprehensive ID confl
    - ✅ New method: `mapper.readGraphInto(graphsonString, existingGraph)`
 
 4. **✅ Advanced Features**:
-   ```kotlin
-   // Default behavior (user-friendly)
-   val mapper = GraphSONMapper.create() // Uses GENERATE_NEW_ID
 
-   // Advanced configuration
-   val mapper = GraphSONMapper.build()
-       .idConflictStrategy(IdConflictStrategy.MERGE_PROPERTIES)
-       .create()
+[source,kotlin]
+----
+// Default behavior (user-friendly)
+val mapper = GraphSONMapper.create() // Uses GENERATE_NEW_ID
 
-   // Import into existing graphs
-   mapper.readGraphInto(graphsonString, existingGraph)
-   ```
+// Advanced configuration
+val mapper = GraphSONMapper.build()
+    .idConflictStrategy(IdConflictStrategy.MERGE_PROPERTIES)
+    .create()
+
+// Import into existing graphs
+mapper.readGraphInto(graphsonString, existingGraph)
+----
 
 **✅ Test Coverage Completed (11/11 tests passing)**:
 - ✅ All 4 ID conflict resolution strategies comprehensively tested

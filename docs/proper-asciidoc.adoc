@@ -7,3 +7,7 @@ it produces high-quality output that is suitable for a wide range of application
 * Blocks should not use the markdown syntax.
 * Lists should not use the markdown syntax.
 * Lists should be preceeded by a single blank line.
+* Should be well-ventilated
+  * Sentences should begin on a new line.
+  * Long sentences (over 80 characters) should be split into multiple lines,
+    splitting (in order of preference) on: semicolons, commas, and predicates.

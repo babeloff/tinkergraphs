@@ -30,14 +30,15 @@ Without ID conflict resolution:
 
 Implemented a comprehensive strategy-based approach with four configurable options:
 
-```kotlin
+[source,kotlin]
+----
 enum class IdConflictStrategy {
     STRICT,           // Throws exception (original behavior)
-    GENERATE_NEW_ID,  // Auto-generates new IDs (DEFAULT)
-    MERGE_PROPERTIES, // Merges properties into existing elements
+    GENERATE_NEW_ID,  // Generates new IDs for conflicting elements
+    MERGE_PROPERTIES, // Merges properties from both elements
     REPLACE_ELEMENT   // Completely replaces existing elements
 }
-```
+----
 
 **Strategy Selection Rationale**:
 - **STRICT**: Maintains backward compatibility and supports data validation use cases
@@ -48,18 +49,20 @@ enum class IdConflictStrategy {
 === Enhanced API Design
 
 **Builder Pattern Configuration**:
-```kotlin
+
+[source,kotlin]
+----
 // Default behavior (user-friendly)
 val mapper = GraphSONMapper.create() // Uses GENERATE_NEW_ID
 
-// Advanced configuration
-val mapper = GraphSONMapper.build()
-    .idConflictStrategy(IdConflictStrategy.MERGE_PROPERTIES)
+// Strict validation mode
+val strictMapper = GraphSONMapper.build()
+    .idConflictStrategy(IdConflictStrategy.STRICT)
     .create()
 
 // Import into existing graphs
 mapper.readGraphInto(graphsonString, existingGraph)
-```
+----
 
 **New API Methods**:
 - `GraphSONMapper.create(IdConflictStrategy)` - Direct strategy specification
@@ -89,7 +92,9 @@ mapper.readGraphInto(graphsonString, existingGraph)
   - Strategy-specific element creation and property handling
 
 **Critical Implementation Details**:
-```kotlin
+
+[source,kotlin]
+----
 // Vertex conflict resolution with ID remapping
 private fun createVertexWithConflictResolution(
     graph: TinkerGraph,
@@ -103,7 +108,7 @@ private fun createVertexWithConflictResolution(
 val inVertex = vertexMap[inVId]
     ?: graph.vertex(inVId) as? TinkerVertex  // Check existing graph
     ?: throw GraphSONException("Cannot find inVertex with id: $inVId")
-```
+----
 
 ==== 3. Enhanced GraphSONMapper (`GraphSONMapper.kt`)
 - **Purpose**: Provides user-friendly API with strategy configuration
@@ -218,7 +223,9 @@ val inVertex = vertexMap[inVId]
 == Usage Examples
 
 === Basic Usage (Zero Configuration Required)
-```kotlin
+
+[source,kotlin]
+----
 // Uses GENERATE_NEW_ID strategy by default - most user-friendly
 val mapper = GraphSONMapper.create()
 
@@ -229,10 +236,12 @@ val graph = mapper.readGraph(graphsonString)
 val existingGraph = TinkerGraph.open()
 // ... populate with existing data ...
 mapper.readGraphInto(graphsonString, existingGraph) // Auto-resolves conflicts
-```
+----
 
 === Advanced Configuration Scenarios
-```kotlin
+
+[source,kotlin]
+----
 // Data validation with strict mode
 val strictMapper = GraphSONMapper.build()
     .idConflictStrategy(IdConflictStrategy.STRICT)
@@ -251,10 +260,12 @@ val refreshMapper = GraphSONMapper.build()
     .create()
 
 refreshMapper.readGraphInto(authoritativeGraphSON, targetGraph)
-```
+----
 
 === Utility Methods
-```kotlin
+
+[source,kotlin]
+----
 // Quick utility with strategy
 val graph = GraphSON.graphFromGraphSON(
     graphsonString,
@@ -263,7 +274,7 @@ val graph = GraphSON.graphFromGraphSON(
 
 // Direct creation with strategy
 val mapper = GraphSONMapper.create(IdConflictStrategy.MERGE_PROPERTIES)
-```
+----
 
 == Performance Impact
 

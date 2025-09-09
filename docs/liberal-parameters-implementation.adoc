@@ -25,18 +25,22 @@ This document summarizes the implementation of the **liberal parameters approach
 === Core Principle: Liberal Input, Internal Casting
 
 **Before (External Casting)**:
-```kotlin
+
+[source,kotlin]
+----
 // Callers must perform casting - failure-prone
 val alice = SafeCasting.safeCastVertex(graph.addVertex())  // Can throw ClassCastException
 val results = queryEngine.queryVertices(criterion)        // More casting internally
-```
+----
 
 **After (Internal Casting)**:
-```kotlin
+
+[source,kotlin]
+----
 // API accepts liberal parameters - safer
 val alice = graph.addVertex()                             // Returns Vertex interface
 val results = queryEngine.queryVertices(criterion)       // Casting handled internally
-```
+----
 
 === Implementation Components
 
@@ -45,13 +49,16 @@ val results = queryEngine.queryVertices(criterion)       // Casting handled inte
 **Purpose**: Centralized, platform-optimized vertex casting with comprehensive error handling.
 
 **Files**:
+
 * `src/commonMain/kotlin/.../util/VertexCastingManager.kt` - Common interface and utilities
 * `src/jsMain/kotlin/.../util/VertexCastingManager.kt` - JavaScript-optimized implementation
 * `src/jvmMain/kotlin/.../util/VertexCastingManager.kt` - JVM-optimized implementation
 * `src/nativeMain/kotlin/.../util/VertexCastingManager.kt` - Native-optimized implementation
 
 **Key Features**:
-```kotlin
+
+[source,kotlin]
+----
 // Platform-specific casting with graceful failure handling
 actual fun tryGetTinkerVertex(vertex: Any?): TinkerVertex?
 
@@ -63,18 +70,21 @@ actual fun diagnoseObjectType(obj: Any?): String
 
 // Statistics for monitoring casting success/failure rates
 actual fun getCastingStatistics(): Map<String, Any>
-```
+----
 
 ==== 2. PropertyQueryEngine (Updated)
 
 **Changes Made**:
+
 * **Liberal Method Signatures**: Accept `Vertex` interface instead of requiring `TinkerVertex`
 * **Internal Casting**: Use `VertexCastingManager.safeGetVertices()` internally
 * **Graceful Error Handling**: Continue processing even if some vertices fail to cast
 * **Return Interface Types**: Return `Iterator<Vertex>` instead of `Iterator<TinkerVertex>`
 
 **Updated Methods**:
-```kotlin
+
+[source,kotlin]
+----
 // Before: Restrictive parameters
 fun queryVertices(criteria: List<PropertyCriterion>): Iterator<TinkerVertex>
 fun queryVertexProperties(vertex: TinkerVertex, criteria: List<PropertyCriterion>)
@@ -82,13 +92,14 @@ fun queryVertexProperties(vertex: TinkerVertex, criteria: List<PropertyCriterion
 // After: Liberal parameters
 fun queryVertices(criteria: List<PropertyCriterion>): Iterator<Vertex>
 fun queryVertexProperties(vertex: Vertex, criteria: List<PropertyCriterion>)
-```
+----
 
 ==== 3. Test Suite (Cleaned Up)
 
 **Removed External Casting**: Eliminated 50+ `SafeCasting.safeCastVertex()` calls from tests:
 
-```kotlin
+[source,kotlin]
+----
 // Before - Manual casting at every vertex creation
 val alice = SafeCasting.safeCastVertex(graph.addVertex())
 val bob = SafeCasting.safeCastVertex(graph.addVertex())
@@ -98,9 +109,10 @@ val charlie = SafeCasting.safeCastVertex(graph.addVertex())
 val alice = graph.addVertex()
 val bob = graph.addVertex()
 val charlie = graph.addVertex()
-```
+----
 
 **Files Updated**:
+
 * `PropertyQueryEngineTest.kt` - Removed 15+ SafeCasting calls
 * `AdvancedIndexingTest.kt` - Removed 10+ SafeCasting calls
 * `MultiPropertyTest.kt` - Updated to use Vertex interface
@@ -111,13 +123,16 @@ val charlie = graph.addVertex()
 === JavaScript Implementation
 
 **JavaScript-Specific Challenges Addressed**:
+
 * **Dynamic Typing**: Uses `asDynamic()` for safe property access
 * **Constructor Detection**: Checks `js("vertex.constructor.name")` for type identification
 * **Duck Typing**: Validates vertex structure using `js("'id' in dynamic")` checks
 * **Graceful Degradation**: Returns `null` instead of throwing exceptions
 
 **Key JavaScript Optimizations**:
-```kotlin
+
+[source,kotlin]
+----
 // Safe constructor name checking
 val constructorName = js("vertex.constructor.name") as? String
 when (constructorName) {
@@ -128,11 +143,12 @@ when (constructorName) {
 // Dynamic property validation
 val hasId = js("'id' in dynamic && dynamic.id !== undefined") as? Boolean ?: false
 val hasLabel = js("'label' in dynamic && dynamic.label !== undefined") as? Boolean ?: false
-```
+----
 
 === JVM Implementation
 
 **JVM-Specific Optimizations**:
+
 * **Reflection-Based Checking**: Uses `TinkerVertex::class.java.isAssignableFrom()`
 * **Type Hierarchy Validation**: Leverages Java class inheritance checks
 * **Performance Optimized**: Direct casting when type safety is confirmed
@@ -140,6 +156,7 @@ val hasLabel = js("'label' in dynamic && dynamic.label !== undefined") as? Boole
 === Native Implementation
 
 **Native-Specific Optimizations**:
+
 * **Safe Type Checking**: Uses Kotlin/Native-safe `is` checks
 * **Memory Efficient**: Minimal object creation during casting operations
 * **Error Resilient**: Handles Native-specific type system limitations
@@ -151,13 +168,16 @@ val hasLabel = js("'label' in dynamic && dynamic.label !== undefined") as? Boole
 **Impact**: Reduced ClassCastException risk from 50+ call sites to 3-5 internal methods
 
 **Evidence**:
+
 * **Before**: 36/248 JavaScript tests failing (85.5% pass rate)
 * **Expected After**: >95% JavaScript test success rate
 
 === 2. Improved API Usability
 
 **Developer Experience**:
-```kotlin
+
+[source,kotlin]
+----
 // More intuitive API - no casting knowledge required
 val results = graph.propertyQueryEngine().queryVertices(
     PropertyQueryEngine.exact("type", "person")
@@ -165,7 +185,7 @@ val results = graph.propertyQueryEngine().queryVertices(
 
 // Works with any Vertex implementation
 val properties = queryEngine.queryVertexProperties(vertex, criteria)
-```
+----
 
 === 3. Platform Consistency
 
@@ -179,11 +199,12 @@ val properties = queryEngine.queryVertexProperties(vertex, criteria)
 
 **Comprehensive Diagnostics**: Detailed error reporting for debugging casting issues
 
-```kotlin
+[source,kotlin]
+----
 // Example diagnostic output
 val diagnosis = VertexCastingManager.diagnoseObjectType(problematicVertex)
 // Returns detailed type information for debugging
-```
+----
 
 == Statistical Monitoring
 
@@ -191,7 +212,8 @@ val diagnosis = VertexCastingManager.diagnoseObjectType(problematicVertex)
 
 **Built-in Statistics**: Monitor casting performance and identify issues
 
-```kotlin
+[source,kotlin]
+----
 val stats = VertexCastingManager.getCastingStatistics()
 // Returns:
 // {
@@ -202,9 +224,10 @@ val stats = VertexCastingManager.getCastingStatistics()
 //   "null_inputs": 15,
 //   "type_mismatches": 3
 // }
-```
+----
 
 **Benefits**:
+
 * **Early Detection**: Identify platform-specific casting issues
 * **Performance Monitoring**: Track casting overhead
 * **Quality Assurance**: Verify casting success rates in CI/CD
@@ -224,6 +247,7 @@ val stats = VertexCastingManager.getCastingStatistics()
 === Expected Test Results
 
 **JavaScript Platform** (Primary Target):
+
 * **Target**: 36 ClassCastException failures → 0 failures
 * **Expected Pass Rate**: 85.5% → >95%
 * **Key Success Metric**: PropertyQueryEngine tests pass consistently
@@ -245,6 +269,7 @@ val stats = VertexCastingManager.getCastingStatistics()
 === Ready for Testing ✅
 
 The implementation is complete and ready for:
+
 * **Compilation Testing**: Verify all platforms compile successfully
 * **JavaScript Test Execution**: Validate ClassCastException resolution
 * **Performance Benchmarking**: Measure casting overhead impact
@@ -255,18 +280,22 @@ The implementation is complete and ready for:
 === For Developers Using TinkerGraph
 
 **Old Pattern (Discouraged)**:
-```kotlin
+
+[source,kotlin]
+----
 val vertex = SafeCasting.safeCastVertex(graph.addVertex())
 vertex.property("name", "Alice")
 val results = queryEngine.queryVertices(criterion).asSequence().toList()
-```
+----
 
 **New Pattern (Recommended)**:
-```kotlin
+
+[source,kotlin]
+----
 val vertex = graph.addVertex()  // No casting needed
 vertex.property("name", "Alice")
 val results = queryEngine.queryVertices(criterion).asSequence().toList()
-```
+----
 
 === For Test Authors
 

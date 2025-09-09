@@ -94,26 +94,32 @@ Previously, GraphSON format operations in TinkerGraph were using JSON serializat
 === Key Features
 
 ==== Type Preservation
-```json
+
+[source,json]
+----
 {
   "@type": "g:Int32",
   "@value": 42
 }
-```
+----
 
 ==== Complex Collections
-```json
+
+[source,json]
+----
 {
   "@type": "g:Map",
   "@value": [
-    {"@type": "g:String", "@value": "key1"},
-    {"@type": "g:Int32", "@value": 100}
+    "key1", {"@type": "g:Int32", "@value": 42},
+    "key2", {"@type": "g:List", "@value": [1, 2, 3]}
   ]
 }
-```
+----
 
 ==== Graph Structures
-```json
+
+[source,json]
+----
 {
   "@type": "g:Vertex",
   "@value": {
@@ -133,7 +139,7 @@ Previously, GraphSON format operations in TinkerGraph were using JSON serializat
     }
   }
 }
-```
+----
 
 == Testing and Quality Assurance
 
@@ -175,46 +181,53 @@ Previously, GraphSON format operations in TinkerGraph were using JSON serializat
 - **Rollback Support**: Option to export back to legacy format if needed
 
 === JavaScript Platform
-```kotlin
+
+[source,kotlin]
+----
 // Automatic format detection
 val graph = GraphSerializer.deserialize(data) // Works with both formats
 
-// Explicit GraphSON usage
-val graph = GraphSerializer.fromGraphSON(graphsonString)
+// Legacy compatibility
+val legacy = NativeGraphSerializer.deserializeWithLegacy(data)
 
 // Migration
 val graphsonData = GraphSONJSIntegration.migrateToGraphSON(legacyData)
-```
+----
 
 === JVM Platform
-```kotlin
+
+[source,kotlin]
+----
 // Persistence layer automatically uses GraphSON v3.0
 persistenceLayer.saveGraph(graph, "test", PersistenceFormat.GRAPHSON)
 
 // With backward compatibility fallback
 val loadedGraph = persistenceLayer.loadGraph("test", PersistenceFormat.GRAPHSON)
-```
+----
 
 == Configuration Options
 
 === JavaScript Platform
-```kotlin
+
+[source,kotlin]
+----
 // Enable/disable GraphSON v3.0 globally
 GraphSerializer.useGraphSONv3 = true // Default: true
 
 // Per-operation control
 val legacy = GraphSerializer.serialize(graph, useGraphSON = false)
 val graphson = GraphSerializer.serialize(graph, useGraphSON = true)
-```
+----
 
 === Mapper Configuration
-```kotlin
+
+[source,kotlin]
+----
 val mapper = GraphSONMapper.build()
     .prettyPrint(true)
-    .typeInfo(true)
     .embedTypes(true)
     .create()
-```
+----
 
 == API Documentation
 
