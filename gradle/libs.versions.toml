@@ -8,7 +8,8 @@ kermit = "2.0.8"
 logback = "1.4.14"
 tinkerpop = "3.7.0"
 junit = "5.11.0"
-kotest = "5.9.1"
+kotest = "6.0.3"
+ksp = "2.2.0-2.0.2"
 
 [libraries]
 # Kotlin and KotlinX
@@ -62,3 +63,5 @@ test-kotest-native = ["kotest-framework-engine", "kotest-assertions-core"]
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
+kotest = { id = "io.kotest", version.ref = "kotest" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }

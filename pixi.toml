@@ -132,3 +132,20 @@ description = "Complete Python integration build and test pipeline"
 [tasks.python-dev]
 cmd = "python -c \"from tinkergraphs import TinkerGraph; print('TinkerGraph Python bindings loaded successfully')\""
 description = "Test Python bindings import"
+
+# Platform demonstration tasks
+
+# Run JVM platform demonstration
+[tasks.runJvmDemo]
+cmd = "gradle runJvmDemo"
+description = "Run JVM platform demonstration showcasing Java interop and enterprise features"
+
+# Run JavaScript platform demonstration in Node.js
+[tasks.runJsNodeDemo]
+cmd = "gradle runJsNodeDemo"
+description = "Run JavaScript platform demonstration in Node.js environment"
+
+# Run Native platform demonstration
+[tasks.runNativeDemo]
+cmd = "gradle runNativeDemo"
+description = "Run Native platform demonstration showcasing native performance optimizations"

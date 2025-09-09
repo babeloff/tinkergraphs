@@ -2,6 +2,8 @@ plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.dokka)
+    alias(libs.plugins.kotest)
+    alias(libs.plugins.ksp)
     `maven-publish`
 }
 
@@ -42,7 +44,13 @@ kotlin {
                 enabled = false // Disable browser tests to avoid Chrome dependency
             }
         }
-        nodejs { testTask { useMocha { timeout = "10s" } } }
+        nodejs {
+            testTask {
+                useMocha {
+                    timeout = "10s"
+                }
+            }
+        }
         binaries.executable()
     }
 
@@ -53,12 +61,18 @@ kotlin {
                 sharedLib {
                     baseName = "tinkergraphs"
                 }
+                executable {
+                    entryPoint = "org.apache.tinkerpop.gremlin.tinkergraph.platform.main"
+                }
             }
         }
         "linux" -> linuxX64("native") {
             binaries {
                 sharedLib {
                     baseName = "tinkergraphs"
+                }
+                executable {
+                    entryPoint = "org.apache.tinkerpop.gremlin.tinkergraph.platform.main"
                 }
             }
         }
@@ -69,12 +83,18 @@ kotlin {
                             sharedLib {
                                 baseName = "tinkergraphs"
                             }
+                            executable {
+                                entryPoint = "org.apache.tinkerpop.gremlin.tinkergraph.platform.main"
+                            }
                         }
                     }
                     hostOs.startsWith("mac") -> macosX64("native") {
                         binaries {
                             sharedLib {
                                 baseName = "tinkergraphs"
+                            }
+                            executable {
+                                entryPoint = "org.apache.tinkerpop.gremlin.tinkergraph.platform.main"
                             }
                         }
                     }
@@ -142,6 +162,17 @@ kotlin {
     }
 }
 
+// Configure test tasks to not fail on no discovered tests
+tasks.withType<org.jetbrains.kotlin.gradle.targets.js.testing.KotlinJsTest> {
+    testLogging {
+        showStandardStreams = true
+    }
+}
+
+tasks.named("nativeTest") {
+    enabled = true
+}
+
 publishing {
     publications {
         create<MavenPublication>("maven") {
@@ -177,6 +208,29 @@ publishing {
             }
         }
     }
+}
+
+// Platform demo tasks
+tasks.register<Exec>("runNativeDemo") {
+    group = "demo"
+    description = "Run native platform demonstration"
+    dependsOn("linkReleaseExecutableNative")
+    commandLine("./build/bin/native/releaseExecutable/tinkergraphs.kexe")
+}
+
+tasks.register<JavaExec>("runJvmDemo") {
+    group = "demo"
+    description = "Run JVM platform demonstration"
+    dependsOn("jvmMainClasses")
+    mainClass.set("org.apache.tinkerpop.gremlin.tinkergraph.platform.JvmPlatformDemoKt")
+    classpath = configurations.getByName("jvmRuntimeClasspath") + kotlin.targets.getByName("jvm").compilations.getByName("main").output.classesDirs
+}
+
+tasks.register<Exec>("runJsNodeDemo") {
+    group = "demo"
+    description = "Run JavaScript platform demonstration in Node.js"
+    dependsOn("jsNodeProductionLibraryDistribution")
+    commandLine("node", "build/dist/js/productionLibrary/tinkergraphs.js")
 }
 
 // Documentation generation tasks

@@ -254,6 +254,9 @@ while maintaining API compatibility with the original Java implementation.
   - `pixi run test` - Run tests
   - `pixi run clean` - Clean build artifacts
   - `pixi run docs` - Generate documentation
+  - `pixi run runJvmDemo` - Run JVM platform demonstration
+  - `pixi run runJsNodeDemo` - Run JavaScript platform demonstration
+  - `pixi run runNativeDemo` - Run Native platform demonstration
 
 Pixi provides consistent dependency management across platforms and ensures reproducible builds with the exact versions specified in `pixi.toml`.
 
@@ -939,6 +942,27 @@ mapper.readGraphInto(graphsonString, existingGraph)
 **COMPLETION SUMMARY**: ✅ Migration successfully completed with 22+ test files migrated from kotlin.test to Kotest StringSpec format. All tests now use kotest assertions (shouldBe, shouldNotBe, shouldThrow, etc.) and StringSpec test organization. Build configuration updated with kotest dependencies for all platforms (JVM, JS, Native). Full implementation details documented in ./docs/changelog/phase4.0.1-kotest-migration.adoc.
 
 Migrate the entire test suite from kotlin.test to kotest framework:
+
+**Task 4.0.2: Platform Demonstration Utilities** [✅ COMPLETED]
+*Managed using `pixi` (wraps `gradle`)*
+*Key tasks: `pixi run runJvmDemo`, `pixi run runJsNodeDemo`, `pixi run runNativeDemo`*
+
+**COMPLETION SUMMARY**: ✅ Successfully created interactive demonstration utilities for all three target platforms. Each demo showcases platform-specific capabilities and can be executed independently for development verification and stakeholder presentations. Gradle tasks configured for easy execution across all platforms.
+
+Created comprehensive platform demonstration utilities:
+- **JvmPlatformDemo.kt**: Showcases Java interop, concurrent operations, persistence layer, memory-mapped storage, and enterprise JVM features
+- **JsPlatformDemo.kt**: Demonstrates browser vs Node.js detection, JavaScript-friendly APIs, async operations, IndexedDB/localStorage, and performance monitoring
+- **NativePlatformDemo.kt**: Highlights native performance optimizations, memory management, platform-specific collections, and cross-platform compatibility
+- **Gradle Integration**: Added `runJvmDemo`, `runJsNodeDemo`, and `runNativeDemo` tasks for easy execution
+- **Educational Value**: Serves as living documentation and onboarding tools for new developers
+- **Stakeholder Demos**: Provides interactive showcases for demonstrating platform capabilities
+
+Benefits:
+- Clear separation from automated tests (demos vs testing)
+- Platform-specific feature highlighting
+- Easy development verification workflow
+- Reduced maintenance burden through focused, streamlined implementations
+- Enhanced developer onboarding experience
 
 - Replace all kotlin.test assertions with kotest matchers
 - Convert test classes to use kotest's Spec-based testing approach
