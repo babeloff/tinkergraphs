@@ -38,7 +38,11 @@ class GraphSONReader {
             throw GraphSONException("Failed to parse GraphSON JSON", e)
         }
 
-        val graph = TinkerGraph.open()
+        // Configure TinkerGraph to support null properties for GraphSON v3.0 compatibility
+        val config = mapOf(
+            TinkerGraph.GREMLIN_TINKERGRAPH_ALLOW_NULL_PROPERTY_VALUES to true
+        )
+        val graph = TinkerGraph.open(config)
         return readGraphInto(graphsonString, graph, idConflictStrategy)
     }
 

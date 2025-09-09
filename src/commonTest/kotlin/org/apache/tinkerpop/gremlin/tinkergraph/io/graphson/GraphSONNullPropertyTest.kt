@@ -61,7 +61,7 @@ class GraphSONNullPropertyTest : StringSpec({
         val graphsonString = mapper.writeGraph(graph)
 
         // Verify GraphSON contains g:Null type
-        graphsonString shouldContain("\"@type\" : \"g:Null\"")
+        graphsonString shouldContain("\"@type\": \"g:Null\"")
 
         // Deserialize into new graph (with same configuration)
         val newGraph = TinkerGraph.open(config)
@@ -158,8 +158,8 @@ class GraphSONNullPropertyTest : StringSpec({
         println(serialized)
 
         // Should contain the proper GraphSON v3.0 null type
-        serialized shouldContain("\"@type\" : \"g:Null\"")
-        serialized shouldContain("\"@value\" : null")
+        serialized shouldContain("\"@type\": \"g:Null\"")
+        serialized shouldContain("\"@value\": null")
 
         graph.close()
     }

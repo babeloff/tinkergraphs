@@ -1,13 +1,163 @@
-= Proper AsciiDoc
+= Proper AsciiDoc Guidelines
 
-Asciidoc is a markup language that allows you to write documents in a simple and intuitive way.
-It is designed to be easy to read and write, and
-it produces high-quality output that is suitable for a wide range of applications.
+AsciiDoc is a markup language that allows you to write documents in a simple and intuitive way.
+It is designed to be easy to read and write,
+and it produces high-quality output that is suitable for a wide range of applications.
 
-* Blocks should not use the markdown syntax.
-* Lists should not use the markdown syntax.
-* Lists should be preceeded by a single blank line.
-* Should be well-ventilated
-  * Sentences should begin on a new line.
-  * Long sentences (over 80 characters) should be split into multiple lines,
-    splitting (in order of preference) on: semicolons, commas, and predicates.
+== Formatting Rules
+
+=== Text Formatting
+
+* Bold text should use single asterisks: `*bold text*`
+* Do NOT use markdown-style double asterisks: `**bold text**`
+* Italic text should use single underscores: `_italic text_`
+* Monospace text should use single backticks: `+monospace text+`
+
+=== Lists
+
+* Lists should be preceded by a single blank line
+* Use proper AsciiDoc list syntax, not markdown syntax
+* Unordered lists use asterisks (`*`)
+* Ordered lists use periods (`.`)
+
+==== Nested Lists
+
+* First level uses single asterisk (`*`)
+* Second level uses double asterisk (`**`)
+* Third level uses triple asterisk (`***`)
+* Fourth level uses quadruple asterisk (`****`)
+
+Example nested list structure:
+
+* Main point
+** Sub-point
+*** Sub-sub-point
+**** Fourth level point
+** Another sub-point
+* Another main point
+
+=== Document Structure
+
+* Use proper AsciiDoc headers: `=`, `==`, `===`, `====`
+* Do NOT use markdown headers: `#`, `##`, `###`
+
+=== Code Blocks
+
+* Use AsciiDoc code block syntax with proper language specification:
+
+[source,kotlin]
+----
+fun example() {
+    println("Hello, World!")
+}
+----
+
+* Do NOT use markdown code fences: ```
+
+=== Well-Ventilated Writing
+
+Documents should be well-ventilated with proper spacing and line breaks:
+
+* Sentences should begin on a new line
+* Long sentences (over 80 characters) should be split into multiple lines,
+  splitting (in order of preference) on: semicolons, commas, and predicates
+* Use blank lines to separate sections and improve readability
+* Each list item should be on its own line
+
+=== Common Migration Issues
+
+When migrating from markdown to AsciiDoc:
+
+* Replace `**bold**` with `*bold*`
+* Replace ```` code blocks with proper `[source,language]` and `----` delimiters
+* Replace `#` headers with `=` headers
+* Ensure nested lists use `**`, `***` syntax instead of indentation
+* Remove any HTML-style formatting
+
+=== Examples
+
+==== Good AsciiDoc:
+
+```
+= Document Title
+
+== Section Header
+
+This is a paragraph with proper line breaks.
+Long sentences are split appropriately for readability.
+
+* First item
+** Nested item
+** Another nested item
+* Second item
+
+*Bold text* and _italic text_ are properly formatted.
+```
+
+==== Bad AsciiDoc (markdown-style):
+
+```
+# Document Title
+
+## Section Header
+
+This is a paragraph that goes on for a very long time without any line breaks which makes it hard to read and maintain.
+
+* First item
+  * Nested item (wrong indentation)
+  * Another nested item
+* Second item
+
+**Bold text** and *italic text* are improperly formatted.
+```
+
+== Document Organization
+
+=== File Structure
+
+* Use descriptive filenames with proper extensions: `.adoc`
+* Follow consistent naming conventions: `phase3.6.2-feature-name.adoc`
+* Place related documents in appropriate directories (`changelog`, `evaluation`, etc.)
+
+=== Document Metadata
+
+* Always include a clear document title using `= Title`
+* Add overview sections for context and scope
+* Include status information when relevant
+* Provide creation/modification dates for tracking
+
+=== Cross-References
+
+* Use proper AsciiDoc cross-reference syntax
+* Link to related documents using relative paths
+* Maintain consistent link formats throughout project documentation
+
+== Best Practices
+
+=== Content Organization
+
+* Start with an overview or executive summary
+* Use logical section hierarchy with proper headers
+* Group related information under appropriate sections
+* End with conclusions or next steps when applicable
+
+=== Writing Style
+
+* Write in active voice when possible
+* Use consistent terminology throughout documents
+* Define acronyms and technical terms on first use
+* Keep paragraphs focused on single topics
+
+=== Technical Documentation
+
+* Include code examples using proper syntax highlighting
+* Provide context for technical decisions and implementations
+* Document both successful outcomes and lessons learned
+* Reference external resources and specifications appropriately
+
+=== Review and Maintenance
+
+* Ensure all cross-references remain valid
+* Update status information as work progresses
+* Remove outdated information promptly
+* Maintain consistency with project-wide documentation standards

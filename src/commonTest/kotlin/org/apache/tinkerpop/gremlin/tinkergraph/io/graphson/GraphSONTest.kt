@@ -21,7 +21,11 @@ class GraphSONTest :
             lateinit var mapper: GraphSONMapper
 
             beforeTest {
-                graph = TinkerGraph.open()
+                // Configure TinkerGraph to support null properties for GraphSON compatibility
+                val config = mapOf(
+                    TinkerGraph.GREMLIN_TINKERGRAPH_ALLOW_NULL_PROPERTY_VALUES to true
+                )
+                graph = TinkerGraph.open(config)
                 mapper = GraphSONMapper.create()
             }
 
@@ -139,7 +143,11 @@ class GraphSONTest :
                 deserializedVertex.value<Boolean>("booleanProp")!!.shouldBeTrue()
                 deserializedVertex.value<Long>("longProp") shouldBe 1234567890L
                 deserializedVertex.value<Float>("floatProp") shouldBe 2.71f
-                // Note: null properties may not be serialized/deserialized identically
+
+                // Verify null property handling
+                val nullProp = deserializedVertex.property<Any?>("nullProp")
+                nullProp.isPresent() shouldBe true
+                nullProp.value() shouldBe null
             }
 
             "edge property serialization should work correctly" {

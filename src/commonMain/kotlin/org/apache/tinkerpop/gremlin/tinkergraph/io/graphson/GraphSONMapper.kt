@@ -15,18 +15,21 @@ import org.apache.tinkerpop.gremlin.tinkergraph.structure.*
 class GraphSONMapper private constructor(
     private val writer: GraphSONWriter,
     private val reader: GraphSONReader,
-    private val idConflictStrategy: IdConflictStrategy = IdConflictStrategy.DEFAULT
+    private val idConflictStrategy: IdConflictStrategy = IdConflictStrategy.DEFAULT,
+    private val allowNullProperties: Boolean = true
 ) {
 
     companion object {
         /**
          * Creates a new GraphSONMapper with default configuration.
+         * Default configuration enables null property support for GraphSON v3.0 compatibility.
          */
         fun create(): GraphSONMapper {
             return GraphSONMapper(
                 writer = GraphSONWriter(),
                 reader = GraphSONReader(),
-                idConflictStrategy = IdConflictStrategy.DEFAULT
+                idConflictStrategy = IdConflictStrategy.DEFAULT,
+                allowNullProperties = true
             )
         }
 
@@ -44,7 +47,8 @@ class GraphSONMapper private constructor(
             return GraphSONMapper(
                 writer = GraphSONWriter(),
                 reader = GraphSONReader(),
-                idConflictStrategy = idConflictStrategy
+                idConflictStrategy = idConflictStrategy,
+                allowNullProperties = true
             )
         }
     }
@@ -58,9 +62,16 @@ class GraphSONMapper private constructor(
 
     /**
      * Deserializes a TinkerGraph from GraphSON v3.0 format.
+     * Creates a new TinkerGraph with proper configuration for GraphSON compatibility.
      */
     fun readGraph(graphsonString: String): TinkerGraph {
-        return reader.readGraph(graphsonString, idConflictStrategy)
+        val config = if (allowNullProperties) {
+            mapOf(TinkerGraph.GREMLIN_TINKERGRAPH_ALLOW_NULL_PROPERTY_VALUES to true)
+        } else {
+            emptyMap()
+        }
+        val graph = TinkerGraph.open(config)
+        return reader.readGraphInto(graphsonString, graph, idConflictStrategy)
     }
 
     /**
@@ -120,6 +131,7 @@ class GraphSONMapper private constructor(
         private var typeInfo: Boolean = true
         private var embedTypes: Boolean = true
         private var idConflictStrategy: IdConflictStrategy = IdConflictStrategy.DEFAULT
+        private var allowNullProperties: Boolean = true
 
         /**
          * Configure whether to pretty-print the JSON output.
@@ -158,6 +170,16 @@ class GraphSONMapper private constructor(
         }
 
         /**
+         * Configure whether to allow null properties in created TinkerGraph instances.
+         * Default is true for GraphSON v3.0 compatibility.
+         * Set to false for strict validation scenarios where null properties should be rejected.
+         */
+        fun allowNullProperties(enabled: Boolean): Builder {
+            this.allowNullProperties = enabled
+            return this
+        }
+
+        /**
          * Creates the configured GraphSONMapper.
          */
         fun create(): GraphSONMapper {
@@ -167,7 +189,8 @@ class GraphSONMapper private constructor(
             return GraphSONMapper(
                 writer = GraphSONWriter(),
                 reader = GraphSONReader(),
-                idConflictStrategy = idConflictStrategy
+                idConflictStrategy = idConflictStrategy,
+                allowNullProperties = allowNullProperties
             )
         }
     }
