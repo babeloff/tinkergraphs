@@ -119,6 +119,7 @@ kotlin {
             dependencies {
                 implementation(libs.kotest.framework.engine)
                 implementation(libs.kotest.assertions.core)
+                implementation(libs.kotest.property)
             }
         }
         val jvmMain by getting {
@@ -135,6 +136,7 @@ kotlin {
                 implementation(libs.junit.jupiter)
                 implementation(libs.kotest.runner.junit5)
                 implementation(libs.kotest.assertions.core)
+                implementation(libs.kotest.property)
             }
         }
         val jsMain by getting {
@@ -147,6 +149,7 @@ kotlin {
             dependencies {
                 implementation(libs.kotest.framework.engine)
                 implementation(libs.kotest.assertions.core)
+                implementation(libs.kotest.property)
                 implementation(libs.kotlinx.coroutines.test)
             }
         }
@@ -157,6 +160,7 @@ kotlin {
             dependencies {
                 implementation(libs.kotest.framework.engine)
                 implementation(libs.kotest.assertions.core)
+                implementation(libs.kotest.property)
             }
         }
     }
