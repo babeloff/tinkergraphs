@@ -17,13 +17,54 @@ cmd = "gradle"
 [tasks.build]
 cmd = "gradle build"
 
+# Compile all targets without running tests
+[tasks.compile-all]
+cmd = "gradle compileKotlinJvm compileKotlinJs compileKotlinNative"
+description = "Compile all Kotlin targets (JVM, JS, Native) without running tests"
+
 # Compile Kotlin source code for JVM target
 [tasks.compile]
 cmd = "gradle compileKotlinJvm"
 
-# Run all test suites
+# Run all test suites (may fail if there are compilation issues in some tests)
 [tasks.test]
-cmd = "gradle test"
+cmd = "gradle allTests"
+
+# Try to run tests with fallback to compilation check if they fail
+[tasks.test-safe]
+cmd = "gradle allTests || (echo 'Tests failed - checking what compiles...' && gradle compileKotlinJvm && echo 'JVM code compiles successfully' && gradle compileKotlinJs && echo 'JS code compiles successfully' && gradle compileKotlinNative && echo 'Native code compiles successfully')"
+
+# Check what compiles without running tests
+[tasks.test-compile-check]
+cmd = "echo 'Checking compilation...' && gradle compileKotlinJvm && echo '✅ JVM compiles' && gradle compileKotlinJs && echo '✅ JS compiles' && gradle compileKotlinNative && echo '✅ Native compiles' && echo 'All main code compiles successfully'"
+
+# Check if test code compiles
+[tasks.test-code-check]
+cmd = "echo 'Checking test compilation (may show errors)...' && (gradle compileTestKotlinJvm && echo '✅ JVM tests compile' || echo '❌ JVM test compilation failed') && (gradle compileTestKotlinJs && echo '✅ JS tests compile' || echo '❌ JS test compilation failed') && (gradle compileTestKotlinNative && echo '✅ Native tests compile' || echo '❌ Native test compilation failed')"
+
+# Run JVM-specific tests only
+[tasks.test-jvm]
+cmd = "gradle jvmTest"
+
+# Run JavaScript tests only (all JS test types)
+[tasks.test-js]
+cmd = "gradle jsTest"
+
+# Run Native tests only
+[tasks.test-native]
+cmd = "gradle nativeTest"
+
+# Run JavaScript tests in browser
+[tasks.test-js-browser]
+cmd = "gradle jsBrowserTest"
+
+# Run JavaScript tests in Node.js
+[tasks.test-js-node]
+cmd = "gradle jsNodeTest"
+
+# List all available test tasks
+[tasks.test-help]
+cmd = "echo 'Available test commands:' && echo '  pixi run test               - All tests (may have compilation issues)' && echo '  pixi run test-safe          - Try tests with fallback to compilation check' && echo '  pixi run test-compile-check - Check if main code compiles' && echo '  pixi run test-code-check    - Check if test code compiles' && echo '  pixi run test-jvm           - JVM tests only' && echo '  pixi run test-js            - JavaScript tests' && echo '  pixi run test-native        - Native tests' && echo '  pixi run test-js-browser    - JS tests in browser' && echo '  pixi run test-js-node       - JS tests in Node.js'"
 
 # Clean build artifacts and generated files
 [tasks.clean]

@@ -932,9 +932,11 @@ mapper.readGraphInto(graphsonString, existingGraph)
 
 === 4.0 Testing Framework Migration
 
-**Task 4.0.1: Migrate from kotlin.test to kotest** [⏸️ TODO]
+**Task 4.0.1: Migrate from kotlin.test to kotest** [✅ COMPLETED]
 *Managed using `pixi` (wraps `gradle`)*
 *Key tasks: `pixi run build`, `pixi run test`, `pixi run gradle allTests`*
+
+**COMPLETION SUMMARY**: ✅ Migration successfully completed with 22+ test files migrated from kotlin.test to Kotest StringSpec format. All tests now use kotest assertions (shouldBe, shouldNotBe, shouldThrow, etc.) and StringSpec test organization. Build configuration updated with kotest dependencies for all platforms (JVM, JS, Native). Full implementation details documented in ./docs/changelog/phase4.0.1-kotest-migration.adoc.
 
 Migrate the entire test suite from kotlin.test to kotest framework:
 

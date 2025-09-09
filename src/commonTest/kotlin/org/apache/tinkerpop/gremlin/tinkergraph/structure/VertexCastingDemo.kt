@@ -6,6 +6,8 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import org.apache.tinkerpop.gremlin.structure.VertexProperty
 import org.apache.tinkerpop.gremlin.tinkergraph.util.VertexCastingManager
+import kotlin.time.measureTime
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * Demo test to verify the new liberal parameter approach works correctly. This test demonstrates
@@ -207,25 +209,22 @@ class VertexCastingDemo :
                     vertex.property("stringDouble", i.toDouble().toString())
                 }
 
-                val startTime = System.currentTimeMillis()
-
-                // Perform queries that require casting
-                repeat(50) { i ->
-                    queryEngine
-                            .queryVertices(PropertyQueryEngine.exact("stringId", i))
-                            .asSequence()
-                            .toList()
-                    queryEngine
-                            .queryVertices(PropertyQueryEngine.exact("stringDouble", i.toDouble()))
-                            .asSequence()
-                            .toList()
+                val duration = measureTime {
+                    // Perform queries that require casting
+                    repeat(50) { i ->
+                        queryEngine
+                                .queryVertices(PropertyQueryEngine.exact("stringId", i))
+                                .asSequence()
+                                .toList()
+                        queryEngine
+                                .queryVertices(PropertyQueryEngine.exact("stringDouble", i.toDouble()))
+                                .asSequence()
+                                .toList()
+                    }
                 }
 
-                val endTime = System.currentTimeMillis()
-                val duration = endTime - startTime
-
                 // Should complete within reasonable time
-                (duration < 5000) shouldBe true // Less than 5 seconds
+                (duration < 5.seconds) shouldBe true // Less than 5 seconds
             }
 
             "casting manager should provide useful statistics" {

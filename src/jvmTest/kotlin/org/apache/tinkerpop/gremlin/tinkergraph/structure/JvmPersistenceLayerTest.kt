@@ -16,9 +16,6 @@ import java.nio.file.Path
 class JvmPersistenceLayerTest :
         StringSpec({
 
-            companion object {
-                private val logger = LoggingConfig.getLogger<JvmPersistenceLayerTest>()
-            }
             lateinit var tempDir: Path
             lateinit var persistenceLayer: JvmPersistenceLayer
             lateinit var testGraph: TinkerGraph
@@ -123,7 +120,6 @@ class JvmPersistenceLayerTest :
                 if (markoVertex == null) {
                     val vertexNames = loadedGraph.vertices().asSequence().mapNotNull {
                         try { it.value<String>("name") } catch (e: Exception) {
-                            logger.d(e) { "Exception getting vertex name during error diagnostics" }
                             "ERROR"
                         }
                     }.toList()

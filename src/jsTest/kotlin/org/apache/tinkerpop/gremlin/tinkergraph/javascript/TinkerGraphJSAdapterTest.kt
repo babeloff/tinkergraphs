@@ -1,9 +1,12 @@
 package org.apache.tinkerpop.gremlin.tinkergraph.javascript
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph
+import kotlin.time.measureTime
+import kotlin.time.Duration.Companion.seconds
 
 /** Tests for TinkerGraphJSAdapter functionality in JavaScript environments. */
 class TinkerGraphJSAdapterTest :
@@ -229,7 +232,7 @@ class TinkerGraphJSAdapterTest :
                 // Export to JSON
                 val json = adapter.toJSON()
                 json shouldNotBe null
-                json.length > 0 shouldBe true
+                (json.length > 0) shouldBe true
 
                 // Clear and import
                 adapter.clear()
@@ -268,13 +271,12 @@ class TinkerGraphJSAdapterTest :
 
             "error handling should be robust" {
                 val vertex = adapter.addVertex("test")
+                // Test error handling
                 val otherGraph = TinkerGraph.open()
                 val otherVertex = otherGraph.addVertex()
-
-                // Test invalid operations
                 try {
                     // This should fail - vertex from different graph
-                    adapter.removeVertex(otherVertex as Any)
+                    adapter.removeVertex(otherVertex as TinkerVertex)
                 } catch (e: Exception) {
                     // Expected - should handle gracefully
                     e shouldNotBe null
@@ -289,30 +291,27 @@ class TinkerGraphJSAdapterTest :
             }
 
             "adapter performance should be reasonable" {
-                val startTime = Date.now()
+                val duration = measureTime {
+                    // Create moderate-sized graph
+                    val vertices = mutableListOf<Any>()
+                    repeat(100) { i ->
+                        val vertex = adapter.addVertex("node")
+                        adapter.setVertexProperty(vertex, "index", i)
+                        adapter.setVertexProperty(vertex, "data", "node_$i")
+                        vertices.add(vertex)
+                    }
 
-                // Create moderate-sized graph
-                val vertices = mutableListOf<Any>()
-                repeat(100) { i ->
-                    val vertex = adapter.addVertex("node")
-                    adapter.setVertexProperty(vertex, "index", i)
-                    adapter.setVertexProperty(vertex, "data", "node_$i")
-                    vertices.add(vertex)
+                    // Add edges
+                    repeat(50) { i ->
+                        adapter.addEdge(vertices[i] as TinkerVertex, "connects", vertices[(i + 1) % vertices.size] as TinkerVertex)
+                    }
                 }
-
-                // Add edges
-                repeat(50) { i ->
-                    adapter.addEdge(vertices[i], "connects", vertices[(i + 1) % vertices.size])
-                }
-
-                val endTime = Date.now()
-                val duration = endTime - startTime
 
                 // Verify structure
                 adapter.getVertexCount() shouldBe 100
                 adapter.getEdgeCount() shouldBe 50
 
                 // Performance check - should complete reasonably quickly
-                (duration < 5000) shouldBe true // Less than 5 seconds
+                (duration < 5.seconds) shouldBe true
             }
         })
