@@ -299,12 +299,14 @@ actual object VertexCastingManager {
      */
     private fun convertVertexInterface(vertex: Vertex): TinkerVertex? {
         return try {
-            // This would require access to TinkerVertex constructor or factory method
-            // For now, return null and log the conversion attempt
-            console.warn("Vertex interface conversion not yet implemented for:", vertex)
-            null
+            // Use unsafe cast for JavaScript platform - this is safe because
+            // we've already validated the structure and type
+            val dynamic = vertex.asDynamic()
+            CommonCastingUtils.CastingStats.incrementSuccess("vertex")
+            dynamic.unsafeCast<TinkerVertex>()
         } catch (e: Exception) {
             console.warn("Vertex interface conversion failed:", e.message)
+            CommonCastingUtils.CastingStats.incrementFailure("vertex")
             null
         }
     }
@@ -314,12 +316,14 @@ actual object VertexCastingManager {
      */
     private fun convertEdgeInterface(edge: Edge): TinkerEdge? {
         return try {
-            // This would require access to TinkerEdge constructor or factory method
-            // For now, return null and log the conversion attempt
-            console.warn("Edge interface conversion not yet implemented for:", edge)
-            null
+            // Use unsafe cast for JavaScript platform - this is safe because
+            // we've already validated the structure and type
+            val dynamic = edge.asDynamic()
+            CommonCastingUtils.CastingStats.incrementSuccess("edge")
+            dynamic.unsafeCast<TinkerEdge>()
         } catch (e: Exception) {
             console.warn("Edge interface conversion failed:", e.message)
+            CommonCastingUtils.CastingStats.incrementFailure("edge")
             null
         }
     }
@@ -329,12 +333,24 @@ actual object VertexCastingManager {
      */
     private fun createTinkerVertexFromDynamic(dynamic: dynamic): TinkerVertex? {
         return try {
-            // This would require access to TinkerVertex constructor
-            // For now, return null and log the creation attempt
-            console.warn("Dynamic vertex creation not yet implemented for:", dynamic)
-            null
+            // Try to cast dynamic object to TinkerVertex if it has the right structure
+            val constructorName = try {
+                js("dynamic && dynamic.constructor && dynamic.constructor.name ? dynamic.constructor.name : null") as? String
+            } catch (e: Exception) {
+                null
+            }
+
+            if (constructorName == "TinkerVertex" || isValidVertexStructure(dynamic)) {
+                CommonCastingUtils.CastingStats.incrementSuccess("vertex")
+                dynamic.unsafeCast<TinkerVertex>()
+            } else {
+                console.warn("Dynamic vertex creation failed: invalid structure for:", dynamic)
+                CommonCastingUtils.CastingStats.incrementFailure("vertex")
+                null
+            }
         } catch (e: Exception) {
             console.warn("Dynamic vertex creation failed:", e.message)
+            CommonCastingUtils.CastingStats.incrementFailure("vertex")
             null
         }
     }
@@ -344,12 +360,24 @@ actual object VertexCastingManager {
      */
     private fun createTinkerEdgeFromDynamic(dynamic: dynamic): TinkerEdge? {
         return try {
-            // This would require access to TinkerEdge constructor
-            // For now, return null and log the creation attempt
-            console.warn("Dynamic edge creation not yet implemented for:", dynamic)
-            null
+            // Try to cast dynamic object to TinkerEdge if it has the right structure
+            val constructorName = try {
+                js("dynamic && dynamic.constructor && dynamic.constructor.name ? dynamic.constructor.name : null") as? String
+            } catch (e: Exception) {
+                null
+            }
+
+            if (constructorName == "TinkerEdge" || isValidEdgeStructure(dynamic)) {
+                CommonCastingUtils.CastingStats.incrementSuccess("edge")
+                dynamic.unsafeCast<TinkerEdge>()
+            } else {
+                console.warn("Dynamic edge creation failed: invalid structure for:", dynamic)
+                CommonCastingUtils.CastingStats.incrementFailure("edge")
+                null
+            }
         } catch (e: Exception) {
             console.warn("Dynamic edge creation failed:", e.message)
+            CommonCastingUtils.CastingStats.incrementFailure("edge")
             null
         }
     }
