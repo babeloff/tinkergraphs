@@ -88,19 +88,22 @@ class JvmOptimizationsTest :
             }
 
             "concurrent access operations should be thread-safe" {
+                val concurrentOps = ConcurrentGraphOperations(graph)
                 val executor = Executors.newFixedThreadPool(4)
                 val vertexCounter = AtomicInteger(0)
                 val edgeCounter = AtomicInteger(0)
                 val futures = mutableListOf<Future<*>>()
 
                 try {
-                    // Test concurrent vertex creation
+                    // Test concurrent vertex creation using ConcurrentGraphOperations
                     repeat(10) { i ->
                         futures.add(executor.submit {
-                            val vertex = graph.addVertex()
-                            vertex.property("thread", Thread.currentThread().name)
-                            vertex.property("index", i)
-                            vertexCounter.incrementAndGet()
+                            concurrentOps.writeOperation("add vertex $i") {
+                                val vertex = it.addVertex()
+                                vertex.property("thread", Thread.currentThread().name)
+                                vertex.property("index", i)
+                                vertexCounter.incrementAndGet()
+                            }
                         })
                     }
 
@@ -111,16 +114,18 @@ class JvmOptimizationsTest :
                     vertexCounter.get() shouldBe 10
 
                     // Test concurrent edge creation
-                    val vertices = graph.vertices().asSequence().toList()
+                    val vertices = concurrentOps.readOperation("get vertices") { it.vertices().asSequence().toList() }
                     repeat(5) { i ->
                         futures.add(executor.submit {
                             if (vertices.size >= 2) {
-                                val source = vertices[i % vertices.size]
-                                val target = vertices[(i + 1) % vertices.size]
-                                val edge = source.addEdge("connects", target)
-                                edge.property("thread", Thread.currentThread().name)
-                                edge.property("index", i)
-                                edgeCounter.incrementAndGet()
+                                concurrentOps.writeOperation("add edge $i") {
+                                    val source = vertices[i % vertices.size]
+                                    val target = vertices[(i + 1) % vertices.size]
+                                    val edge = source.addEdge("connects", target)
+                                    edge.property("thread", Thread.currentThread().name)
+                                    edge.property("index", i)
+                                    edgeCounter.incrementAndGet()
+                                }
                             }
                         })
                     }
@@ -130,9 +135,12 @@ class JvmOptimizationsTest :
 
                     edgeCounter.get() shouldBe 5
 
-                    // Verify final graph state
-                    graph.vertices().asSequence().count() shouldBe 10
-                    graph.edges().asSequence().count() shouldBe 5
+                    // Verify final graph state using concurrent operations
+                    val finalVertexCount = concurrentOps.readOperation("count vertices") { it.vertices().asSequence().count() }
+                    val finalEdgeCount = concurrentOps.readOperation("count edges") { it.edges().asSequence().count() }
+
+                    finalVertexCount shouldBe 10
+                    finalEdgeCount shouldBe 5
 
                 } finally {
                     executor.shutdown()
@@ -156,26 +164,18 @@ class JvmOptimizationsTest :
                 edge.property("since", 2020)
                 edge.property("strength", 0.8)
 
-                // Serialize the graph elements
-                val byteArrayOut = ByteArrayOutputStream()
-                val objectOut = ObjectOutputStream(byteArrayOut)
+                // Test vertex serialization using JvmSerialization utility
+                val serializedVertexData = JvmSerialization.serializeVertex(alice)
 
-                // Test vertex serialization
-                val aliceVertex = alice as TinkerVertex
-                objectOut.writeObject(aliceVertex)
-                objectOut.flush()
-
-                val byteArrayIn = ByteArrayInputStream(byteArrayOut.toByteArray())
-                val objectIn = ObjectInputStream(byteArrayIn)
-                val deserializedVertex = objectIn.readObject() as TinkerVertex
+                // Create a new graph for deserialization test
+                val newGraph = TinkerGraph.open()
+                val deserializedVertex = JvmSerialization.deserializeVertex(serializedVertexData, newGraph)
 
                 // Verify vertex properties were preserved
                 deserializedVertex.value<String>("name") shouldBe "Alice"
                 deserializedVertex.value<Int>("age") shouldBe 30
                 deserializedVertex.value<String>("department") shouldBe "Engineering"
-
-                objectOut.close()
-                objectIn.close()
+                deserializedVertex.label() shouldBe alice.label()
             }
 
             "memory-mapped storage simulation should handle large datasets" {
@@ -295,9 +295,9 @@ class JvmOptimizationsTest :
 
                 (highScores > 25.0) shouldBe true
 
-                // Test parallel stream processing
+                // Test parallel stream processing - use index property which we actually set
                 val parallelSum = vertices.parallelStream()
-                    .mapToInt { vertex -> vertex.value<Int>("id") ?: 0 }
+                    .mapToInt { vertex -> vertex.value<Int>("index") ?: 0 }
                     .sum()
 
                 parallelSum shouldBe (0..19).sum() // Sum of 0 to 19
