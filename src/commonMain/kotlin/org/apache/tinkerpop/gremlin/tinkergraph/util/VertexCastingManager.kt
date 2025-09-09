@@ -15,8 +15,6 @@ import org.apache.tinkerpop.gremlin.tinkergraph.util.LoggingConfig
  */
 expect object VertexCastingManager {
 
-    private val logger = LoggingConfig.getLogger("VertexCastingManager")
-
     /**
      * Safely converts any vertex-like object to TinkerVertex.
      * Returns null if conversion is not possible.
@@ -117,7 +115,7 @@ object CommonCastingUtils {
                 }
             }
         } catch (e: Exception) {
-            logger.d(e) { "Exception during vertex-like object check, returning false" }
+            LoggingConfig.getLogger("VertexCastingManager").d(e) { "Exception during vertex-like object check, returning false" }
             false
         }
     }

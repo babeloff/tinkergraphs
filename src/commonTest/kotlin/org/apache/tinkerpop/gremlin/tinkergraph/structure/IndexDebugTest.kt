@@ -11,10 +11,6 @@ import org.apache.tinkerpop.gremlin.tinkergraph.util.LoggingConfig
 class IndexDebugTest :
         StringSpec({
 
-            companion object {
-                private val logger = LoggingConfig.getLogger<IndexDebugTest>()
-            }
-
             lateinit var graph: TinkerGraph
 
             beforeTest { graph = TinkerGraph.open() }
@@ -133,7 +129,7 @@ class IndexDebugTest :
                     try {
                         println("  Found: ${vertex.value<String>("name")}")
                     } catch (e: Exception) {
-                        logger.w(e) { "Error accessing vertex name" }
+                        LoggingConfig.getLogger<IndexDebugTest>().w(e) { "Error accessing vertex name" }
                     }
                 }
 
@@ -206,4 +202,9 @@ class IndexDebugTest :
                 println("Odd vertices found: ${oddVertices.size}")
                 oddVertices shouldHaveSize 2
             }
-        })
+        }) {
+
+    companion object {
+        private val logger = LoggingConfig.getLogger<IndexDebugTest>()
+    }
+}

@@ -14,10 +14,6 @@ import org.apache.tinkerpop.gremlin.tinkergraph.util.LoggingConfig
  */
 class PropertyQueryEngine(private val graph: TinkerGraph) {
 
-    companion object {
-        private val logger = LoggingConfig.getLogger<PropertyQueryEngine>()
-    }
-
     /**
      * Base interface for property criteria.
      */
@@ -315,6 +311,7 @@ class PropertyQueryEngine(private val graph: TinkerGraph) {
 
     // Companion object for criterion factory methods
     companion object {
+        private val logger = LoggingConfig.getLogger<PropertyQueryEngine>()
         fun exact(key: String, value: Any?) = ExactCriterion(key, value)
         fun range(key: String, min: Number?, max: Number?, includeMin: Boolean = true, includeMax: Boolean = false) =
             RangeCriterion(key, min, max, includeMin, includeMax)

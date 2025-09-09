@@ -14,10 +14,6 @@ import org.apache.tinkerpop.gremlin.tinkergraph.util.LoggingConfig
  */
 class PropertyDiagnosticTest :
         StringSpec({
-
-            companion object {
-                private val logger = LoggingConfig.getLogger<PropertyDiagnosticTest>()
-            }
             lateinit var graph: TinkerGraph
 
             beforeTest { graph = TinkerGraph.open() }
@@ -228,13 +224,13 @@ class PropertyDiagnosticTest :
 
                 // Force test to fail if we don't find engineers to see output
                 if (engineers.size != 3) {
-                    logger.w { "ERROR: Expected 3 engineers but found ${engineers.size}" }
-                    logger.d { "All vertices in graph:" }
+                    LoggingConfig.getLogger<PropertyDiagnosticTest>().w { "ERROR: Expected 3 engineers but found ${engineers.size}" }
+                    LoggingConfig.getLogger<PropertyDiagnosticTest>().d { "All vertices in graph:" }
                     graph.vertices().asSequence().forEach { vertex ->
                         val v = SafeCasting.asTinkerVertex(vertex)
                         if (v != null) {
-                            logger.d { "  ID: ${v.id()}, Keys: ${v.keys()}" }
-                            v.keys().forEach { key -> logger.d { "    $key: ${v.value<Any>(key)}" } }
+                            LoggingConfig.getLogger<PropertyDiagnosticTest>().d { "  ID: ${v.id()}, Keys: ${v.keys()}" }
+                            v.keys().forEach { key -> LoggingConfig.getLogger<PropertyDiagnosticTest>().d { "    $key: ${v.value<Any>(key)}" } }
                         }
                     }
                 }
@@ -260,4 +256,9 @@ class PropertyDiagnosticTest :
                 aliceResults shouldHaveSize 1 // Should find exactly 1 Alice
                 aliceResults.first().value<String>("name") shouldBe "Alice"
             }
-        })
+        }) {
+
+    companion object {
+        private val logger = LoggingConfig.getLogger<PropertyDiagnosticTest>()
+    }
+}

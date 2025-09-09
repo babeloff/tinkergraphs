@@ -15,10 +15,6 @@ import org.apache.tinkerpop.gremlin.tinkergraph.util.LoggingConfig
  */
 class AdvancedIndexingTest :
         StringSpec({
-
-            companion object {
-                private val logger = LoggingConfig.getLogger<AdvancedIndexingTest>()
-            }
             lateinit var graph: TinkerGraph
 
             beforeTest {
@@ -364,7 +360,12 @@ class AdvancedIndexingTest :
                 val names = filteredResults.map { it.value<String>("name") }.sortedBy { it }
                 names shouldBe listOf("Bob", "Eve")
             }
-        })
+        }) {
+
+    companion object {
+        private val logger = LoggingConfig.getLogger<AdvancedIndexingTest>()
+    }
+}
 
 /** Helper function to set up test data for indexing tests. */
 private fun setupTestData(graph: TinkerGraph) {

@@ -10,10 +10,6 @@ import java.nio.file.Path
 /** Debug test for JVM persistence layer to isolate issues. */
 class JvmPersistenceDebugTest :
         StringSpec({
-
-            companion object {
-                private val logger = LoggingConfig.getLogger<JvmPersistenceDebugTest>()
-            }
             lateinit var tempDir: Path
             lateinit var persistenceLayer: JvmPersistenceLayer
 
@@ -362,4 +358,8 @@ class JvmPersistenceDebugTest :
                 simpleGraph.close()
                 loadedGraph.close()
             }
-        })
+        }) {
+    companion object {
+        private val logger = LoggingConfig.getLogger<JvmPersistenceDebugTest>()
+    }
+}

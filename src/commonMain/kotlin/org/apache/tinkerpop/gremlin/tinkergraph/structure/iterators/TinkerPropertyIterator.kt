@@ -26,9 +26,7 @@ class TinkerPropertyIterator<V>(
     private val includeHidden: Boolean = false
 ) : Iterator<Property<V>> {
 
-    companion object {
-        private val logger = LoggingConfig.getLogger<TinkerPropertyIterator<*>>()
-    }
+
 
     private val baseSequence: Sequence<Property<V>> = createBaseSequence()
     private val iterator = baseSequence.iterator()
@@ -49,12 +47,12 @@ class TinkerPropertyIterator<V>(
         return element.getProperties().asSequence()
             .filter { (key, _) -> matchesKeyFilter(key) }
             .filter { (key, _) -> matchesHiddenFilter(key) }
-            .mapNotNull { (_, property) ->
+            .mapNotNull { (key, property) ->
                 try {
                     @Suppress("UNCHECKED_CAST") // Safe cast - Property interface guarantees type consistency
                     property as Property<V>
                 } catch (e: ClassCastException) {
-                    logger.d(e) { "ClassCastException when casting property for key '$key' on element ${element.id()}" }
+                    LoggingConfig.getLogger<TinkerPropertyIterator<*>>().d(e) { "ClassCastException when casting property for key '$key' on element ${element.id()}" }
                     null
                 }
             }
@@ -84,6 +82,7 @@ class TinkerPropertyIterator<V>(
     }
 
     companion object {
+        private val logger = LoggingConfig.getLogger<TinkerPropertyIterator<*>>()
         /**
          * Creates a property iterator for all properties of an element.
          */
@@ -192,7 +191,7 @@ class TinkerVertexPropertyIterator<V>(
                     @Suppress("UNCHECKED_CAST") // Safe cast - VertexProperty interface guarantees type consistency
                     property as? VertexProperty<V>
                 } catch (e: ClassCastException) {
-                    logger.d(e) { "ClassCastException when casting vertex property for key '$key'" }
+                    logger.d(e) { "ClassCastException when casting vertex property" }
                     null
                 }
             }
@@ -224,6 +223,7 @@ class TinkerVertexPropertyIterator<V>(
     }
 
     companion object {
+        private val logger = LoggingConfig.getLogger<TinkerVertexPropertyIterator<*>>()
         /**
          * Creates a vertex property iterator for all vertex properties of an element.
          */
@@ -318,7 +318,7 @@ class TinkerMetaPropertyIterator<V>(
                     @Suppress("UNCHECKED_CAST") // Safe cast - Property interface guarantees type consistency
                     property as Property<V>
                 } catch (e: ClassCastException) {
-                    logger.d(e) { "ClassCastException when casting property in filtered iterator" }
+                    logger.d(e) { "ClassCastException when casting property in meta-property iterator" }
                     null
                 }
             }
@@ -341,6 +341,7 @@ class TinkerMetaPropertyIterator<V>(
     }
 
     companion object {
+        private val logger = LoggingConfig.getLogger<TinkerMetaPropertyIterator<*>>()
         /**
          * Creates a meta-property iterator for all meta-properties of a vertex property.
          */

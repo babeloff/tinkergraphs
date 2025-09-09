@@ -10,7 +10,6 @@ import org.apache.tinkerpop.gremlin.tinkergraph.util.LoggingConfig
  */
 class GraphSONIdDiagnosticTest : StringSpec({
 
-    private val logger = LoggingConfig.getLogger<GraphSONIdDiagnosticTest>()
     lateinit var graph: TinkerGraph
     lateinit var mapper: GraphSONMapper
 
@@ -133,4 +132,8 @@ class GraphSONIdDiagnosticTest : StringSpec({
             logger.w(e) { "Duplicate vertex creation failed: ${e::class.simpleName}" }
         }
     }
-})
+}) {
+    companion object {
+        private val logger = LoggingConfig.getLogger<GraphSONIdDiagnosticTest>()
+    }
+}

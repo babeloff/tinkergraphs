@@ -10,8 +10,6 @@ import org.apache.tinkerpop.gremlin.tinkergraph.util.LoggingConfig
  */
 class SimpleGraphSONTest : StringSpec({
 
-    private val logger = LoggingConfig.getLogger<SimpleGraphSONTest>()
-
     "basic GraphSON serialization and deserialization should work" {
         val graph = TinkerGraph.open()
         val mapper = GraphSONMapper.create()
@@ -102,4 +100,8 @@ class SimpleGraphSONTest : StringSpec({
 
         graph.close()
     }
-})
+}) {
+    companion object {
+        private val logger = LoggingConfig.getLogger<SimpleGraphSONTest>()
+    }
+}

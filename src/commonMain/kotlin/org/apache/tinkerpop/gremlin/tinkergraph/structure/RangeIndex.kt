@@ -13,9 +13,7 @@ import org.apache.tinkerpop.gremlin.tinkergraph.util.LoggingConfig
  */
 class RangeIndex<T : Element> {
 
-    companion object {
-        private val logger = LoggingConfig.getLogger<RangeIndex<*>>()
-    }
+
 
     /**
      * Map of property key to sorted index data structure.
@@ -468,6 +466,8 @@ class RangeIndex<T : Element> {
     )
 
     companion object {
+        private val logger = LoggingConfig.getLogger<RangeIndex<*>>()
+
         /**
          * Safely converts a value to Comparable<Any> if possible.
          *
