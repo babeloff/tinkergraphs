@@ -48,12 +48,36 @@ kotlin {
 
     // Native targets - use a more robust approach
     when (val hostOs = System.getProperty("os.name").lowercase()) {
-        "mac os x", "macos" -> macosX64("native")
-        "linux" -> linuxX64("native")
+        "mac os x", "macos" -> macosX64("native") {
+            binaries {
+                sharedLib {
+                    baseName = "tinkergraphs"
+                }
+            }
+        }
+        "linux" -> linuxX64("native") {
+            binaries {
+                sharedLib {
+                    baseName = "tinkergraphs"
+                }
+            }
+        }
         else ->
                 when {
-                    hostOs.startsWith("windows") -> mingwX64("native")
-                    hostOs.startsWith("mac") -> macosX64("native")
+                    hostOs.startsWith("windows") -> mingwX64("native") {
+                        binaries {
+                            sharedLib {
+                                baseName = "tinkergraphs"
+                            }
+                        }
+                    }
+                    hostOs.startsWith("mac") -> macosX64("native") {
+                        binaries {
+                            sharedLib {
+                                baseName = "tinkergraphs"
+                            }
+                        }
+                    }
                     else ->
                             throw GradleException(
                                     "Host OS '$hostOs' is not supported in Kotlin/Native."

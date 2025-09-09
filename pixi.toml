@@ -34,6 +34,8 @@ gradle = "9.0.*"
 openjdk = "23.0.*"
 kotlin = "2.2.*"
 ruby = ">=3.0"
+python = ">=3.8"
+pip = "*"
 
 # Documentation generation tasks
 [tasks.docs]
@@ -62,3 +64,30 @@ cmd = "pixi run docs-adoc && pixi run docs-pdf && pixi run docs-slides"
 # Check available asciidoctor tools
 [tasks.docs-check]
 cmd = "ruby -e \"puts 'Ruby version: ' + RUBY_VERSION; %w[asciidoctor asciidoctor-diagram asciidoctor-revealjs asciidoctor-pdf].each {|gem| begin; require gem; puts gem + ': available'; rescue LoadError; puts gem + ': not available'; end}\""
+
+# Python platform support tasks
+
+# Build native shared library for Python
+[tasks.python-native]
+cmd = "gradle linkNative"
+description = "Build native shared library for Python integration"
+
+# Install Python package in development mode
+[tasks.python-setup]
+cmd = "python -m pip install -e python/"
+description = "Install Python package in development mode"
+
+# Run Python tests
+[tasks.python-test]
+cmd = "python -m pytest python/tests/ -v"
+description = "Run Python integration tests"
+
+# Build and test Python integration
+[tasks.python-build-test]
+cmd = "pixi run python-native && pixi run python-setup && pixi run python-test"
+description = "Complete Python integration build and test pipeline"
+
+# Python development test (for interactive testing)
+[tasks.python-dev]
+cmd = "python -c \"from tinkergraphs import TinkerGraph; print('TinkerGraph Python bindings loaded successfully')\""
+description = "Test Python bindings import"
