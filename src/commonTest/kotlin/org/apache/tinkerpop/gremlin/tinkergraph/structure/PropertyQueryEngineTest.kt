@@ -512,7 +512,7 @@ class PropertyQueryEngineTest :
                 results shouldHaveSize 0
 
                 val stats = emptyQueryEngine.getGraphPropertyStatistics()
-                stats shouldBe emptyList<Map<String, Any>>()
+                stats shouldBe emptyMap<String, Any>()
 
                 emptyGraph.close()
             }

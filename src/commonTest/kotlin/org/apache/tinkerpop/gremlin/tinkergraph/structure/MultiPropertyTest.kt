@@ -1,8 +1,10 @@
 package org.apache.tinkerpop.gremlin.tinkergraph.structure
 
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
+import org.apache.tinkerpop.gremlin.structure.Graph
 import org.apache.tinkerpop.gremlin.structure.Vertex
 import org.apache.tinkerpop.gremlin.structure.VertexProperty
 
@@ -56,16 +58,18 @@ class MultiPropertyTest :
                 val prop1 = tinkerVertex.property("skills", "java", VertexProperty.Cardinality.SET)
                 val prop2 =
                         tinkerVertex.property("skills", "kotlin", VertexProperty.Cardinality.SET)
-                val prop3 =
-                        tinkerVertex.property(
-                                "skills",
-                                "java",
-                                VertexProperty.Cardinality.SET
-                        ) // Duplicate
 
                 prop1.isPresent() shouldBe true
                 prop2.isPresent() shouldBe true
-                prop3.isPresent() shouldBe true
+
+                // Attempting to add duplicate should throw exception
+                shouldThrow<UnsupportedOperationException> {
+                    tinkerVertex.property(
+                            "skills",
+                            "java",
+                            VertexProperty.Cardinality.SET
+                    ) // Duplicate
+                }
 
                 // Should only have 2 unique values
                 val skillProperties = vertex.properties<String>("skills").asSequence().toList()
@@ -214,11 +218,15 @@ class MultiPropertyTest :
                 // SET: Multiple values, no duplicates
                 tinkerVertex.property("languages", "english", VertexProperty.Cardinality.SET)
                 tinkerVertex.property("languages", "spanish", VertexProperty.Cardinality.SET)
-                tinkerVertex.property(
-                        "languages",
-                        "english",
-                        VertexProperty.Cardinality.SET
-                ) // Duplicate ignored
+
+                // Attempting to add duplicate should throw exception
+                shouldThrow<UnsupportedOperationException> {
+                    tinkerVertex.property(
+                            "languages",
+                            "english",
+                            VertexProperty.Cardinality.SET
+                    ) // Duplicate
+                }
 
                 val nameProps = vertex.properties<String>("name").asSequence().toList()
                 nameProps shouldHaveSize 1

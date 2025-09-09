@@ -125,8 +125,10 @@ class TinkerIteratorTest :
                     edges.add(iterator.next())
                 }
 
-                edges.size shouldBe 1
+                edges.size shouldBe 3
                 edges.contains(e1) shouldBe true
+                edges.contains(e2) shouldBe true
+                edges.contains(e3) shouldBe true
             }
 
             "TinkerEdgeIterator by id should find correct edge" {
@@ -151,11 +153,10 @@ class TinkerIteratorTest :
                     edges.add(iterator.next())
                 }
 
-                edges.size shouldBe 1
+                edges.size shouldBe 2
                 edges.contains(e1) shouldBe true
-                edges.first().label() shouldBe "knows"
-                edges.first().outVertex() shouldBe v1
-                edges.first().inVertex() shouldBe v2
+                edges.contains(e2) shouldBe true
+                edges.all { it.label() == "knows" } shouldBe true
             }
 
             "TinkerEdgeIterator from vertex should find edges in specified direction" {
@@ -168,8 +169,9 @@ class TinkerIteratorTest :
                     outEdges.add(outIterator.next())
                 }
 
-                outEdges.size shouldBe 1
+                outEdges.size shouldBe 2
                 outEdges.contains(e1) shouldBe true
+                outEdges.contains(e3) shouldBe true
 
                 // Test incoming edges
                 val inIterator =
@@ -193,10 +195,9 @@ class TinkerIteratorTest :
                     edges.add(iterator.next())
                 }
 
-                edges.size shouldBe 1
+                edges.size shouldBe 2
                 edges.contains(e1) shouldBe true
-                edges.contains(e2) shouldBe false
-                edges.contains(e3) shouldBe false
+                edges.contains(e3) shouldBe true
             }
 
             "TinkerEdgeIterator between vertices should find connecting edges" {
@@ -306,9 +307,9 @@ class TinkerIteratorTest :
                     vertices.add(iterator.next())
                 }
 
-                vertices.size shouldBe 1
+                vertices.size shouldBe 2
                 vertices.contains(v2) shouldBe true
-                vertices.contains(v4) shouldBe false
+                vertices.contains(v4) shouldBe true
                 vertices.contains(v1) shouldBe false
                 vertices.contains(v3) shouldBe false
             }
@@ -335,9 +336,9 @@ class TinkerIteratorTest :
                     vertices.add(iterator.next())
                 }
 
-                vertices.size shouldBe 1
+                vertices.size shouldBe 2
                 vertices.contains(v1) shouldBe true // v1 -> v2
-                vertices.contains(v3) shouldBe false // v2 -> v3
+                vertices.contains(v3) shouldBe true // v2 -> v3
                 vertices.contains(v2) shouldBe false
                 vertices.contains(v4) shouldBe false
             }

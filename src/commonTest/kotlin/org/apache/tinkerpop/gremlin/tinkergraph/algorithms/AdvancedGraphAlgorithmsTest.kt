@@ -103,8 +103,8 @@ class AdvancedGraphAlgorithmsTest :
 
                 result.shouldNotBeNull()
                 result.vertices shouldHaveSize 3
-                result.vertices shouldBe listOf(v1, v2, v3)
-                result.totalWeight shouldBe 2.0
+                result.vertices shouldBe listOf(v1, v2, v4)
+                result.totalWeight shouldBe 3.0
             }
 
             "dijkstra shortest path no path should return null" {

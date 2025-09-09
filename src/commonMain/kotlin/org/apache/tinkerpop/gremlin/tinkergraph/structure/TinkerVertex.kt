@@ -267,6 +267,7 @@ class TinkerVertex(
                 // Check for duplicate values in SET cardinality
                 val existingValues = propertyList.filter { !it.isVertexPropertyRemoved() }.map { it.value() }.toSet()
                 if (value in existingValues) {
+                    logger.w { "Attempted to add duplicate value '$value' for property '$key' with SET cardinality on vertex ${this.id()}." }
                     throw VertexProperty.Exceptions.identicalMultiPropertiesNotSupported()
                 }
             }

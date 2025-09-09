@@ -5,6 +5,7 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph
+import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerVertex
 import kotlin.time.measureTime
 import kotlin.time.Duration.Companion.seconds
 
