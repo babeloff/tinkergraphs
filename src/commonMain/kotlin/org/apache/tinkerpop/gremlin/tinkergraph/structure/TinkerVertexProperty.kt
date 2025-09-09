@@ -1,6 +1,7 @@
 package org.apache.tinkerpop.gremlin.tinkergraph.structure
 
 import org.apache.tinkerpop.gremlin.structure.*
+import org.apache.tinkerpop.gremlin.tinkergraph.util.LoggingConfig
 import org.apache.tinkerpop.gremlin.tinkergraph.util.SafeCasting
 
 /**
@@ -27,6 +28,10 @@ class TinkerVertexProperty<V>(
     private val propertyKey: String,
     private val propertyValue: V
 ) : VertexProperty<V>, TinkerElement(id, VertexProperty::class.simpleName ?: "vertexproperty", SafeCasting.asTinkerGraph(vertex.graph()) ?: throw IllegalStateException("Expected TinkerGraph")) {
+
+    companion object {
+        private val logger = LoggingConfig.getLogger<TinkerVertexProperty<*>>()
+    }
 
     /**
      * Flag to track if this vertex property has been removed.
@@ -144,6 +149,7 @@ class TinkerVertexProperty<V>(
                 emptyList<U>().iterator()
             }
         } catch (e: ClassCastException) {
+            logger.d(e) { "ClassCastException when getting values for property '$key' on vertex property ${this.id()}" }
             emptyList<U>().iterator()
         }
     }
@@ -168,6 +174,7 @@ class TinkerVertexProperty<V>(
                 emptyList()
             }
         } catch (e: ClassCastException) {
+            logger.d(e) { "ClassCastException when getting property list for key '$key' on vertex property ${this.id()}" }
             emptyList()
         }
     }

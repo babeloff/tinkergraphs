@@ -3,6 +3,7 @@ package org.apache.tinkerpop.gremlin.tinkergraph.structure
 import org.apache.tinkerpop.gremlin.structure.Element
 import org.apache.tinkerpop.gremlin.tinkergraph.util.SafeCasting
 import org.apache.tinkerpop.gremlin.tinkergraph.platform.Platform
+import org.apache.tinkerpop.gremlin.tinkergraph.util.LoggingConfig
 
 /**
  * RangeIndex provides efficient range query capabilities for comparable property values.
@@ -11,6 +12,10 @@ import org.apache.tinkerpop.gremlin.tinkergraph.platform.Platform
  * @param T the type of element being indexed (TinkerVertex or TinkerEdge)
  */
 class RangeIndex<T : Element> {
+
+    companion object {
+        private val logger = LoggingConfig.getLogger<RangeIndex<*>>()
+    }
 
     /**
      * Map of property key to sorted index data structure.
@@ -300,6 +305,7 @@ class RangeIndex<T : Element> {
                 }
             } catch (e: Exception) {
                 // Property doesn't exist or isn't accessible
+                logger.d(e) { "Property '$key' doesn't exist or isn't accessible on element ${element.id()}" }
             }
         }
     }
@@ -319,6 +325,7 @@ class RangeIndex<T : Element> {
                 }
             } catch (e: Exception) {
                 // Property doesn't exist or isn't accessible
+                logger.d(e) { "Property '$key' doesn't exist or isn't accessible on element ${element.id()} during removal" }
             }
         }
     }
@@ -346,6 +353,7 @@ class RangeIndex<T : Element> {
                 }
             } catch (e: Exception) {
                 // Property doesn't exist or isn't accessible
+                logger.d(e) { "Property '$key' doesn't exist or isn't accessible on element ${element.id()} during update" }
             }
         }
     }

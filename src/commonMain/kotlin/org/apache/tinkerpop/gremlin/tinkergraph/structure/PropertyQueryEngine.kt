@@ -3,6 +3,7 @@ package org.apache.tinkerpop.gremlin.tinkergraph.structure
 import org.apache.tinkerpop.gremlin.structure.*
 import org.apache.tinkerpop.gremlin.tinkergraph.util.SafeCasting
 import org.apache.tinkerpop.gremlin.tinkergraph.util.VertexCastingManager
+import org.apache.tinkerpop.gremlin.tinkergraph.util.LoggingConfig
 
 /**
  * PropertyQueryEngine provides advanced querying capabilities for properties in TinkerGraph.
@@ -12,6 +13,10 @@ import org.apache.tinkerpop.gremlin.tinkergraph.util.VertexCastingManager
  * to eliminate ClassCastException issues, especially on the JavaScript platform.
  */
 class PropertyQueryEngine(private val graph: TinkerGraph) {
+
+    companion object {
+        private val logger = LoggingConfig.getLogger<PropertyQueryEngine>()
+    }
 
     /**
      * Base interface for property criteria.
@@ -468,6 +473,7 @@ class PropertyQueryEngine(private val graph: TinkerGraph) {
                 }
             }
         } catch (e: Exception) {
+            logger.d(e) { "Exception during property evaluation, returning false" }
             false
         }
     }
@@ -496,6 +502,7 @@ class PropertyQueryEngine(private val graph: TinkerGraph) {
         return try {
             evaluateCriterion(tinkerVertex, criterion)
         } catch (e: Exception) {
+            logger.d(e) { "Exception during vertex criterion evaluation, returning false" }
             false
         }
     }

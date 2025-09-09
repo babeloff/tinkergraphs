@@ -5,6 +5,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import org.apache.tinkerpop.gremlin.tinkergraph.util.LoggingConfig
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -14,6 +15,10 @@ import java.nio.file.Path
  */
 class JvmPersistenceLayerTest :
         StringSpec({
+
+            companion object {
+                private val logger = LoggingConfig.getLogger<JvmPersistenceLayerTest>()
+            }
             lateinit var tempDir: Path
             lateinit var persistenceLayer: JvmPersistenceLayer
             lateinit var testGraph: TinkerGraph
@@ -117,7 +122,10 @@ class JvmPersistenceLayerTest :
                         }
                 if (markoVertex == null) {
                     val vertexNames = loadedGraph.vertices().asSequence().mapNotNull {
-                        try { it.value<String>("name") } catch (e: Exception) { "ERROR" }
+                        try { it.value<String>("name") } catch (e: Exception) {
+                            logger.d(e) { "Exception getting vertex name during error diagnostics" }
+                            "ERROR"
+                        }
                     }.toList()
                     throw AssertionError("Marko vertex not found. Available vertex names: $vertexNames")
                 }

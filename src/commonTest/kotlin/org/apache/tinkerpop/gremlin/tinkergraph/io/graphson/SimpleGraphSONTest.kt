@@ -3,11 +3,14 @@ package org.apache.tinkerpop.gremlin.tinkergraph.io.graphson
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph
+import org.apache.tinkerpop.gremlin.tinkergraph.util.LoggingConfig
 
 /**
  * Simple test to understand basic GraphSON behavior and diagnose issues.
  */
 class SimpleGraphSONTest : StringSpec({
+
+    private val logger = LoggingConfig.getLogger<SimpleGraphSONTest>()
 
     "basic GraphSON serialization and deserialization should work" {
         val graph = TinkerGraph.open()
@@ -45,9 +48,7 @@ class SimpleGraphSONTest : StringSpec({
             newGraph.close()
             deserializedGraph.close()
         } catch (e: Exception) {
-            println("Exception during GraphSON operations:")
-            println("Type: ${e::class.simpleName}")
-            println("Message: ${e.message}")
+            logger.e(e) { "Exception during GraphSON operations: ${e::class.simpleName}" }
             e.printStackTrace()
             throw e
         }
@@ -76,9 +77,7 @@ class SimpleGraphSONTest : StringSpec({
 
             result.close()
         } catch (e: Exception) {
-            println("Exception during same-graph deserialization (expected):")
-            println("Type: ${e::class.simpleName}")
-            println("Message: ${e.message}")
+            logger.d(e) { "Exception during same-graph deserialization (expected): ${e::class.simpleName}" }
             // This exception is expected - don't rethrow
         }
 
@@ -97,9 +96,7 @@ class SimpleGraphSONTest : StringSpec({
             val vertex2 = graph.addVertex("id", 42, "name", "Second")
             println("Created second vertex unexpectedly: ID=${vertex2.id()}")
         } catch (e: Exception) {
-            println("Exception when creating duplicate ID (expected):")
-            println("Type: ${e::class.simpleName}")
-            println("Message: ${e.message}")
+            logger.d(e) { "Exception when creating duplicate ID (expected): ${e::class.simpleName}" }
             // This exception is expected
         }
 

@@ -1,12 +1,17 @@
 package org.apache.tinkerpop.gremlin.tinkergraph.structure
 
 import org.apache.tinkerpop.gremlin.structure.*
+import org.apache.tinkerpop.gremlin.tinkergraph.util.LoggingConfig
 
 /**
  * PropertyManager handles advanced property operations for TinkerGraph including
  * multi-property management, cardinality enforcement, and property lifecycle.
  */
 class PropertyManager(private val graph: TinkerGraph) {
+
+    companion object {
+        private val logger = LoggingConfig.getLogger<PropertyManager>()
+    }
 
     /**
      * Property listeners for lifecycle events.
@@ -274,7 +279,7 @@ class PropertyManager(private val graph: TinkerGraph) {
                 listener.onPropertyAdded(vertex, property)
             } catch (e: Exception) {
                 // Log error but don't fail the operation
-                println("Error in property listener: ${e.message}")
+                logger.w(e) { "Error in property listener during property addition" }
             }
         }
     }
@@ -293,7 +298,7 @@ class PropertyManager(private val graph: TinkerGraph) {
                 listener.onPropertyRemoved(vertex, property)
             } catch (e: Exception) {
                 // Log error but don't fail the operation
-                println("Error in property listener: ${e.message}")
+                logger.w(e) { "Error in property listener during property removal" }
             }
         }
     }
@@ -345,11 +350,11 @@ class PropertyManager(private val graph: TinkerGraph) {
      */
     class DebugPropertyListener : PropertyLifecycleListener {
         override fun onPropertyAdded(vertex: TinkerVertex, property: TinkerVertexProperty<*>) {
-            println("Property added: vertex=${vertex.id()}, key=${property.key()}, value=${property.value()}")
+            logger.d { "Property added: vertex=${vertex.id()}, key=${property.key()}, value=${property.value()}" }
         }
 
         override fun onPropertyRemoved(vertex: TinkerVertex, property: TinkerVertexProperty<*>) {
-            println("Property removed: vertex=${vertex.id()}, key=${property.key()}, value=${property.value()}")
+            logger.d { "Property removed: vertex=${vertex.id()}, key=${property.key()}, value=${property.value()}" }
         }
     }
 }

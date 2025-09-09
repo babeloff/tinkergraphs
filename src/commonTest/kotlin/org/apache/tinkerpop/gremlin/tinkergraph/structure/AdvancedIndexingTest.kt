@@ -7,6 +7,7 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import org.apache.tinkerpop.gremlin.structure.Vertex
 import org.apache.tinkerpop.gremlin.tinkergraph.platform.Platform
+import org.apache.tinkerpop.gremlin.tinkergraph.util.LoggingConfig
 
 /**
  * Comprehensive tests for advanced indexing capabilities including composite indices, range
@@ -14,6 +15,10 @@ import org.apache.tinkerpop.gremlin.tinkergraph.platform.Platform
  */
 class AdvancedIndexingTest :
         StringSpec({
+
+            companion object {
+                private val logger = LoggingConfig.getLogger<AdvancedIndexingTest>()
+            }
             lateinit var graph: TinkerGraph
 
             beforeTest {
@@ -121,7 +126,7 @@ class AdvancedIndexingTest :
                         val age = vertex.value<Int>("age")
                         println("  $name (age $age)")
                     } catch (e: Exception) {
-                        println("  Error accessing vertex properties: ${e.message}")
+                        logger.w(e) { "Error accessing vertex properties" }
                     }
                 }
 

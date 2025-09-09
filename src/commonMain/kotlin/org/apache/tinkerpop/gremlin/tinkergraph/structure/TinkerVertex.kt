@@ -3,6 +3,7 @@ package org.apache.tinkerpop.gremlin.tinkergraph.structure
 import org.apache.tinkerpop.gremlin.structure.*
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.iterators.TinkerEdgeIterator
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.iterators.TinkerVertexTraversingIterator
+import org.apache.tinkerpop.gremlin.tinkergraph.util.LoggingConfig
 
 /**
  * TinkerVertex is the vertex implementation for TinkerGraph.
@@ -14,6 +15,10 @@ class TinkerVertex(
     label: String,
     graph: TinkerGraph
 ) : TinkerElement(id, label, graph), Vertex {
+
+    companion object {
+        private val logger = LoggingConfig.getLogger<TinkerVertex>()
+    }
 
     /**
      * Outgoing edges organized by label.
@@ -126,6 +131,7 @@ class TinkerVertex(
                 @Suppress("UNCHECKED_CAST") // Safe cast - property type consistency is maintained
                 firstProperty?.value() as V?
             } catch (e: ClassCastException) {
+                logger.d(e) { "ClassCastException when getting value for property '$key' on vertex $id" }
                 null
             }
         } else {
@@ -143,6 +149,7 @@ class TinkerVertex(
             val properties = vertexProperties[key] as? List<TinkerVertexProperty<V>> ?: emptyList()
             properties.filter { !it.isVertexPropertyRemoved() }.map { it.value() }.iterator()
         } catch (e: ClassCastException) {
+            logger.d(e) { "ClassCastException when getting values for property '$key' on vertex $id" }
             emptyList<V>().iterator()
         }
     }
@@ -174,6 +181,7 @@ class TinkerVertex(
                     @Suppress("UNCHECKED_CAST") // Safe cast - property type consistency is maintained
                     result.addAll(properties as List<VertexProperty<V>>)
                 } catch (e: ClassCastException) {
+                    logger.d(e) { "ClassCastException when getting properties for key '$key' on vertex $id, skipping" }
                     // Skip properties that don't match the expected type
                 }
             }
@@ -365,6 +373,7 @@ class TinkerVertex(
             val properties = vertexProperties[key] as? List<TinkerVertexProperty<V>>
             properties?.firstOrNull { !it.isVertexPropertyRemoved() && it.value() == value }
         } catch (e: ClassCastException) {
+            logger.d(e) { "ClassCastException when finding property '$key' with value '$value' on vertex $id" }
             null
         }
     }
@@ -380,6 +389,7 @@ class TinkerVertex(
             val properties = vertexProperties[key] as? List<TinkerVertexProperty<V>> ?: emptyList()
             properties.filter { !it.isVertexPropertyRemoved() }
         } catch (e: ClassCastException) {
+            logger.d(e) { "ClassCastException when getting properties list for key '$key' on vertex $id" }
             emptyList()
         }
     }

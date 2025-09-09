@@ -1,6 +1,7 @@
 package org.apache.tinkerpop.gremlin.tinkergraph.structure
 
 import org.apache.tinkerpop.gremlin.structure.*
+import org.apache.tinkerpop.gremlin.tinkergraph.util.LoggingConfig
 import java.io.RandomAccessFile
 import java.nio.ByteBuffer
 import java.nio.MappedByteBuffer
@@ -22,6 +23,10 @@ class MemoryMappedStorage(
     private val maxFileSize: Long = 1024L * 1024L * 1024L, // 1GB per file
     private val bufferSize: Int = 64 * 1024 // 64KB buffer
 ) {
+
+    companion object {
+        private val logger = LoggingConfig.getLogger<MemoryMappedStorage>()
+    }
 
     private val vertexFiles = ConcurrentHashMap<Int, MappedFile>()
     private val edgeFiles = ConcurrentHashMap<Int, MappedFile>()
@@ -55,7 +60,7 @@ class MemoryMappedStorage(
                 fileChannel.close()
             } catch (e: Exception) {
                 // Log error but continue cleanup
-                System.err.println("Error closing mapped file: ${e.message}")
+                logger.w(e) { "Error closing mapped file" }
             }
         }
     }

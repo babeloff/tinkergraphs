@@ -3,12 +3,17 @@ package org.apache.tinkerpop.gremlin.tinkergraph.structure
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import org.apache.tinkerpop.gremlin.tinkergraph.util.LoggingConfig
 import java.nio.file.Files
 import java.nio.file.Path
 
 /** Debug test for JVM persistence layer to isolate issues. */
 class JvmPersistenceDebugTest :
         StringSpec({
+
+            companion object {
+                private val logger = LoggingConfig.getLogger<JvmPersistenceDebugTest>()
+            }
             lateinit var tempDir: Path
             lateinit var persistenceLayer: JvmPersistenceLayer
 
@@ -72,7 +77,7 @@ class JvmPersistenceDebugTest :
 
                     println("Debug test completed successfully!")
                 } catch (e: Exception) {
-                    println("Debug test failed with exception: ${e.message}")
+                    logger.e(e) { "Debug test failed with exception" }
                     e.printStackTrace()
                     throw e
                 }
@@ -188,7 +193,7 @@ class JvmPersistenceDebugTest :
                             JvmPersistenceLayer.PersistenceFormat.JSON
                     )
                 } catch (e: Exception) {
-                    println("Expected error caught: ${e.message}")
+                    logger.d(e) { "Expected error caught during error handling test" }
                     e shouldNotBe null
                 }
 

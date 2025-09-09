@@ -6,6 +6,7 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import org.apache.tinkerpop.gremlin.tinkergraph.util.SafeCasting
+import org.apache.tinkerpop.gremlin.tinkergraph.util.LoggingConfig
 
 /**
  * Simple diagnostic test to verify property setting and retrieval works correctly across all
@@ -13,6 +14,10 @@ import org.apache.tinkerpop.gremlin.tinkergraph.util.SafeCasting
  */
 class PropertyDiagnosticTest :
         StringSpec({
+
+            companion object {
+                private val logger = LoggingConfig.getLogger<PropertyDiagnosticTest>()
+            }
             lateinit var graph: TinkerGraph
 
             beforeTest { graph = TinkerGraph.open() }
@@ -223,13 +228,13 @@ class PropertyDiagnosticTest :
 
                 // Force test to fail if we don't find engineers to see output
                 if (engineers.size != 3) {
-                    println("ERROR: Expected 3 engineers but found ${engineers.size}")
-                    println("All vertices in graph:")
+                    logger.w { "ERROR: Expected 3 engineers but found ${engineers.size}" }
+                    logger.d { "All vertices in graph:" }
                     graph.vertices().asSequence().forEach { vertex ->
                         val v = SafeCasting.asTinkerVertex(vertex)
                         if (v != null) {
-                            println("  ID: ${v.id()}, Keys: ${v.keys()}")
-                            v.keys().forEach { key -> println("    $key: ${v.value<Any>(key)}") }
+                            logger.d { "  ID: ${v.id()}, Keys: ${v.keys()}" }
+                            v.keys().forEach { key -> logger.d { "    $key: ${v.value<Any>(key)}" } }
                         }
                     }
                 }

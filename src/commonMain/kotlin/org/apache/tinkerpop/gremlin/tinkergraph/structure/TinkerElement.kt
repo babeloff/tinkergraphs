@@ -1,6 +1,7 @@
 package org.apache.tinkerpop.gremlin.tinkergraph.structure
 
 import org.apache.tinkerpop.gremlin.structure.*
+import org.apache.tinkerpop.gremlin.tinkergraph.util.LoggingConfig
 
 /**
  * Base class for TinkerGraph elements (vertices and edges).
@@ -18,10 +19,14 @@ import org.apache.tinkerpop.gremlin.structure.*
  * @since 1.0.0
  */
 abstract class TinkerElement(
-    protected val elementId: Any,
-    protected val elementLabel: String,
-    protected val elementGraph: TinkerGraph
+    protected var elementId: Any?,
+    protected var elementLabel: String,
+    protected val graph: TinkerGraph
 ) : Element {
+
+    companion object {
+        private val logger = LoggingConfig.getLogger<TinkerElement>()
+    }
 
     /**
      * Properties associated with this element.
@@ -72,6 +77,7 @@ abstract class TinkerElement(
             val property = elementProperties[key] as? Property<V>
             if (property?.isPresent() == true) property.value() else null
         } catch (e: ClassCastException) {
+            logger.d(e) { "ClassCastException when getting property '$key' on element $elementId" }
             null
         }
     }
@@ -99,6 +105,7 @@ abstract class TinkerElement(
                     @Suppress("UNCHECKED_CAST") // Safe cast - Property interface guarantees type consistency
                     elementProperties[key] as? Property<V>
                 } catch (e: ClassCastException) {
+                    logger.d(e) { "ClassCastException when getting property '$key' on element $elementId" }
                     null
                 }
             }
@@ -120,6 +127,7 @@ abstract class TinkerElement(
             val existingProperty = elementProperties[key] as? Property<V>
             existingProperty ?: Property.empty()
         } catch (e: ClassCastException) {
+            logger.d(e) { "ClassCastException when getting property '$key' on element $elementId" }
             Property.empty()
         }
     }

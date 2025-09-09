@@ -3,12 +3,15 @@ package org.apache.tinkerpop.gremlin.tinkergraph.platform
 import org.apache.tinkerpop.gremlin.tinkergraph.memory.NativeMemoryManager
 import org.apache.tinkerpop.gremlin.tinkergraph.collections.NativeCollections
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph
+import org.apache.tinkerpop.gremlin.tinkergraph.util.LoggingConfig
 
 /**
  * Simple test to verify native platform enhancements are working correctly.
  * This demonstrates the key features implemented in Phase 3.3.1.
  */
 object NativePlatformTest {
+
+    private val logger = LoggingConfig.getLogger("NativePlatformTest")
 
     fun runTests() {
         println("=== TinkerGraph Native Platform Test ===")
@@ -155,7 +158,7 @@ object NativePlatformTest {
             println("Native cleanup completed successfully")
 
         } catch (e: Exception) {
-            println("Error testing cross-platform compatibility: ${e.message}")
+            logger.w(e) { "Error testing cross-platform compatibility" }
         }
     }
 }

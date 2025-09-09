@@ -3,12 +3,14 @@ package org.apache.tinkerpop.gremlin.tinkergraph.io.graphson
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph
+import org.apache.tinkerpop.gremlin.tinkergraph.util.LoggingConfig
 
 /**
  * Diagnostic test to understand the current ID conflict behavior in GraphSON deserialization.
  */
 class GraphSONIdDiagnosticTest : StringSpec({
 
+    private val logger = LoggingConfig.getLogger<GraphSONIdDiagnosticTest>()
     lateinit var graph: TinkerGraph
     lateinit var mapper: GraphSONMapper
 
@@ -69,10 +71,7 @@ class GraphSONIdDiagnosticTest : StringSpec({
             }
             result.close()
         } catch (e: Exception) {
-            println("Exception occurred during deserialization:")
-            println("Exception type: ${e::class.simpleName}")
-            println("Exception message: ${e.message}")
-            println("Full exception: $e")
+            logger.w(e) { "Exception occurred during deserialization: ${e::class.simpleName}" }
             e.printStackTrace()
         }
     }
@@ -118,8 +117,7 @@ class GraphSONIdDiagnosticTest : StringSpec({
             vertex.value<String>("name") shouldBe "Charlie"
             result.close()
         } catch (e: Exception) {
-            println("Basic deserialization failed:")
-            println("Exception: $e")
+            logger.e(e) { "Basic deserialization failed" }
             throw e
         }
     }
@@ -132,9 +130,7 @@ class GraphSONIdDiagnosticTest : StringSpec({
             val duplicate = graph.addVertex("id", 99, "name", "Duplicate")
             println("Duplicate vertex creation succeeded: ${duplicate.id()}")
         } catch (e: Exception) {
-            println("Duplicate vertex creation failed:")
-            println("Exception type: ${e::class.simpleName}")
-            println("Exception message: ${e.message}")
+            logger.w(e) { "Duplicate vertex creation failed: ${e::class.simpleName}" }
         }
     }
 })

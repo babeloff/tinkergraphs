@@ -1,6 +1,7 @@
 package org.apache.tinkerpop.gremlin.tinkergraph.structure
 
 import org.apache.tinkerpop.gremlin.structure.*
+import org.apache.tinkerpop.gremlin.tinkergraph.util.LoggingConfig
 
 /**
  * CompositeIndex provides indexing capabilities for multiple properties simultaneously.
@@ -9,6 +10,10 @@ import org.apache.tinkerpop.gremlin.structure.*
  * @param T the type of element being indexed (TinkerVertex or TinkerEdge)
  */
 class CompositeIndex<T : Element> {
+
+    companion object {
+        private val logger = LoggingConfig.getLogger<CompositeIndex<*>>()
+    }
 
     /**
      * Map of composite key combinations to index data structures.
@@ -260,6 +265,7 @@ class CompositeIndex<T : Element> {
                 try {
                     element.value<Any?>(key)
                 } catch (e: Exception) {
+                    logger.d(e) { "Property '$key' doesn't exist on element ${element.id()}" }
                     null // Property doesn't exist
                 }
             }
@@ -288,6 +294,7 @@ class CompositeIndex<T : Element> {
                     val value = element.value<Any?>(key)
                     compositeValue.add(value)
                 } catch (e: Exception) {
+                    logger.d(e) { "Failed to get property '$key' from element ${element.id()}" }
                     hasAllProperties = false
                 }
             }
@@ -356,6 +363,7 @@ class CompositeIndex<T : Element> {
                     val value = element.value<Any?>(key)
                     compositeValue.add(value)
                 } catch (e: Exception) {
+                    logger.d(e) { "Failed to get property '$key' from element ${element.id()} during query" }
                     hasAllProperties = false
                 }
             }

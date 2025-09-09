@@ -1,6 +1,7 @@
 package org.apache.tinkerpop.gremlin.tinkergraph.structure
 
 import org.apache.tinkerpop.gremlin.structure.Graph
+import org.apache.tinkerpop.gremlin.tinkergraph.util.LoggingConfig
 
 /**
  * TinkerGraphVariables provides a key-value store for graph-level metadata.
@@ -8,6 +9,10 @@ import org.apache.tinkerpop.gremlin.structure.Graph
  * associated with the graph instance.
  */
 class TinkerGraphVariables : Graph.Variables {
+
+    companion object {
+        private val logger = LoggingConfig.getLogger<TinkerGraphVariables>()
+    }
 
     /**
      * Internal storage for graph variables.
@@ -23,6 +28,7 @@ class TinkerGraphVariables : Graph.Variables {
             @Suppress("UNCHECKED_CAST") // Safe cast - caller specifies expected type
             variables[key] as? R
         } catch (e: ClassCastException) {
+            logger.d(e) { "ClassCastException when getting variable '$key'" }
             null
         }
     }
@@ -63,6 +69,7 @@ class TinkerGraphVariables : Graph.Variables {
             @Suppress("UNCHECKED_CAST") // Safe cast - caller specifies expected type
             (variables[key] as? R) ?: defaultValue
         } catch (e: ClassCastException) {
+            logger.d(e) { "ClassCastException when getting variable '$key' with default" }
             defaultValue
         }
     }

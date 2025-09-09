@@ -6,6 +6,9 @@ build/
 .kotlin/
 build_output.txt
 
+# Debug files
+debug/
+
 # Python
 __pycache__/
 *.py[cod]

@@ -1,6 +1,7 @@
 package org.apache.tinkerpop.gremlin.tinkergraph.platform
 
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph
+import org.apache.tinkerpop.gremlin.tinkergraph.util.LoggingConfig
 import kotlin.js.Promise
 
 /**
@@ -77,6 +78,8 @@ data class StorageInfo(
  */
 object StorageFactory {
 
+    private val logger = LoggingConfig.getLogger("StorageFactory")
+
     /**
      * Create the best available storage for the current JavaScript environment.
      * Priority: IndexedDB > LocalStorage > Memory
@@ -143,15 +146,24 @@ object StorageFactory {
     // Environment detection functions
     private fun isLocalStorageAvailable(): Boolean = try {
         js("typeof Storage !== 'undefined' && typeof localStorage !== 'undefined'").unsafeCast<Boolean>()
-    } catch (e: Exception) { false }
+    } catch (e: Exception) {
+        logger.d(e) { "LocalStorage availability check failed" }
+        false
+    }
 
     private fun isIndexedDBAvailable(): Boolean = try {
         js("typeof indexedDB !== 'undefined'").unsafeCast<Boolean>()
-    } catch (e: Exception) { false }
+    } catch (e: Exception) {
+        logger.d(e) { "IndexedDB availability check failed" }
+        false
+    }
 
     private fun isNodeJSAvailable(): Boolean = try {
         js("typeof process !== 'undefined' && process.versions && process.versions.node").unsafeCast<Boolean>()
-    } catch (e: Exception) { false }
+    } catch (e: Exception) {
+        logger.d(e) { "Node.js availability check failed" }
+        false
+    }
 }
 
 /**

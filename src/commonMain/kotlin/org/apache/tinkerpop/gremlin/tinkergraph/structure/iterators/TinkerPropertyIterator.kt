@@ -5,6 +5,7 @@ import org.apache.tinkerpop.gremlin.structure.Property
 import org.apache.tinkerpop.gremlin.structure.VertexProperty
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerElement
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerVertexProperty
+import org.apache.tinkerpop.gremlin.tinkergraph.util.LoggingConfig
 
 /**
  * A memory-efficient iterator for TinkerGraph properties that supports lazy evaluation
@@ -24,6 +25,10 @@ class TinkerPropertyIterator<V>(
     private val valueFilters: List<(V) -> Boolean> = emptyList(),
     private val includeHidden: Boolean = false
 ) : Iterator<Property<V>> {
+
+    companion object {
+        private val logger = LoggingConfig.getLogger<TinkerPropertyIterator<*>>()
+    }
 
     private val baseSequence: Sequence<Property<V>> = createBaseSequence()
     private val iterator = baseSequence.iterator()
@@ -49,6 +54,7 @@ class TinkerPropertyIterator<V>(
                     @Suppress("UNCHECKED_CAST") // Safe cast - Property interface guarantees type consistency
                     property as Property<V>
                 } catch (e: ClassCastException) {
+                    logger.d(e) { "ClassCastException when casting property for key '$key' on element ${element.id()}" }
                     null
                 }
             }
@@ -186,6 +192,7 @@ class TinkerVertexPropertyIterator<V>(
                     @Suppress("UNCHECKED_CAST") // Safe cast - VertexProperty interface guarantees type consistency
                     property as? VertexProperty<V>
                 } catch (e: ClassCastException) {
+                    logger.d(e) { "ClassCastException when casting vertex property for key '$key'" }
                     null
                 }
             }
@@ -311,6 +318,7 @@ class TinkerMetaPropertyIterator<V>(
                     @Suppress("UNCHECKED_CAST") // Safe cast - Property interface guarantees type consistency
                     property as Property<V>
                 } catch (e: ClassCastException) {
+                    logger.d(e) { "ClassCastException when casting property in filtered iterator" }
                     null
                 }
             }

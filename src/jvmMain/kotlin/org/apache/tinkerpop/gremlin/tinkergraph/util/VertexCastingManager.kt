@@ -3,12 +3,15 @@ package org.apache.tinkerpop.gremlin.tinkergraph.util
 import org.apache.tinkerpop.gremlin.structure.*
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerVertex
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerEdge
+import org.apache.tinkerpop.gremlin.tinkergraph.util.LoggingConfig
 
 /**
  * JVM-optimized implementation of vertex casting manager.
  * Uses reflection and instanceof checks for efficient and safe type conversions.
  */
 actual object VertexCastingManager {
+
+    private val logger = LoggingConfig.getLogger("JVMVertexCastingManager")
 
     /**
      * Safely converts any vertex-like object to TinkerVertex using JVM reflection.
@@ -53,11 +56,11 @@ actual object VertexCastingManager {
             }
         } catch (e: ClassCastException) {
             CommonCastingUtils.CastingStats.incrementFailure("vertex")
-            println("JVM vertex casting failed for ${vertex.javaClass.simpleName}: ${e.message}")
+            logger.w(e) { "JVM vertex casting failed for ${vertex.javaClass.simpleName}" }
             null
         } catch (e: Exception) {
             CommonCastingUtils.CastingStats.incrementFailure("vertex")
-            println("JVM vertex casting error for ${vertex.javaClass.simpleName}: ${e.message}")
+            logger.w(e) { "JVM vertex casting error for ${vertex.javaClass.simpleName}" }
             null
         }
     }
@@ -102,11 +105,11 @@ actual object VertexCastingManager {
             }
         } catch (e: ClassCastException) {
             CommonCastingUtils.CastingStats.incrementFailure("edge")
-            println("JVM edge casting failed for ${edge.javaClass.simpleName}: ${e.message}")
+            logger.w(e) { "JVM edge casting failed for ${edge.javaClass.simpleName}" }
             null
         } catch (e: Exception) {
             CommonCastingUtils.CastingStats.incrementFailure("edge")
-            println("JVM edge casting error for ${edge.javaClass.simpleName}: ${e.message}")
+            logger.w(e) { "JVM edge casting error for ${edge.javaClass.simpleName}" }
             null
         }
     }

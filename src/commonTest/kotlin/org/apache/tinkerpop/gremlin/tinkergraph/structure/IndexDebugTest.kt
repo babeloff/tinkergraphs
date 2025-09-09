@@ -5,10 +5,16 @@ import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import org.apache.tinkerpop.gremlin.structure.Vertex
+import org.apache.tinkerpop.gremlin.tinkergraph.util.LoggingConfig
 
 /** Debug test to isolate the index issue causing test failures. */
 class IndexDebugTest :
         StringSpec({
+
+            companion object {
+                private val logger = LoggingConfig.getLogger<IndexDebugTest>()
+            }
+
             lateinit var graph: TinkerGraph
 
             beforeTest { graph = TinkerGraph.open() }
@@ -127,7 +133,7 @@ class IndexDebugTest :
                     try {
                         println("  Found: ${vertex.value<String>("name")}")
                     } catch (e: Exception) {
-                        println("  Error accessing vertex name: ${e.message}")
+                        logger.w(e) { "Error accessing vertex name" }
                     }
                 }
 
