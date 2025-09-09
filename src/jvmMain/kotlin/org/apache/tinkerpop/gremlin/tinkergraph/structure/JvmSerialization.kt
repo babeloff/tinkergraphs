@@ -1,6 +1,7 @@
 package org.apache.tinkerpop.gremlin.tinkergraph.structure
 
 import org.apache.tinkerpop.gremlin.structure.*
+import org.apache.tinkerpop.gremlin.tinkergraph.factory.TinkerGraphFactory
 import java.io.*
 import java.nio.file.Files
 import java.nio.file.Path
@@ -279,7 +280,7 @@ object JvmSerialization {
      * Convert serializable representation to TinkerGraph.
      */
     private fun convertFromSerializable(serializableGraph: SerializableGraph): TinkerGraph {
-        val graph = TinkerGraph.open()
+        val graph = TinkerGraphFactory.create()
 
         // First create all vertices
         val vertexMap = mutableMapOf<Any, Vertex>()

@@ -2,6 +2,7 @@ package org.apache.tinkerpop.gremlin.tinkergraph.structure
 
 import org.apache.tinkerpop.gremlin.structure.*
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph
+import org.apache.tinkerpop.gremlin.tinkergraph.factory.TinkerGraphFactory
 import org.apache.tinkerpop.gremlin.tinkergraph.io.graphson.GraphSONMapper
 import org.apache.tinkerpop.gremlin.tinkergraph.io.graphson.GraphSONException
 import kotlinx.serialization.Serializable
@@ -874,7 +875,7 @@ class JvmPersistenceLayer(
     }
 
     private fun convertSerializableDataToGraph(data: SerializableGraphData): TinkerGraph {
-        val graph = TinkerGraph.open()
+        val graph = TinkerGraphFactory.create()
 
         logger.d { "Converting serialized data: ${data.vertices.size} vertices, ${data.edges.size} edges" }
         data.vertices.forEachIndexed { i, vertex ->
@@ -976,7 +977,7 @@ class JvmPersistenceLayer(
     }
 
     private fun convertSerializableMapToGraph(data: Map<String, Any>): TinkerGraph {
-        val graph = TinkerGraph.open()
+        val graph = TinkerGraphFactory.create()
 
         logger.d { "Converting map to graph: fallback deserialization method" }
 

@@ -2,6 +2,7 @@ package org.apache.tinkerpop.gremlin.tinkergraph.structure
 
 import org.apache.tinkerpop.gremlin.structure.*
 import org.apache.tinkerpop.gremlin.tinkergraph.util.LoggingConfig
+import org.apache.tinkerpop.gremlin.tinkergraph.factory.TinkerGraphFactory
 import java.io.RandomAccessFile
 import java.nio.ByteBuffer
 import java.nio.MappedByteBuffer
@@ -200,7 +201,7 @@ class MemoryMappedStorage(
     fun loadGraph(): TinkerGraph {
         readLock.lock()
         try {
-            val graph = TinkerGraph.open()
+            val graph = TinkerGraphFactory.create()
             val vertexMap = mutableMapOf<Any, Vertex>()
 
             // Load all vertices first
