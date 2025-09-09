@@ -176,7 +176,7 @@ class JvmPersistenceDebugTest :
                 stats shouldNotBe null
                 stats.containsKey("totalSaves") shouldBe true
                 stats.containsKey("totalLoads") shouldBe true
-                stats.containsKey("errorCount") shouldBe true
+                stats.containsKey("totalErrors") shouldBe true
 
                 println("Statistics debug test completed successfully!")
             }

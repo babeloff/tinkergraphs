@@ -487,8 +487,7 @@ class JvmPersistenceLayer(
 
         stats["activeTransactions"] = activeTransactions.size
         stats["nextTransactionId"] = transactionId.get()
-        stats["compressionEnabled"] = enableCompression
-        stats["transactionLogEnabled"] = enableTransactionLog
+
 
         return stats
     }
