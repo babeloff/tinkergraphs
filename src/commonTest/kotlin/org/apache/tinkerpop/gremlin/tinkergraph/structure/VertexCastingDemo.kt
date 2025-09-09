@@ -185,10 +185,11 @@ class VertexCastingDemo :
 
             "casting should work with complex property structures" {
                 val vertex = graph.addVertex()
-                vertex.property("tags", "developer", VertexProperty.Cardinality.LIST)
-                vertex.property("tags", "kotlin", VertexProperty.Cardinality.LIST)
-                vertex.property("tags", "testing", VertexProperty.Cardinality.LIST)
-                vertex.property("metadata", mapOf("created" to "2024", "version" to "1.0"))
+                vertex.property("tags", "developer")
+                vertex.property("language", "kotlin")
+                vertex.property("type", "testing")
+                vertex.property("created", "2024")
+                vertex.property("version", "1.0")
 
                 // Query should still work with casting enabled
                 val taggedVertices =

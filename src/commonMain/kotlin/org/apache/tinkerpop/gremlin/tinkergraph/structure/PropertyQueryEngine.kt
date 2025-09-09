@@ -3,6 +3,7 @@ package org.apache.tinkerpop.gremlin.tinkergraph.structure
 import org.apache.tinkerpop.gremlin.structure.*
 import org.apache.tinkerpop.gremlin.tinkergraph.util.SafeCasting
 import org.apache.tinkerpop.gremlin.tinkergraph.util.VertexCastingManager
+import org.apache.tinkerpop.gremlin.tinkergraph.util.CommonCastingUtils
 import org.apache.tinkerpop.gremlin.tinkergraph.util.LoggingConfig
 
 /**
@@ -339,23 +340,29 @@ class PropertyQueryEngine(private val graph: TinkerGraph) {
             return when (criterion) {
                 is ExactCriterion -> {
                     val properties = vertex.getVertexProperties<Any>(criterion.key)
-                    properties.any { it.value() == criterion.value }
+                    if (criterion.value == null) {
+                        // Null query should match vertices without the property
+                        properties.isEmpty()
+                    } else {
+                        properties.any { valuesMatch(it.value(), criterion.value) }
+                    }
                 }
                 is RangeCriterion -> {
                     val properties = vertex.getVertexProperties<Any>(criterion.key)
                     properties.any { property ->
                         val value = property.value()
-                        if (value !is Number || (criterion.minValue == null && criterion.maxValue == null)) {
+                        val numberValue = tryConvertToNumber(value)
+                        if (numberValue == null || (criterion.minValue == null && criterion.maxValue == null)) {
                             false
                         } else {
-                            val numberValue = value.toDouble()
+                            val doubleValue = numberValue.toDouble()
                             val minCheck = criterion.minValue?.let { min ->
                                 val minDouble = min.toDouble()
-                                if (criterion.includeMin) numberValue >= minDouble else numberValue > minDouble
+                                if (criterion.includeMin) doubleValue >= minDouble else doubleValue > minDouble
                             } ?: true
                             val maxCheck = criterion.maxValue?.let { max ->
                                 val maxDouble = max.toDouble()
-                                if (criterion.includeMax) numberValue <= maxDouble else numberValue < maxDouble
+                                if (criterion.includeMax) doubleValue <= maxDouble else doubleValue < maxDouble
                             } ?: true
                             minCheck && maxCheck
                         }
@@ -500,6 +507,141 @@ class PropertyQueryEngine(private val graph: TinkerGraph) {
             evaluateCriterion(tinkerVertex, criterion)
         } catch (e: Exception) {
             logger.d(e) { "Exception during vertex criterion evaluation, returning false" }
+            false
+        }
+    }
+
+    /**
+     * Tries to convert a value to a Number, supporting string representations.
+     */
+    private fun tryConvertToNumber(value: Any?): Number? {
+        return when (value) {
+            is Number -> value
+            is String -> {
+                try {
+                    // Try different number formats
+                    when {
+                        value.contains('.') -> value.toDoubleOrNull()
+                        else -> value.toLongOrNull() ?: value.toDoubleOrNull()
+                    }
+                } catch (e: Exception) {
+                    null
+                }
+            }
+            else -> null
+        }
+    }
+
+    /**
+     * Tries to convert a value to a Boolean, supporting string representations.
+     */
+    private fun tryConvertToBoolean(value: Any?): Boolean? {
+        return when (value) {
+            is Boolean -> value
+            is String -> {
+                when (value.lowercase()) {
+                    "true", "1", "yes", "on" -> true
+                    "false", "0", "no", "off" -> false
+                    else -> null
+                }
+            }
+            is Number -> {
+                when (value.toInt()) {
+                    1 -> true
+                    0 -> false
+                    else -> null
+                }
+            }
+            else -> null
+        }
+    }
+
+    /**
+     * Checks if two values match, with type coercion support.
+     * This enables liberal parameter matching where string values can match their typed counterparts.
+     */
+    private fun valuesMatch(propertyValue: Any?, queryValue: Any?): Boolean {
+        // Null handling
+        if (propertyValue == null && queryValue == null) return true
+        if (propertyValue == null || queryValue == null) return false
+
+        // Direct equality check first (fastest path)
+        if (propertyValue == queryValue) {
+            return true
+        }
+
+        // Type coercion attempts
+        return try {
+            val coercionResult = when {
+                // String to Number conversion
+                propertyValue is String && queryValue is Number -> {
+                    CommonCastingUtils.CastingStats.incrementTypeCoercion()
+                    tryConvertToNumber(propertyValue)?.let { convertedValue ->
+                        val matches = when (queryValue) {
+                            is Int -> convertedValue.toDouble() == queryValue.toDouble()
+                            is Long -> convertedValue.toDouble() == queryValue.toDouble()
+                            is Float -> convertedValue.toDouble() == queryValue.toDouble()
+                            is Double -> convertedValue.toDouble() == queryValue.toDouble()
+                            else -> false
+                        }
+                        if (matches) CommonCastingUtils.CastingStats.incrementCoercionSuccess()
+                        else CommonCastingUtils.CastingStats.incrementCoercionFailure()
+                        matches
+                    } ?: run {
+                        CommonCastingUtils.CastingStats.incrementCoercionFailure()
+                        false
+                    }
+                }
+
+                // Number to String conversion
+                propertyValue is Number && queryValue is String -> {
+                    CommonCastingUtils.CastingStats.incrementTypeCoercion()
+                    tryConvertToNumber(queryValue)?.let { convertedValue ->
+                        val matches = propertyValue.toDouble() == convertedValue.toDouble()
+                        if (matches) CommonCastingUtils.CastingStats.incrementCoercionSuccess()
+                        else CommonCastingUtils.CastingStats.incrementCoercionFailure()
+                        matches
+                    } ?: run {
+                        CommonCastingUtils.CastingStats.incrementCoercionFailure()
+                        false
+                    }
+                }
+
+                // String to Boolean conversion
+                propertyValue is String && queryValue is Boolean -> {
+                    CommonCastingUtils.CastingStats.incrementTypeCoercion()
+                    val converted = tryConvertToBoolean(propertyValue)
+                    val matches = converted == queryValue
+                    if (converted != null && matches) CommonCastingUtils.CastingStats.incrementCoercionSuccess()
+                    else CommonCastingUtils.CastingStats.incrementCoercionFailure()
+                    matches
+                }
+
+                // Boolean to String conversion
+                propertyValue is Boolean && queryValue is String -> {
+                    CommonCastingUtils.CastingStats.incrementTypeCoercion()
+                    val converted = tryConvertToBoolean(queryValue)
+                    val matches = converted == propertyValue
+                    if (converted != null && matches) CommonCastingUtils.CastingStats.incrementCoercionSuccess()
+                    else CommonCastingUtils.CastingStats.incrementCoercionFailure()
+                    matches
+                }
+
+                // Different Number types
+                propertyValue is Number && queryValue is Number -> {
+                    CommonCastingUtils.CastingStats.incrementTypeCoercion()
+                    val matches = propertyValue.toDouble() == queryValue.toDouble()
+                    if (matches) CommonCastingUtils.CastingStats.incrementCoercionSuccess()
+                    else CommonCastingUtils.CastingStats.incrementCoercionFailure()
+                    matches
+                }
+
+                else -> false
+            }
+            coercionResult
+        } catch (e: Exception) {
+            // If any conversion fails, fall back to false
+            CommonCastingUtils.CastingStats.incrementCoercionFailure()
             false
         }
     }
