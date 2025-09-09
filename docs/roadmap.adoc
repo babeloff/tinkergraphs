@@ -1152,6 +1152,22 @@ Create distribution packages:
 - Installation documentation
 - Place the implementation summary in ./docs/changelog/ as phase6.2.2-prod-dist.adoc
 
+**Task 6.2.3: Conda-forge packaging with rattler-build** [⏸️ TODO]
+*Managed using `pixi` and `rattler-build`*
+*Key tasks: `pixi run rattler-build`, `pixi run conda-build`, `pixi run publish-conda`*
+
+Package all products as conda-forge packages:
+
+- Python product packaging using rattler-build
+- Native product packaging for multiple architectures (x86_64, aarch64)
+- JVM product packaging with Java dependencies
+- JavaScript product packaging for Node.js environments
+- Cross-platform conda-forge recipe templates
+- Automated testing of conda packages across platforms
+- Integration with conda-forge CI/CD pipeline
+- Version management and dependency specification
+- Place the implementation summary in ./docs/changelog/ as phase6.2.3-conda-packaging.adoc
+
 == Success Criteria
 
 === Functional Requirements
