@@ -11,6 +11,7 @@ import io.kotest.matchers.string.shouldNotBeEmpty
 import org.apache.tinkerpop.gremlin.tinkergraph.collections.NativeCollections
 import org.apache.tinkerpop.gremlin.tinkergraph.memory.NativeMemoryManager
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph
+import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerVertex
 
 /**
  * Native platform test suite using Kotest framework.
@@ -125,13 +126,8 @@ class NativePlatformTest : StringSpec({
             val graph = TinkerGraph.open()
 
             // Add test data
-            val vertex1 = graph.addVertex("person")
-            vertex1.property("name", "Alice")
-            vertex1.property("age", 30)
-
-            val vertex2 = graph.addVertex("person")
-            vertex2.property("name", "Bob")
-            vertex2.property("age", 25)
+            val vertex1 = graph.addVertex(TinkerVertex.T.label, "person", "name", "Alice", "age", 30)
+            val vertex2 = graph.addVertex(TinkerVertex.T.label, "person", "name", "Bob", "age", 25)
 
             val edge = vertex1.addEdge("knows", vertex2)
             edge.property("since", "2020")

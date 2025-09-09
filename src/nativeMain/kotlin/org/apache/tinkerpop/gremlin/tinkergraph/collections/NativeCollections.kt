@@ -40,11 +40,10 @@ object NativeCollections {
 
         /**
          * Create a sorted map using standard Kotlin implementation.
-         * Note: Native platforms don't have TreeMap, so this returns a map
-         * that will need manual sorting when required.
+         * Returns a map that maintains sorted key ordering.
          */
         fun <K : Comparable<K>, V> createSortedMap(): MutableMap<K, V> {
-            return mutableMapOf<K, V>()
+            return SortedMutableMap<K, V>()
         }
 
         /**
@@ -121,5 +120,72 @@ object NativeCollections {
         }
 
         return recommendations
+    }
+
+    /**
+     * A simple sorted map implementation that maintains key ordering.
+     */
+    private class SortedMutableMap<K : Comparable<K>, V> : MutableMap<K, V> {
+        private val backing = mutableMapOf<K, V>()
+        private val sortedKeys = mutableListOf<K>()
+
+        override val size: Int get() = backing.size
+        override val keys: MutableSet<K> get() = sortedKeys.toMutableSet()
+        override val values: MutableCollection<V> get() = sortedKeys.map { backing[it]!! }.toMutableList()
+        override val entries: MutableSet<MutableMap.MutableEntry<K, V>> get() {
+            val entrySet = mutableSetOf<MutableMap.MutableEntry<K, V>>()
+            for (key in sortedKeys) {
+                entrySet.add(SimpleEntry(key, backing[key]!!))
+            }
+            return entrySet
+        }
+
+        override fun isEmpty(): Boolean = backing.isEmpty()
+
+        override fun get(key: K): V? = backing[key]
+
+        override fun put(key: K, value: V): V? {
+            val oldValue = backing.put(key, value)
+            if (oldValue == null) {
+                // New key, insert in sorted position
+                val insertIndex = sortedKeys.binarySearch(key)
+                val index = if (insertIndex < 0) -(insertIndex + 1) else insertIndex
+                sortedKeys.add(index, key)
+            }
+            return oldValue
+        }
+
+        override fun remove(key: K): V? {
+            val oldValue = backing.remove(key)
+            if (oldValue != null) {
+                sortedKeys.remove(key)
+            }
+            return oldValue
+        }
+
+        override fun putAll(from: Map<out K, V>) {
+            for ((key, value) in from) {
+                put(key, value)
+            }
+        }
+
+        override fun clear() {
+            backing.clear()
+            sortedKeys.clear()
+        }
+
+        override fun containsKey(key: K): Boolean = backing.containsKey(key)
+        override fun containsValue(value: V): Boolean = backing.containsValue(value)
+
+        private data class SimpleEntry<K, V>(
+            override val key: K,
+            override var value: V
+        ) : MutableMap.MutableEntry<K, V> {
+            override fun setValue(newValue: V): V {
+                val oldValue = value
+                value = newValue
+                return oldValue
+            }
+        }
     }
 }
