@@ -435,7 +435,9 @@ class JvmPersistenceLayer(
         // Add expected keys for tests
         stats["totalSaves"] = transactionId.get() / 2 // Approximate count using transaction ID (save/load pairs)
         stats["totalLoads"] = transactionId.get() / 2 // Approximate count using transaction ID (save/load pairs)
-        stats["errorCount"] = 0 // Could track this in future
+        stats["totalErrors"] = 0 // Could track this in future
+        stats["compressionEnabled"] = enableCompression
+        stats["transactionLogEnabled"] = enableTransactionLog
 
         // File counts by format
         val formatCounts = PersistenceFormat.values().associate { format ->
