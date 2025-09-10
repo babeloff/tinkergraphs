@@ -308,7 +308,7 @@ The roadmap uses the following status indicators to track progress:
 
 Create TinkerVertex class that implements the Vertex interface. This should include:
 
-- Property management with support for VertexProperty
+- Property management with support for VertexPropertUpdate names to be more aligned with what they representy
 - Edge adjacency lists (incoming/outgoing edges)
 - Methods for adding edges to other vertices
 - Support for multi-properties and meta-properties
@@ -652,11 +652,10 @@ JavaScript tests compilation and type preservation fixes:
 
 Generate comprehensive TypeScript definitions:
 
-- Complete type definitions for all public APIs
+- To enable the generation of these TypeScript declarations, mark the relevant Kotlin functions and classes with the @JsExport annotation.
+- The compiler then creates the .d.ts file alongside the generated JavaScript.
+- Apply the @JsExport only to the type definitions for all public APIs
 - Generic type parameters for type safety
-- Documentation comments for IDE support
-- Compatibility with existing JS graph libraries
-- NPM package configuration
 - Place the implementation summary in ./docs/changelog/ as task-3.2.2-ts-definitions.adoc
 
 === 3.3 Native Platform Support
