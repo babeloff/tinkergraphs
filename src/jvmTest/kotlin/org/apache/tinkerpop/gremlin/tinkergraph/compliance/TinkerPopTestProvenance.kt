@@ -141,15 +141,31 @@ object TinkerPopProvenanceRegistry {
             adaptations = listOf("To be implemented")
         ))
 
-        // Process Tests (planned)
+        // Process Tests (implemented)
         registerMapping(TinkerPopTestMapping(
-            kotlinTestClass = "ProcessComplianceRunner",
+            kotlinTestClass = "ProcessComplianceTests",
             originalJavaClass = "org.apache.tinkerpop.gremlin.process.traversal.TraversalTest",
             originalPackage = "org.apache.tinkerpop.gremlin.process.traversal",
             testCategory = TestCategory.PROCESS_API,
+            status = MappingStatus.PARTIAL,
+            coveragePercentage = 0.7,
+            adaptations = listOf(
+                "Combined multiple Java traversal test classes into single Kotlin test suite",
+                "Adapted to Kotest StringSpec format",
+                "Focused on core Gremlin steps supported by TinkerGraph",
+                "Simplified complex traversal patterns for cross-platform execution"
+            )
+        ))
+
+        // Process Tests (runner - planned)
+        registerMapping(TinkerPopTestMapping(
+            kotlinTestClass = "ProcessComplianceRunner",
+            originalJavaClass = "org.apache.tinkerpop.gremlin.process.ProcessStandardSuite",
+            originalPackage = "org.apache.tinkerpop.gremlin.process",
+            testCategory = TestCategory.PROCESS_API,
             status = MappingStatus.PLANNED,
             coveragePercentage = 0.0,
-            adaptations = listOf("To be implemented with Gremlin traversal support")
+            adaptations = listOf("Framework runner to be implemented")
         ))
     }
 }
