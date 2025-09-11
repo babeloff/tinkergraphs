@@ -54,6 +54,19 @@ kotlin {
             }
         }
         binaries.executable()
+
+        // Enable TypeScript definitions generation
+        compilations.all {
+            compileTaskProvider.configure {
+                compilerOptions {
+                    freeCompilerArgs.addAll(listOf(
+                        "-Xir-generate-inline-anonymous-functions",
+                        "-Xir-per-module-output-name=tinkergraphs",
+                        "-Xgenerate-dts"
+                    ))
+                }
+            }
+        }
     }
 
     // Native targets - use a more robust approach
@@ -404,4 +417,103 @@ tasks.named("allTests") {
 // Disable configuration cache for compliance tasks to avoid serialization issues
 tasks.matching { it.group == "compliance" }.configureEach {
     notCompatibleWithConfigurationCache("Compliance tasks generate dynamic reports")
+}
+
+// TypeScript definition generation tasks
+tasks.register("generateTypeScriptDefinitions") {
+    group = "typescript"
+    description = "Generate TypeScript definition files from @JsExport annotations"
+    dependsOn("compileKotlinJs")
+
+    doLast {
+        val jsOutputDir = file("build/dist/js/productionLibrary")
+        val tsDefsDir = file("build/typescript-definitions")
+
+        tsDefsDir.mkdirs()
+
+        // Copy generated .d.ts files
+        if (jsOutputDir.exists()) {
+            copy {
+                from(jsOutputDir)
+                into(tsDefsDir)
+                include("**/*.d.ts")
+            }
+            println("✅ TypeScript definitions generated in: ${tsDefsDir.absolutePath}")
+        } else {
+            println("⚠️  JavaScript output directory not found: ${jsOutputDir.absolutePath}")
+        }
+    }
+}
+
+tasks.register("validateTypeScriptDefinitions") {
+    group = "typescript"
+    description = "Validate generated TypeScript definitions"
+    dependsOn("generateTypeScriptDefinitions")
+
+    doLast {
+        val tsDefsDir = file("build/typescript-definitions")
+        val tsFiles = tsDefsDir.walkTopDown()
+            .filter { it.extension == "ts" }
+            .toList()
+
+        if (tsFiles.isNotEmpty()) {
+            println("✅ Found ${tsFiles.size} TypeScript definition files:")
+            tsFiles.forEach { file ->
+                println("   - ${file.relativeTo(tsDefsDir)}")
+            }
+        } else {
+            println("⚠️  No TypeScript definition files found")
+        }
+    }
+}
+
+tasks.register("buildTypeScriptPackage") {
+    group = "typescript"
+    description = "Build complete TypeScript package with definitions"
+    dependsOn("jsNodeProductionLibraryDistribution", "generateTypeScriptDefinitions")
+
+    doLast {
+        val packageDir = file("build/typescript-package")
+        val jsLibDir = file("build/dist/js/productionLibrary")
+        val tsDefsDir = file("build/typescript-definitions")
+
+        packageDir.mkdirs()
+
+        // Copy JavaScript files
+        if (jsLibDir.exists()) {
+            copy {
+                from(jsLibDir)
+                into(packageDir)
+                include("*.js")
+            }
+        }
+
+        // Copy TypeScript definitions
+        if (tsDefsDir.exists()) {
+            copy {
+                from(tsDefsDir)
+                into(packageDir)
+                include("**/*.d.ts")
+            }
+        }
+
+        // Create package.json for npm
+        val packageJson = """
+        {
+          "name": "tinkergraphs",
+          "version": "1.0.0-SNAPSHOT",
+          "description": "Kotlin Multiplatform TinkerPop Graph Database",
+          "main": "tinkergraphs.js",
+          "types": "tinkergraphs.d.ts",
+          "files": ["*.js", "*.d.ts"],
+          "keywords": ["graph", "database", "tinkerpop", "kotlin"],
+          "author": "Apache TinkerPop",
+          "license": "Apache-2.0"
+        }
+        """.trimIndent()
+
+        file("$packageDir/package.json").writeText(packageJson)
+
+        println("✅ TypeScript package built in: ${packageDir.absolutePath}")
+    }
 }

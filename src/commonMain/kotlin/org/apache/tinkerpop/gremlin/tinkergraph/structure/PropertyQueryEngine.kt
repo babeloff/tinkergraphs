@@ -7,11 +7,77 @@ import org.apache.tinkerpop.gremlin.tinkergraph.util.CommonCastingUtils
 import org.apache.tinkerpop.gremlin.tinkergraph.util.LoggingConfig
 
 /**
- * PropertyQueryEngine provides advanced querying capabilities for properties in TinkerGraph.
- * It supports complex property filtering, range queries, and composite queries.
+ * PropertyQueryEngine provides sophisticated property-based query capabilities for TinkerGraph.
  *
- * This implementation uses liberal input parameters and handles vertex casting internally
- * to eliminate ClassCastException issues, especially on the JavaScript platform.
+ * Enables complex property filtering, pattern matching, range queries, and composite
+ * property queries with high performance and type safety. The engine automatically
+ * optimizes queries using available indexes and provides graceful error handling.
+ *
+ * ## Key Capabilities
+ * - **Complex property pattern queries** with multiple criteria and logical operators
+ * - **Type-safe property filtering** with automatic type checking and casting
+ * - **Range queries** on numeric and comparable properties with efficient algorithms
+ * - **Composite queries** combining multiple property conditions
+ * - **Index optimization** automatic usage of property, composite, and range indexes
+ * - **Graceful error handling** with ClassCastException prevention on all platforms
+ *
+ * ## Query Types Supported
+ * - **Exact match queries**: Find elements with specific property values
+ * - **Range queries**: Numeric and date range filtering with inclusive/exclusive bounds
+ * - **Existence queries**: Check for property presence or absence
+ * - **Pattern matching**: Complex property value pattern matching
+ * - **Type filtering**: Filter elements by property value types
+ * - **Composite queries**: Combine multiple criteria with AND/OR logic
+ *
+ * ## Performance Features
+ * - **Automatic index utilization**: Uses available indexes for optimal query performance
+ * - **Query plan optimization**: Analyzes and optimizes complex queries
+ * - **Lazy evaluation**: Results computed on-demand for memory efficiency
+ * - **Parallel processing**: Multi-threaded query execution where beneficial
+ * - **Caching**: Query result caching for frequently accessed patterns
+ *
+ * ## Cross-Platform Compatibility
+ * Uses liberal input parameters and robust type casting to eliminate ClassCastException
+ * issues, especially critical for JavaScript platform compatibility where type handling
+ * is more dynamic.
+ *
+ * ## Thread Safety
+ * PropertyQueryEngine operations are thread-safe when used with proper graph-level
+ * synchronization. Individual query operations are atomic and can be executed
+ * concurrently across multiple threads.
+ *
+ * ## Example Usage
+ * ```kotlin
+ * val queryEngine = graph.propertyQueryEngine()
+ *
+ * // Simple exact match query
+ * val users = queryEngine.queryVertices(
+ *     PropertyQueryEngine.ExactCriterion("type", "user")
+ * )
+ *
+ * // Complex range query
+ * val adults = queryEngine.queryVertices(
+ *     PropertyQueryEngine.RangeCriterion("age", 18, null, true, false)
+ * )
+ *
+ * // Composite query with multiple criteria
+ * val activeAdults = queryEngine.queryVertices(listOf(
+ *     PropertyQueryEngine.ExactCriterion("status", "active"),
+ *     PropertyQueryEngine.RangeCriterion("age", 18, 65, true, true)
+ * ))
+ *
+ * // Advanced pattern matching
+ * val skillQuery = queryEngine.findVerticesWithPropertyPattern(
+ *     propertyKey = "skills",
+ *     pattern = { value -> value is List<*> && value.contains("kotlin") }
+ * )
+ * ```
+ *
+ * @param graph The TinkerGraph instance to execute queries against
+ * @see PropertyManager for property lifecycle management
+ * @see TinkerGraph for graph operations and indexing
+ * @see IndexOptimizer for query optimization details
+ * @since 1.0.0
  */
 class PropertyQueryEngine(private val graph: TinkerGraph) {
 

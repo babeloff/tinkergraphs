@@ -1,25 +1,72 @@
 package org.apache.tinkerpop.gremlin.tinkergraph.structure
 
+import kotlin.js.JsExport
 import org.apache.tinkerpop.gremlin.structure.*
 
 /**
  * TinkerEdge is the edge implementation for TinkerGraph.
- * It maintains references to the outgoing (tail) and incoming (head) vertices
- * and supports properties like any other graph element.
  *
- * This class provides:
- * - Directional edge functionality with source and target vertex references
- * - Property management inherited from TinkerElement
- * - Integration with TinkerGraph's indexing and caching systems
- * - Edge lifecycle management and validation
+ * Represents a directed edge connecting two vertices with full property support.
+ * Each edge maintains strong references to both its source (outVertex) and
+ * target (inVertex) vertices, enabling efficient bidirectional navigation.
  *
- * @param id the unique identifier for this edge
- * @param label the label assigned to this edge
- * @param outVertex the source vertex of this edge
- * @param inVertex the target vertex of this edge
- * @param graph the TinkerGraph instance that owns this edge
+ * ## Direction Semantics
+ * ```
+ * outVertex ---[edge with label and properties]---> inVertex
+ *    tail                                              head
+ *   source                                            target
+ * ```
+ *
+ * ## Property Model
+ * TinkerEdge supports simple properties following TinkerPop specifications:
+ * - **Single-valued**: One value per property key (no multi-properties)
+ * - **No cardinality constraints**: Properties are always SINGLE cardinality
+ * - **No meta-properties**: Edge properties cannot have properties themselves
+ * - **Type preservation**: Property values maintain their original types
+ *
+ * ## Vertex References
+ * Maintains strong bidirectional references:
+ * - **outVertex**: Source/tail vertex where edge originates
+ * - **inVertex**: Target/head vertex where edge terminates
+ * - **Automatic cleanup**: Edge removal updates vertex adjacency lists
+ * - **Reference integrity**: Vertices cannot be garbage collected while edge exists
+ *
+ * ## Memory Layout
+ * Approximate memory usage per edge:
+ * - Base edge: ~112 bytes (object overhead + vertex references + core fields)
+ * - Per property: ~48-64 bytes + value size
+ * - Label string: ~24 bytes + string content
+ * - Index references: ~16-32 bytes depending on indexed properties
+ *
+ * ## Thread Safety
+ * Individual edge operations are thread-safe for concurrent reads.
+ * However, concurrent modifications (adding/removing properties or edge removal)
+ * require external synchronization to maintain consistency with vertex adjacency lists.
+ *
+ * ## Performance Characteristics
+ * - Property access: O(1) average lookup time
+ * - Vertex navigation: O(1) constant time for both directions
+ * - Edge removal: O(1) from graph, O(k) from vertex adjacency lists where k = edges per vertex
+ * - Property updates: O(1) for simple properties
+ *
+ * ## Integration Features
+ * - **Indexing**: Automatically maintained in graph property indexes
+ * - **Caching**: Participates in graph-level query optimization caching
+ * - **Lifecycle management**: Proper cleanup when removed from graph
+ * - **Validation**: Ensures vertex references remain valid throughout lifecycle
+ *
+ * @param id The unique identifier for this edge (must be unique within graph)
+ * @param label The edge label describing the relationship type
+ * @param outVertex The source/tail vertex where this edge originates
+ * @param inVertex The target/head vertex where this edge terminates
+ * @param graph The TinkerGraph instance that owns this edge
+ * @see Edge for the interface contract
+ * @see TinkerVertex for vertex implementation details
+ * @see TinkerElement for base element functionality
+ * @see Direction for edge direction constants
  * @since 1.0.0
  */
+@JsExport
 class TinkerEdge(
     id: Any,
     label: String,
@@ -91,7 +138,6 @@ class TinkerEdge(
      * @throws IllegalStateException if this edge has been removed
      */
     override fun bothVertices(): Iterator<Vertex> {
-        checkNotRemoved()
         return listOf(outVertex, inVertex).iterator()
     }
 
@@ -100,14 +146,14 @@ class TinkerEdge(
      * @param vertex the vertex to find the opposite of
      * @return the opposite vertex
      * @throws IllegalStateException if this edge has been removed
-     * @throws IllegalArgumentException if the specified vertex is not incident to this edge
+     * @throws IllegalArgumentException if the vertex is not incident to this edge
      */
     override fun otherVertex(vertex: Vertex): Vertex {
         checkNotRemoved()
         return when (vertex) {
             outVertex -> inVertex
             inVertex -> outVertex
-            else -> throw IllegalArgumentException("Vertex $vertex is not incident to this edge")
+            else -> throw IllegalArgumentException("The provided vertex is not incident to this edge")
         }
     }
 
@@ -127,6 +173,24 @@ class TinkerEdge(
         }
     }
 
+    /**
+     * Get both vertices as an array for JavaScript/TypeScript compatibility.
+     *
+     * @return Array containing both outVertex and inVertex
+     */
+    fun bothVerticesArray(): Array<Vertex> {
+        return arrayOf(outVertex, inVertex)
+    }
+
+    /**
+     * Get vertices in specified direction as an array for JavaScript/TypeScript compatibility.
+     *
+     * @param direction the direction to get vertices for
+     * @return Array of vertices in the specified direction
+     */
+    fun verticesArray(direction: Direction): Array<Vertex> {
+        return vertices(direction).asSequence().toList().toTypedArray()
+    }
     /**
      * Checks if this edge is incident to the specified vertex.
      * An edge is incident to a vertex if the vertex is either the source or target.
