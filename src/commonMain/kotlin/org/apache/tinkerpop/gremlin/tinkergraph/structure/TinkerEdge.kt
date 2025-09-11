@@ -66,7 +66,6 @@ import org.apache.tinkerpop.gremlin.structure.*
  * @see Direction for edge direction constants
  * @since 1.0.0
  */
-@JsExport
 class TinkerEdge(
     id: Any,
     label: String,

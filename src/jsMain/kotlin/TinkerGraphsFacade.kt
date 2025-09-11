@@ -6,6 +6,7 @@ import kotlin.js.JsExport
 import kotlin.js.JsName
 import org.apache.tinkerpop.gremlin.structure.*
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.*
+import org.apache.tinkerpop.gremlin.tinkergraph.algorithms.*
 
 /**
  * JavaScript/TypeScript facade for TinkerGraphs library.
@@ -345,7 +346,7 @@ fun createRangeIndex(graph: TinkerGraph, propertyKey: String, elementType: Strin
  */
 @JsExport
 fun breadthFirstSearch(graph: TinkerGraph, startVertex: Vertex): Array<Vertex> {
-    return org.apache.tinkerpop.gremlin.tinkergraph.algorithms.breadthFirstSearch(graph, startVertex)
+    return graph.breadthFirstSearch(startVertex)
         .toList().toTypedArray()
 }
 
@@ -358,7 +359,7 @@ fun breadthFirstSearch(graph: TinkerGraph, startVertex: Vertex): Array<Vertex> {
  */
 @JsExport
 fun depthFirstSearch(graph: TinkerGraph, startVertex: Vertex): Array<Vertex> {
-    return org.apache.tinkerpop.gremlin.tinkergraph.algorithms.depthFirstSearch(graph, startVertex)
+    return graph.depthFirstSearch(startVertex)
         .toList().toTypedArray()
 }
 
@@ -372,8 +373,8 @@ fun depthFirstSearch(graph: TinkerGraph, startVertex: Vertex): Array<Vertex> {
  */
 @JsExport
 fun shortestPath(graph: TinkerGraph, fromVertex: Vertex, toVertex: Vertex): Array<Vertex>? {
-    return org.apache.tinkerpop.gremlin.tinkergraph.algorithms.shortestPath(graph, fromVertex, toVertex)
-        ?.toTypedArray()
+    return graph.shortestPath(fromVertex, toVertex)
+        ?.toList()?.toTypedArray()
 }
 
 /**
@@ -384,8 +385,8 @@ fun shortestPath(graph: TinkerGraph, fromVertex: Vertex, toVertex: Vertex): Arra
  */
 @JsExport
 fun findConnectedComponents(graph: TinkerGraph): Array<Array<Vertex>> {
-    return org.apache.tinkerpop.gremlin.tinkergraph.algorithms.connectedComponents(graph)
-        .map { it.toTypedArray() }.toTypedArray()
+    return graph.connectedComponents()
+        .map { it.toList().toTypedArray() }.toTypedArray()
 }
 
 /**
@@ -396,7 +397,7 @@ fun findConnectedComponents(graph: TinkerGraph): Array<Array<Vertex>> {
  */
 @JsExport
 fun hasCycle(graph: TinkerGraph): Boolean {
-    return org.apache.tinkerpop.gremlin.tinkergraph.algorithms.hasCycle(graph)
+    return graph.hasCycle()
 }
 
 // Utility Operations

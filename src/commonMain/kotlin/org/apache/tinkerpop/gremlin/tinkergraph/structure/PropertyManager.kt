@@ -84,7 +84,6 @@ import org.apache.tinkerpop.gremlin.tinkergraph.util.LoggingConfig
  * @see VertexProperty for individual property management
  * @see PropertyLifecycleListener for event handling interfaces
  */
-@JsExport
 class PropertyManager(private val graph: TinkerGraph) {
 
     companion object {

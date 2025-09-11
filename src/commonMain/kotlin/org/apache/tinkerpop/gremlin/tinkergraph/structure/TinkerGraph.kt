@@ -68,7 +68,6 @@ import org.apache.tinkerpop.gremlin.tinkergraph.util.VertexCastingManager
  * @see GraphAlgorithms
  * @since 1.0.0
  */
-@JsExport
 class TinkerGraph private constructor(private val configuration: Map<String, Any?>) : Graph {
 
     /** Internal storage for vertices, keyed by vertex ID. */

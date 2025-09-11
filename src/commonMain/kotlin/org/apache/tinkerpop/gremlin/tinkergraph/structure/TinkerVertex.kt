@@ -54,7 +54,6 @@ import org.apache.tinkerpop.gremlin.tinkergraph.util.LoggingConfig
  * @see TinkerVertexProperty for vertex property implementation
  * @see VertexProperty.Cardinality for supported cardinality types
  */
-@JsExport
 class TinkerVertex(
     id: Any,
     label: String,
