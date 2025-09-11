@@ -10,6 +10,7 @@ import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldNotBeEmpty
 import org.apache.tinkerpop.gremlin.tinkergraph.collections.NativeCollections
 import org.apache.tinkerpop.gremlin.tinkergraph.memory.NativeMemoryManager
+import org.apache.tinkerpop.gremlin.tinkergraph.optimization.*
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerVertex
 
@@ -190,5 +191,53 @@ class NativePlatformTest : StringSpec({
 
         // Verify sorted map maintains order
         sortedMap.keys.toList() shouldBe listOf(1, 3)
+    }
+
+    "native optimizations should be available and functional" {
+        shouldNotThrowAny {
+            // Test basic optimization system availability
+            val memStats = NativeMemoryManager.getMemoryStatistics()
+            memStats.totalAllocated shouldBeGreaterThanOrEqual 0L
+
+            val memRecommendations = NativeMemoryManager.getOptimizationRecommendations()
+            memRecommendations shouldNotBe null
+
+            // Test memory pool basic functionality
+            val vertex = MemoryPool.allocateVertex("v1", "person")
+            vertex.isInitialized() shouldBe true
+            MemoryPool.releaseVertex(vertex)
+
+            val poolStats = MemoryPool.getPoolStatistics()
+            poolStats.isNotEmpty() shouldBe true
+
+            // Test SIMD optimizations basic functionality
+            val values = doubleArrayOf(1.0, 2.0, 3.0, 4.0)
+            val sum = SimdOptimizations.vectorizedAggregation(values, SimdOptimizations.AggregationOperation.SUM)
+            sum shouldBe 10.0
+
+            val simdStats = SimdOptimizations.getSimdStatistics()
+            simdStats shouldNotBe null
+
+            // Test native threading basic functionality
+            NativeThreading.initialize(2)
+            val threadStats = NativeThreading.getThreadingStatistics()
+            threadStats?.activeThreads shouldBe 2
+            NativeThreading.shutdown()
+
+            // Test memory mapping basic functionality
+            val mappingStats = NativeMemoryMapping.getMappingStatistics()
+            mappingStats shouldNotBe null
+
+            // Test profile-guided optimization basic functionality
+            ProfileGuidedOptimization.profileOperation("test_operation") {
+                // Simple test operation
+                repeat(10) { it * 2 }
+            }
+
+            val pgoStats = ProfileGuidedOptimization.getOptimizationStatistics()
+            pgoStats.totalOperationsProfiled shouldBeGreaterThan 0
+
+            ProfileGuidedOptimization.reset()
+        }
     }
 })
