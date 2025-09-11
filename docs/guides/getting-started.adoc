@@ -1,0 +1,440 @@
+= Getting Started with TinkerGraphs
+:toc: left
+:toclevels: 3
+:sectnums:
+:icons: font
+:source-highlighter: rouge
+
+== Introduction
+
+TinkerGraphs is a high-performance, multiplatform implementation of Apache TinkerPop's graph database specification. This guide will help you get started with TinkerGraphs across different platforms and use cases.
+
+== Quick Start
+
+=== Installation
+
+==== JVM/Android (Kotlin/Java)
+
+Add TinkerGraphs to your project dependencies:
+
+[source,kotlin]
+----
+dependencies {
+    implementation("org.apache.tinkerpop:tinkergraphs:1.0.0")
+}
+----
+
+==== JavaScript/Node.js
+
+[source,bash]
+----
+npm install tinkergraphs
+----
+
+==== Native Platforms
+
+Download the appropriate native binary for your platform from the releases page, or build from source using the provided build scripts.
+
+=== Basic Usage
+
+==== Creating Your First Graph
+
+[source,kotlin]
+----
+import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph
+
+// Create an empty graph
+val graph = TinkerGraph.open()
+
+// Add vertices
+val alice = graph.addVertex("person")
+alice.property("name", "Alice")
+alice.property("age", 30)
+
+val bob = graph.addVertex("person")
+bob.property("name", "Bob")
+bob.property("age", 25)
+
+// Add an edge
+val friendship = alice.addEdge("knows", bob)
+friendship.property("since", "2020")
+----
+
+==== Basic Traversals
+
+[source,kotlin]
+----
+// Find all people
+val people = graph.traversal().V().hasLabel("person").toList()
+println("Found ${people.size} people")
+
+// Find Alice's friends
+val aliceFriends = graph.traversal()
+    .V().hasLabel("person").has("name", "Alice")
+    .out("knows")
+    .values<String>("name")
+    .toList()
+
+println("Alice knows: ${aliceFriends.joinToString(", ")}")
+----
+
+== Core Concepts
+
+=== Graph Elements
+
+TinkerGraphs supports the standard TinkerPop graph elements:
+
+* **Vertices**: Nodes in the graph that can have properties and labels
+* **Edges**: Connections between vertices with direction, properties, and labels
+* **Properties**: Key-value pairs attached to vertices and edges
+* **Vertex Properties**: Special properties on vertices that can have their own properties
+
+=== Graph Structure
+
+[source,kotlin]
+----
+// Vertex with multiple labels and properties
+val person = graph.addVertex("person", "employee")
+person.property("name", "Charlie")
+person.property("department", "Engineering")
+person.property("salary", 75000)
+
+// Edge with properties
+val employment = person.addEdge("works_for", company)
+employment.property("start_date", "2023-01-15")
+employment.property("position", "Senior Developer")
+----
+
+=== Advanced Features
+
+==== Indexing
+
+TinkerGraphs provides powerful indexing capabilities:
+
+[source,kotlin]
+----
+// Create indices for better query performance
+graph.createIndex("name", TinkerGraph.IndexType.SINGLE_PROPERTY)
+graph.createIndex("age", TinkerGraph.IndexType.RANGE)
+
+// Composite index for multiple properties
+graph.createCompositeIndex("person_lookup", "name", "department")
+----
+
+==== Transactions (JVM Platform)
+
+[source,kotlin]
+----
+// JVM platform supports transactions
+val tx = graph.tx()
+try {
+    tx.open()
+    // Perform graph operations
+    val vertex = graph.addVertex("temp")
+    tx.commit()
+} catch (e: Exception) {
+    tx.rollback()
+    throw e
+}
+----
+
+== Platform-Specific Features
+
+=== JVM Platform
+
+The JVM platform provides enterprise-grade features:
+
+* **Concurrent Access**: Thread-safe operations with fair locking
+* **JVM Serialization**: Java Serializable compliance
+* **Memory Mapping**: Support for large graphs exceeding RAM
+* **Integration**: Seamless integration with Java ecosystem
+
+[source,kotlin]
+----
+// Enable concurrent access
+val config = mapOf(
+    TinkerGraph.GREMLIN_TINKERGRAPH_CONCURRENT_ACCESS to true,
+    TinkerGraph.GREMLIN_TINKERGRAPH_MEMORY_MAPPED to true
+)
+val graph = TinkerGraph.open(config)
+----
+
+=== JavaScript Platform
+
+The JavaScript platform offers web and Node.js compatibility:
+
+* **Browser Support**: Works in modern web browsers
+* **Node.js Integration**: Full Node.js ecosystem support
+* **JSON Serialization**: Native JSON import/export
+* **WebAssembly**: Performance optimizations through WASM
+
+[source,javascript]
+----
+// JavaScript/TypeScript usage
+import { TinkerGraph } from 'tinkergraphs';
+
+const graph = TinkerGraph.open();
+const vertex = graph.addVertex('person', 'name', 'Alice');
+----
+
+=== Native Platform
+
+The native platform provides maximum performance:
+
+* **Memory Pools**: Efficient object allocation and reuse
+* **SIMD Optimizations**: Vectorized operations for algorithms
+* **Native Threading**: Advanced concurrent execution
+* **Zero-Copy I/O**: Memory mapping for large datasets
+
+[source,kotlin]
+----
+// Native platform optimizations
+import org.apache.tinkerpop.gremlin.tinkergraph.optimization.*
+
+// Initialize native optimizations
+NativeThreading.initialize(threadCount = 8)
+MemoryPool.warmupPools(vertexCount = 10000, edgeCount = 50000)
+----
+
+== Common Patterns
+
+=== Data Loading
+
+[source,kotlin]
+----
+// Batch loading for better performance
+val vertices = mutableMapOf<String, Vertex>()
+
+// Load vertices in batches
+data.vertices.chunked(1000).forEach { batch ->
+    batch.forEach { vertexData ->
+        val vertex = graph.addVertex(vertexData.label)
+        vertexData.properties.forEach { (key, value) ->
+            vertex.property(key, value)
+        }
+        vertices[vertexData.id] = vertex
+    }
+}
+
+// Load edges after vertices
+data.edges.forEach { edgeData ->
+    val outVertex = vertices[edgeData.outVertexId]
+    val inVertex = vertices[edgeData.inVertexId]
+    val edge = outVertex?.addEdge(edgeData.label, inVertex)
+    edgeData.properties.forEach { (key, value) ->
+        edge?.property(key, value)
+    }
+}
+----
+
+=== Graph Algorithms
+
+[source,kotlin]
+----
+// Finding shortest paths
+val shortestPath = graph.traversal()
+    .V().hasLabel("person").has("name", "Alice")
+    .repeat(out("knows"))
+    .until(has("name", "Bob"))
+    .path()
+    .next()
+
+// Page rank calculation
+val pageRank = graph.traversal()
+    .V()
+    .pageRank()
+    .by("pageRank")
+    .values<Double>("pageRank")
+    .toList()
+----
+
+=== Property Management
+
+[source,kotlin]
+----
+// Multi-valued properties
+val vertex = graph.addVertex("document")
+vertex.property(VertexProperty.Cardinality.list, "tag", "kotlin")
+vertex.property(VertexProperty.Cardinality.list, "tag", "graph")
+vertex.property(VertexProperty.Cardinality.list, "tag", "database")
+
+// Property metadata
+val nameProperty = vertex.property("name", "Document Title")
+nameProperty.property("language", "en")
+nameProperty.property("confidence", 0.95)
+----
+
+== Performance Optimization
+
+=== Indexing Strategy
+
+[source,kotlin]
+----
+// Choose the right index type
+graph.createIndex("id", TinkerGraph.IndexType.SINGLE_PROPERTY) // Fast lookups
+graph.createIndex("created", TinkerGraph.IndexType.RANGE) // Range queries
+graph.createCompositeIndex("user_search", "name", "email") // Multi-property
+----
+
+=== Memory Management
+
+[source,kotlin]
+----
+// Monitor memory usage
+val stats = graph.getStatistics()
+println("Vertices: ${stats.vertexCount}")
+println("Edges: ${stats.edgeCount}")
+println("Memory usage: ${stats.memoryUsage} MB")
+
+// Optimize for large datasets (Native platform)
+if (isLargeDataset) {
+    NativeMemoryMapping.createMappedFile("graph-data.bin", size = 4_000_000_000L)
+}
+----
+
+=== Query Optimization
+
+[source,kotlin]
+----
+// Use specific traversal steps
+graph.traversal()
+    .V().hasLabel("person") // Filter early
+    .has("age", P.gte(18)) // Use indexed properties
+    .out("knows") // Follow edges efficiently
+    .dedup() // Remove duplicates
+    .limit(100) // Limit results
+    .toList()
+----
+
+== Configuration Options
+
+=== Graph Configuration
+
+[source,kotlin]
+----
+val config = mapOf(
+    // Basic configuration
+    TinkerGraph.GREMLIN_TINKERGRAPH_VERTEX_ID_MANAGER to UUID.randomUUID().toString(),
+    TinkerGraph.GREMLIN_TINKERGRAPH_EDGE_ID_MANAGER to UUID.randomUUID().toString(),
+
+    // JVM-specific features
+    TinkerGraph.GREMLIN_TINKERGRAPH_CONCURRENT_ACCESS to true,
+    TinkerGraph.GREMLIN_TINKERGRAPH_MEMORY_MAPPED to true,
+
+    // Performance tuning
+    TinkerGraph.GREMLIN_TINKERGRAPH_CACHE_SIZE to 10000,
+    TinkerGraph.GREMLIN_TINKERGRAPH_BATCH_SIZE to 1000
+)
+
+val graph = TinkerGraph.open(config)
+----
+
+== Error Handling
+
+=== Common Exceptions
+
+[source,kotlin]
+----
+try {
+    val vertex = graph.traversal()
+        .V().hasLabel("person")
+        .has("name", "NonExistent")
+        .next() // Throws NoSuchElementException if not found
+} catch (e: NoSuchElementException) {
+    println("Person not found")
+}
+
+try {
+    vertex.addEdge("invalid", null) // Invalid edge creation
+} catch (e: IllegalArgumentException) {
+    println("Invalid edge: ${e.message}")
+}
+----
+
+=== Validation
+
+[source,kotlin]
+----
+// Validate graph structure
+fun validateGraph(graph: TinkerGraph): List<String> {
+    val issues = mutableListOf<String>()
+
+    graph.vertices().forEach { vertex ->
+        if (vertex.label().isBlank()) {
+            issues.add("Vertex ${vertex.id()} has empty label")
+        }
+    }
+
+    graph.edges().forEach { edge ->
+        if (edge.outVertex() == null || edge.inVertex() == null) {
+            issues.add("Edge ${edge.id()} has invalid vertices")
+        }
+    }
+
+    return issues
+}
+----
+
+== Next Steps
+
+=== Advanced Topics
+
+* **Custom Traversal Steps**: Implementing domain-specific graph operations
+* **Graph Algorithms**: Implementing PageRank, shortest paths, and community detection
+* **Serialization**: Persisting graphs to disk and network formats
+* **Integration**: Connecting with other graph databases and analytics tools
+
+=== Learning Resources
+
+* **API Documentation**: Complete reference for all classes and methods
+* **Examples Repository**: Real-world examples and use cases
+* **Community Forum**: Ask questions and share experiences
+* **Contributing Guide**: Help improve TinkerGraphs
+
+== Troubleshooting
+
+=== Common Issues
+
+==== Performance Problems
+
+[source,kotlin]
+----
+// Enable performance monitoring
+ProfileGuidedOptimization.profileOperation("graph_query") {
+    // Your query here
+}
+
+val stats = ProfileGuidedOptimization.getOptimizationStatistics()
+println("Query optimizations: ${stats.totalOptimizationsApplied}")
+----
+
+==== Memory Issues
+
+[source,kotlin]
+----
+// Monitor memory usage
+val memStats = NativeMemoryManager.getMemoryStatistics()
+if (memStats.memoryLeakDetected) {
+    NativeMemoryManager.forceCleanup()
+}
+----
+
+==== Platform-Specific Issues
+
+* **JVM**: Ensure adequate heap size for large graphs
+* **JavaScript**: Use Web Workers for CPU-intensive operations
+* **Native**: Check platform-specific binary compatibility
+
+== Summary
+
+TinkerGraphs provides a powerful, flexible graph database solution that scales from simple applications to enterprise-grade systems. The multiplatform architecture ensures you can use the same API across different deployment environments while taking advantage of platform-specific optimizations.
+
+Key takeaways:
+
+* Start with basic vertex and edge creation
+* Use appropriate indexing for your query patterns
+* Take advantage of platform-specific optimizations
+* Monitor performance and memory usage
+* Follow graph modeling best practices
+
+For more detailed information, consult the API documentation and explore the example projects in the repository.

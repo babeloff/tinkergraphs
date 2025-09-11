@@ -753,7 +753,8 @@ Implement Jank platform support:
 - In the Jank code, use a library like ctypes to load the dynamic library.
 - Use the C header as a reference to declare the function signatures in your Jank wrapper code.
 - This allows the call to the Kotlin functions as if they were native Jank functions.
-- Place the implementation summary in ./docs/changelog/ as task-3.5.1-jank-platform.adoc
+- Place the implementation summary in ./docs/chaHaving problems with build.bat being run, try build.nu
+ngelog/ as task-3.5.1-jank-platform.adoc
 
 === 3.6 Cross-Platform I/O Format Improvements
 
@@ -1032,7 +1033,7 @@ Create comprehensive test suite:
 - Cross-platform compatibility tests
 - Place the implementation summary in ./docs/changelog/ as task-4.1.1-qa.adoc
 
-**Task 4.1.2: TinkerPop compliance tests** [✅ FULLY COMPLETED]
+**Task 4.1.2: TinkerPop compliance tests** [⏸️ Partially implemented, Phase 3 TODO]
 *Managed using `pixi` (wraps `gradle`)*
 *Key tasks: `pixi run gradle complianceTests`, `pixi run gradle ciCompliance`*
 *Status: Phase 2 (Core Compliance Implementation) - Complete; Phase 3 (Integration & Validation) - Ready*
@@ -1058,8 +1059,10 @@ Implement TinkerPop compliance testing:
 
 **Phase 3 Ready to Start:**
 * ⏸️ CI/CD Integration and automated compliance reporting
-* ⏸️ Cross-platform compliance validation (JVM, JS, Native)
-* ⏸️ Performance compliance benchmarking
+* ⏸️ Cross-platform compliance validation
+** JVM : these tests should be run as java tests against the JVM implementation, the tests should be as close to the original java compliance tests as is possible.
+** JS : while there are no official JavaScript compliance tests, we aim to closely follow the Java compliance tests.
+** Python, Native : there is no official Python compliance tests, we aim to closely follow the Java compliance tests, these tests effectively validate the Native implementation as well.
 * ⏸️ Documentation and certification generation
 
 **Reference:** https://github.com/apache/tinkerpop/tree/master/tinkergraph-gremlin/src/test

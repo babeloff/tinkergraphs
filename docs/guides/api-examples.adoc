@@ -1,0 +1,1438 @@
+= TinkerGraphs API Examples
+:toc: left
+:toclevels: 3
+:sectnums:
+:icons: font
+:source-highlighter: rouge
+
+== Introduction
+
+This guide provides comprehensive examples of using the TinkerGraphs API across different platforms and scenarios. Each example includes complete code with explanations and best practices.
+
+== Basic Graph Operations
+
+=== Creating and Configuring Graphs
+
+==== Simple Graph Creation
+
+[source,kotlin]
+----
+import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph
+
+// Create a basic graph
+val graph = TinkerGraph.open()
+println("Created graph with ${graph.vertices().asSequence().count()} vertices")
+
+// Create graph with configuration
+val configuredGraph = TinkerGraph.open(mapOf(
+    TinkerGraph.GREMLIN_TINKERGRAPH_VERTEX_ID_MANAGER to
+        TinkerGraph.DefaultIdManager.UUID.name(),
+    TinkerGraph.GREMLIN_TINKERGRAPH_EDGE_ID_MANAGER to
+        TinkerGraph.DefaultIdManager.UUID.name()
+))
+----
+
+==== Advanced Graph Configuration
+
+[source,kotlin]
+----
+// Production-ready configuration
+val productionConfig = mapOf(
+    // ID management
+    TinkerGraph.GREMLIN_TINKERGRAPH_VERTEX_ID_MANAGER to
+        TinkerGraph.DefaultIdManager.UUID.name(),
+    TinkerGraph.GREMLIN_TINKERGRAPH_EDGE_ID_MANAGER to
+        TinkerGraph.DefaultIdManager.UUID.name(),
+
+    // Performance optimizations (JVM platform)
+    TinkerGraph.GREMLIN_TINKERGRAPH_CONCURRENT_ACCESS to true,
+    TinkerGraph.GREMLIN_TINKERGRAPH_MEMORY_MAPPED to true,
+    TinkerGraph.GREMLIN_TINKERGRAPH_CACHE_SIZE to 10000,
+
+    // Batch processing
+    TinkerGraph.GREMLIN_TINKERGRAPH_BATCH_SIZE to 1000,
+
+    // Index optimization
+    TinkerGraph.GREMLIN_TINKERGRAPH_AUTO_INDEX to true
+)
+
+val graph = TinkerGraph.open(productionConfig)
+
+// Verify configuration
+val features = graph.features()
+println("Supports transactions: ${features.graph().supportsTransactions()}")
+println("Supports concurrent access: ${features.graph().supportsConcurrentAccess()}")
+----
+
+=== Working with Vertices
+
+==== Basic Vertex Operations
+
+[source,kotlin]
+----
+// Add vertices with properties
+val alice = graph.addVertex(T.label, "person", "name", "Alice", "age", 30, "city", "New York")
+val bob = graph.addVertex(T.label, "person", "name", "Bob", "age", 25, "city", "San Francisco")
+val company = graph.addVertex(T.label, "company", "name", "TechCorp", "industry", "Software")
+
+// Alternative syntax
+val charlie = graph.addVertex("person")
+charlie.property("name", "Charlie")
+charlie.property("age", 35)
+charlie.property("department", "Engineering")
+
+// Multiple labels (if supported)
+val consultant = graph.addVertex("person", "consultant")
+consultant.property("name", "Diana")
+consultant.property("specialization", "Graph Databases")
+
+println("Total vertices: ${graph.vertices().asSequence().count()}")
+----
+
+==== Vertex Property Management
+
+[source,kotlin]
+----
+// Single-valued properties
+val person = graph.addVertex("person")
+person.property("name", "John")
+person.property("email", "john@example.com")
+
+// Multi-valued properties
+person.property(VertexProperty.Cardinality.list, "skill", "Kotlin")
+person.property(VertexProperty.Cardinality.list, "skill", "Graph Databases")
+person.property(VertexProperty.Cardinality.list, "skill", "Machine Learning")
+
+// Set cardinality (no duplicates)
+person.property(VertexProperty.Cardinality.set, "certification", "AWS")
+person.property(VertexProperty.Cardinality.set, "certification", "Kubernetes")
+
+// Property with metadata
+val nameProperty = person.property("fullName", "John Smith")
+nameProperty.property("language", "en")
+nameProperty.property("verified", true)
+
+// Access properties
+val name = person.value<String>("name")
+val skills = person.values<String>("skill").asSequence().toList()
+val certifications = person.properties<String>("certification")
+    .asSequence()
+    .map { it.value() }
+    .toSet()
+
+println("Name: $name")
+println("Skills: ${skills.joinToString(", ")}")
+println("Certifications: ${certifications.joinToString(", ")}")
+----
+
+=== Working with Edges
+
+==== Basic Edge Operations
+
+[source,kotlin]
+----
+// Create vertices
+val user = graph.addVertex("user", "name", "Alice", "role", "Developer")
+val project = graph.addVertex("project", "name", "TinkerGraphs", "status", "Active")
+val team = graph.addVertex("team", "name", "Graph Team", "size", 5)
+
+// Add edges with properties
+val worksOn = user.addEdge("works_on", project)
+worksOn.property("since", "2024-01-01")
+worksOn.property("contribution", "Core Developer")
+worksOn.property("hours_per_week", 40)
+
+val memberOf = user.addEdge("member_of", team)
+memberOf.property("role", "Technical Lead")
+memberOf.property("start_date", "2023-06-15")
+
+// Bidirectional relationship
+val collaborates = user.addEdge("collaborates_with", user) // Self-loop
+collaborates.property("type", "Code Review")
+
+println("User has ${user.edges(Direction.OUT).asSequence().count()} outgoing edges")
+println("Project has ${project.edges(Direction.IN).asSequence().count()} incoming edges")
+----
+
+==== Complex Edge Patterns
+
+[source,kotlin]
+----
+// Create a social network
+val users = (1..5).map { i ->
+    graph.addVertex("user", "name", "User$i", "id", i)
+}
+
+// Create friendship network
+users.forEach { user1 ->
+    users.filter { it != user1 }.take(2).forEach { user2 ->
+        val friendship = user1.addEdge("friends", user2)
+        friendship.property("strength", (1..10).random())
+        friendship.property("since", "202${(0..4).random()}-${(1..12).random().toString().padStart(2, '0')}-01")
+    }
+}
+
+// Create follows relationships
+users.forEach { user1 ->
+    users.filter { it != user1 }.forEach { user2 ->
+        if ((1..10).random() > 6) { // 40% chance
+            val follows = user1.addEdge("follows", user2)
+            follows.property("notifications", (1..10).random() > 5)
+        }
+    }
+}
+
+// Edge statistics
+val friendshipCount = graph.edges().asSequence().count { it.label() == "friends" }
+val followsCount = graph.edges().asSequence().count { it.label() == "follows" }
+
+println("Friendships: $friendshipCount")
+println("Follows relationships: $followsCount")
+----
+
+== Traversal Examples
+
+=== Basic Traversals
+
+==== Finding Elements
+
+[source,kotlin]
+----
+// Find all vertices of a specific label
+val people = graph.traversal().V().hasLabel("person").toList()
+println("Found ${people.size} people")
+
+// Find by property value
+val alice = graph.traversal().V().hasLabel("person").has("name", "Alice").tryNext()
+if (alice.isPresent) {
+    println("Found Alice: ${alice.get().id()}")
+}
+
+// Find by property range
+val adults = graph.traversal()
+    .V()
+    .hasLabel("person")
+    .has("age", P.gte(18))
+    .values<String>("name")
+    .toList()
+println("Adults: ${adults.joinToString(", ")}")
+
+// Find edges by label
+val friendships = graph.traversal()
+    .E()
+    .hasLabel("friends")
+    .toList()
+println("Friendship edges: ${friendships.size}")
+----
+
+==== Property-Based Queries
+
+[source,kotlin]
+----
+// Multiple property conditions
+val seniorDevelopers = graph.traversal()
+    .V()
+    .hasLabel("person")
+    .has("age", P.gt(25))
+    .has("role", "Developer")
+    .has("experience", P.gte(5))
+    .valueMap<Any>("name", "age", "experience")
+    .toList()
+
+seniorDevelopers.forEach { developer ->
+    println("Senior Developer: $developer")
+}
+
+// Text-based property search
+val techPeople = graph.traversal()
+    .V()
+    .hasLabel("person")
+    .has("bio", TextP.containing("technology"))
+    .values<String>("name")
+    .toList()
+
+// Property existence
+val profileComplete = graph.traversal()
+    .V()
+    .hasLabel("user")
+    .has("email")
+    .has("phone")
+    .has("address")
+    .count()
+    .next()
+
+println("Users with complete profiles: $profileComplete")
+----
+
+=== Advanced Traversals
+
+==== Graph Navigation
+
+[source,kotlin]
+----
+// Find friends of friends
+val friendsOfFriends = graph.traversal()
+    .V()
+    .has("name", "Alice")
+    .out("friends")
+    .out("friends")
+    .dedup()
+    .where(P.neq("Alice")) // Exclude Alice herself
+    .values<String>("name")
+    .toList()
+
+println("Friends of Alice's friends: ${friendsOfFriends.joinToString(", ")}")
+
+// Multi-hop traversal with path tracking
+val connectionPaths = graph.traversal()
+    .V()
+    .has("name", "Alice")
+    .repeat(out("friends"))
+    .times(3)
+    .path()
+    .by("name")
+    .toList()
+
+connectionPaths.take(5).forEach { path ->
+    println("Connection path: ${path.objects().joinToString(" -> ")}")
+}
+
+// Bidirectional traversal
+val connectedUsers = graph.traversal()
+    .V()
+    .has("name", "Alice")
+    .both("friends", "collaborates")
+    .dedup()
+    .values<String>("name")
+    .toList()
+
+println("Connected users: ${connectedUsers.joinToString(", ")}")
+----
+
+==== Aggregation and Grouping
+
+[source,kotlin]
+----
+// Count vertices by label
+val vertexCounts = graph.traversal()
+    .V()
+    .groupCount<String>()
+    .by(T.label)
+    .next()
+
+vertexCounts.forEach { (label, count) ->
+    println("$label: $count vertices")
+}
+
+// Group by property values
+val usersByCity = graph.traversal()
+    .V()
+    .hasLabel("person")
+    .group<String, List<Vertex>>()
+    .by("city")
+    .by(fold())
+    .next()
+
+usersByCity.forEach { (city, users) ->
+    println("$city: ${users.size} users")
+}
+
+// Statistical aggregations
+val ageStats = graph.traversal()
+    .V()
+    .hasLabel("person")
+    .values<Int>("age")
+    .fold()
+    .project<Any>("min", "max", "avg", "count")
+    .by(min<Int>())
+    .by(max<Int>())
+    .by(mean())
+    .by(count())
+    .next()
+
+println("Age statistics: $ageStats")
+----
+
+=== Complex Query Patterns
+
+==== Recommendation Algorithms
+
+[source,kotlin]
+----
+// Friend recommendations based on mutual connections
+fun findFriendRecommendations(userName: String, limit: Int = 5): List<Map<String, Any>> {
+    return graph.traversal()
+        .V()
+        .has("name", userName)
+        .aggregate("currentUser")
+        .out("friends")
+        .aggregate("friends")
+        .out("friends")
+        .where(P.without("friends"))
+        .where(P.without("currentUser"))
+        .groupCount<Vertex>()
+        .unfold<Map.Entry<Vertex, Long>>()
+        .order()
+        .by(Column.values, Order.desc)
+        .limit(limit.toLong())
+        .project<Any>("name", "mutualFriends", "commonInterests")
+        .by(Column.keys.get().values<String>("name"))
+        .by(Column.values)
+        .by(Column.keys.get().values<String>("interests").count(Scope.local))
+        .toList()
+}
+
+val recommendations = findFriendRecommendations("Alice")
+recommendations.forEach { rec ->
+    println("Recommend: ${rec["name"]} (${rec["mutualFriends"]} mutual friends)")
+}
+----
+
+==== Graph Analytics
+
+[source,kotlin]
+----
+// Calculate PageRank-like centrality
+fun calculateCentrality(): Map<String, Double> {
+    val centrality = mutableMapOf<String, Double>()
+
+    graph.traversal()
+        .V()
+        .hasLabel("person")
+        .forEach { vertex ->
+            val inDegree = vertex.edges(Direction.IN).asSequence().count()
+            val outDegree = vertex.edges(Direction.OUT).asSequence().count()
+            val totalDegree = inDegree + outDegree
+
+            val name = vertex.value<String>("name")
+            centrality[name] = totalDegree.toDouble()
+        }
+
+    return centrality.toList()
+        .sortedByDescending { it.second }
+        .toMap()
+}
+
+val centralityScores = calculateCentrality()
+println("Top 3 most connected users:")
+centralityScores.take(3).forEach { (name, score) ->
+    println("  $name: $score connections")
+}
+
+// Community detection using label propagation
+fun detectCommunities(): Map<String, Set<String>> {
+    val communities = mutableMapOf<String, MutableSet<String>>()
+
+    // Simplified community detection
+    graph.traversal()
+        .V()
+        .hasLabel("person")
+        .forEach { vertex ->
+            val name = vertex.value<String>("name")
+            val friends = vertex.edges(Direction.BOTH, "friends")
+                .asSequence()
+                .map { edge ->
+                    if (edge.outVertex() == vertex) {
+                        edge.inVertex().value<String>("name")
+                    } else {
+                        edge.outVertex().value<String>("name")
+                    }
+                }
+                .toSet()
+
+            val communityId = friends.minByOrNull { it } ?: name
+            communities.getOrPut(communityId) { mutableSetOf() }.add(name)
+        }
+
+    return communities.mapValues { it.value.toSet() }
+}
+
+val communities = detectCommunities()
+println("Detected ${communities.size} communities:")
+communities.forEach { (id, members) ->
+    println("  Community $id: ${members.joinToString(", ")}")
+}
+----
+
+== Indexing Examples
+
+=== Creating and Using Indices
+
+==== Single Property Indices
+
+[source,kotlin]
+----
+// Create single property indices
+graph.createIndex("name", TinkerGraph.IndexType.SINGLE_PROPERTY)
+graph.createIndex("email", TinkerGraph.IndexType.SINGLE_PROPERTY)
+graph.createIndex("age", TinkerGraph.IndexType.RANGE)
+
+// Verify index creation
+val indices = graph.getIndices()
+println("Created ${indices.size} indices")
+indices.forEach { index ->
+    println("  Index: ${index.name} (${index.type})")
+}
+
+// Query using indexed properties (automatically optimized)
+val fastLookup = graph.traversal()
+    .V()
+    .has("email", "alice@example.com")
+    .tryNext()
+
+val ageRangeQuery = graph.traversal()
+    .V()
+    .has("age", P.between(25, 35))
+    .values<String>("name")
+    .toList()
+
+println("Age range results: ${ageRangeQuery.joinToString(", ")}")
+----
+
+==== Composite Indices
+
+[source,kotlin]
+----
+// Create composite indices for multi-property queries
+graph.createCompositeIndex(
+    "person_lookup",
+    "firstName", "lastName", "department"
+)
+
+graph.createCompositeIndex(
+    "project_search",
+    "status", "priority", "assignee"
+)
+
+// Add test data
+val employees = listOf(
+    mapOf("firstName" to "John", "lastName" to "Smith", "department" to "Engineering"),
+    mapOf("firstName" to "Jane", "lastName" to "Doe", "department" to "Marketing"),
+    mapOf("firstName" to "Bob", "lastName" to "Johnson", "department" to "Engineering")
+)
+
+employees.forEach { emp ->
+    val vertex = graph.addVertex("employee")
+    emp.forEach { (key, value) -> vertex.property(key, value) }
+}
+
+// Efficient composite queries
+val engineeringStaff = graph.traversal()
+    .V()
+    .hasLabel("employee")
+    .has("department", "Engineering")
+    .valueMap<Any>("firstName", "lastName")
+    .toList()
+
+println("Engineering staff: $engineeringStaff")
+
+// Get index statistics
+val indexStats = graph.getIndexStatistics()
+indexStats.forEach { (indexName, stats) ->
+    println("Index $indexName: ${stats.hitRatio}% hit ratio, ${stats.totalQueries} queries")
+}
+----
+
+=== Index Performance Optimization
+
+[source,kotlin]
+----
+// Monitor index performance
+fun analyzeIndexPerformance() {
+    val startTime = System.currentTimeMillis()
+
+    // Run a series of queries
+    repeat(1000) {
+        graph.traversal()
+            .V()
+            .has("name", "User${it % 100}")
+            .tryNext()
+    }
+
+    val endTime = System.currentTimeMillis()
+    val duration = endTime - startTime
+
+    println("1000 indexed queries took ${duration}ms")
+    println("Average: ${duration / 1000.0}ms per query")
+
+    // Get recommendations
+    val recommendations = graph.getOptimizationRecommendations()
+    recommendations.forEach { rec ->
+        println("💡 $rec")
+    }
+}
+
+// Index maintenance
+fun optimizeIndices() {
+    // Rebuild indices for better performance
+    graph.rebuildIndices()
+
+    // Remove unused indices
+    val unusedIndices = graph.getIndices().filter { it.queryCount == 0L }
+    unusedIndices.forEach { index ->
+        println("Removing unused index: ${index.name}")
+        graph.dropIndex(index.name)
+    }
+
+    // Suggest new indices based on query patterns
+    val suggestions = graph.suggestIndices()
+    suggestions.forEach { suggestion ->
+        println("Suggested index: ${suggestion.properties.joinToString(", ")} (${suggestion.benefit}% improvement)")
+    }
+}
+
+analyzeIndexPerformance()
+optimizeIndices()
+----
+
+== Serialization Examples
+
+=== GraphSON Serialization
+
+==== Basic GraphSON Operations
+
+[source,kotlin]
+----
+import org.apache.tinkerpop.gremlin.tinkergraph.io.graphson.*
+
+// Create and populate a sample graph
+val graph = TinkerGraph.open()
+val alice = graph.addVertex("person", "name", "Alice", "age", 30)
+val bob = graph.addVertex("person", "name", "Bob", "age", 25)
+val knows = alice.addEdge("knows", bob, "weight", 0.8)
+
+// Serialize to GraphSON
+val writer = GraphSONWriter.Builder().create()
+val outputStream = ByteArrayOutputStream()
+writer.writeGraph(outputStream, graph)
+
+val graphsonData = outputStream.toString()
+println("GraphSON size: ${graphsonData.length} characters")
+
+// Deserialize from GraphSON
+val reader = GraphSONReader.Builder().create()
+val newGraph = TinkerGraph.open()
+val inputStream = ByteArrayInputStream(graphsonData.toByteArray())
+reader.readGraph(inputStream, newGraph)
+
+println("Restored graph: ${newGraph.vertices().asSequence().count()} vertices, ${newGraph.edges().asSequence().count()} edges")
+----
+
+==== Advanced GraphSON Configuration
+
+[source,kotlin]
+----
+// Custom GraphSON configuration
+val customMapper = GraphSONMapper.build()
+    .addRegistry(TinkerIoRegistryV3d0.instance())
+    .typeInfo(GraphSONMapper.TypeInfo.PARTIAL_TYPES)
+    .create()
+
+val advancedWriter = GraphSONWriter.build()
+    .mapper(customMapper)
+    .create()
+
+// Serialize with type information
+val typedOutputStream = ByteArrayOutputStream()
+advancedWriter.writeGraph(typedOutputStream, graph)
+
+// Handle serialization errors gracefully
+try {
+    val problematicGraph = TinkerGraph.open()
+    val vertex = problematicGraph.addVertex("test")
+    vertex.property("circularRef", vertex) // This might cause issues
+
+    advancedWriter.writeGraph(ByteArrayOutputStream(), problematicGraph)
+} catch (e: IOException) {
+    println("Serialization error: ${e.message}")
+    // Handle circular references or unsupported types
+}
+
+// Batch serialization for large graphs
+fun serializeLargeGraph(graph: TinkerGraph, batchSize: Int = 1000) {
+    val vertices = graph.vertices().asSequence().toList()
+    val edges = graph.edges().asSequence().toList()
+
+    vertices.chunked(batchSize).forEachIndexed { index, batch ->
+        val batchGraph = TinkerGraph.open()
+        batch.forEach { vertex ->
+            // Copy vertex to batch graph
+            val newVertex = batchGraph.addVertex(vertex.label())
+            vertex.properties<Any>().forEach { prop ->
+                newVertex.property(prop.key(), prop.value())
+            }
+        }
+
+        val outputStream = FileOutputStream("graph_batch_$index.json")
+        advancedWriter.writeGraph(outputStream, batchGraph)
+        outputStream.close()
+
+        println("Serialized batch $index: ${batch.size} vertices")
+    }
+}
+----
+
+=== Platform-Specific Serialization
+
+==== JVM Binary Serialization
+
+[source,kotlin]
+----
+// JVM platform: Binary serialization
+fun serializeGraphBinary(graph: TinkerGraph, filename: String) {
+    try {
+        ObjectOutputStream(FileOutputStream(filename)).use { oos ->
+            // Serialize graph structure
+            val vertices = graph.vertices().asSequence().map { vertex ->
+                VertexData(
+                    id = vertex.id(),
+                    label = vertex.label(),
+                    properties = vertex.properties<Any>().asSequence()
+                        .associate { it.key() to it.value() }
+                )
+            }.toList()
+
+            val edges = graph.edges().asSequence().map { edge ->
+                EdgeData(
+                    id = edge.id(),
+                    label = edge.label(),
+                    outVertexId = edge.outVertex().id(),
+                    inVertexId = edge.inVertex().id(),
+                    properties = edge.properties<Any>().asSequence()
+                        .associate { it.key() to it.value() }
+                )
+            }.toList()
+
+            oos.writeObject(GraphData(vertices, edges))
+            println("Binary serialization complete: $filename")
+        }
+    } catch (e: Exception) {
+        println("Serialization failed: ${e.message}")
+    }
+}
+
+fun deserializeGraphBinary(filename: String): TinkerGraph {
+    val graph = TinkerGraph.open()
+
+    try {
+        ObjectInputStream(FileInputStream(filename)).use { ois ->
+            val graphData = ois.readObject() as GraphData
+            val vertexMap = mutableMapOf<Any, Vertex>()
+
+            // Restore vertices
+            graphData.vertices.forEach { vData ->
+                val vertex = graph.addVertex(vData.label)
+                vData.properties.forEach { (key, value) ->
+                    vertex.property(key, value)
+                }
+                vertexMap[vData.id] = vertex
+            }
+
+            // Restore edges
+            graphData.edges.forEach { eData ->
+                val outVertex = vertexMap[eData.outVertexId]
+                val inVertex = vertexMap[eData.inVertexId]
+                val edge = outVertex?.addEdge(eData.label, inVertex)
+                eData.properties.forEach { (key, value) ->
+                    edge?.property(key, value)
+                }
+            }
+
+            println("Binary deserialization complete")
+        }
+    } catch (e: Exception) {
+        println("Deserialization failed: ${e.message}")
+    }
+
+    return graph
+}
+
+// Data classes for serialization
+@Serializable
+data class VertexData(
+    val id: Any,
+    val label: String,
+    val properties: Map<String, Any>
+)
+
+@Serializable
+data class EdgeData(
+    val id: Any,
+    val label: String,
+    val outVertexId: Any,
+    val inVertexId: Any,
+    val properties: Map<String, Any>
+)
+
+@Serializable
+data class GraphData(
+    val vertices: List<VertexData>,
+    val edges: List<EdgeData>
+)
+----
+
+==== JavaScript JSON Serialization
+
+[source,kotlin]
+----
+// JavaScript platform: JSON serialization
+fun serializeGraphToJson(graph: TinkerGraph): String {
+    val jsonGraph = buildJsonObject {
+        put("vertices", buildJsonArray {
+            graph.vertices().forEach { vertex ->
+                add(buildJsonObject {
+                    put("id", vertex.id().toString())
+                    put("label", vertex.label())
+                    put("properties", buildJsonObject {
+                        vertex.properties<Any>().forEach { prop ->
+                            put(prop.key(), JsonPrimitive(prop.value().toString()))
+                        }
+                    })
+                })
+            }
+        })
+
+        put("edges", buildJsonArray {
+            graph.edges().forEach { edge ->
+                add(buildJsonObject {
+                    put("id", edge.id().toString())
+                    put("label", edge.label())
+                    put("outVertex", edge.outVertex().id().toString())
+                    put("inVertex", edge.inVertex().id().toString())
+                    put("properties", buildJsonObject {
+                        edge.properties<Any>().forEach { prop ->
+                            put(prop.key(), JsonPrimitive(prop.value().toString()))
+                        }
+                    })
+                })
+            }
+        })
+    }
+
+    return jsonGraph.toString()
+}
+
+fun deserializeGraphFromJson(jsonString: String): TinkerGraph {
+    val graph = TinkerGraph.open()
+    val jsonElement = Json.parseToJsonElement(jsonString)
+    val jsonObject = jsonElement.jsonObject
+
+    val vertexMap = mutableMapOf<String, Vertex>()
+
+    // Restore vertices
+    jsonObject["vertices"]?.jsonArray?.forEach { vertexElement ->
+        val vertexObj = vertexElement.jsonObject
+        val id = vertexObj["id"]?.jsonPrimitive?.content ?: ""
+        val label = vertexObj["label"]?.jsonPrimitive?.content ?: ""
+
+        val vertex = graph.addVertex(label)
+        vertexObj["properties"]?.jsonObject?.forEach { (key, value) ->
+            vertex.property(key, value.jsonPrimitive.content)
+        }
+
+        vertexMap[id] = vertex
+    }
+
+    // Restore edges
+    jsonObject["edges"]?.jsonArray?.forEach { edgeElement ->
+        val edgeObj = edgeElement.jsonObject
+        val label = edgeObj["label"]?.jsonPrimitive?.content ?: ""
+        val outVertexId = edgeObj["outVertex"]?.jsonPrimitive?.content ?: ""
+        val inVertexId = edgeObj["inVertex"]?.jsonPrimitive?.content ?: ""
+
+        val outVertex = vertexMap[outVertexId]
+        val inVertex = vertexMap[inVertexId]
+
+        if (outVertex != null && inVertex != null) {
+            val edge = outVertex.addEdge(label, inVertex)
+            edgeObj["properties"]?.jsonObject?.forEach { (key, value) ->
+                edge.property(key, value.jsonPrimitive.content)
+            }
+        }
+    }
+
+    return graph
+}
+
+// Usage example
+val originalGraph = TinkerGraph.open()
+// ... populate graph ...
+
+val jsonString = serializeGraphToJson(originalGraph)
+val restoredGraph = deserializeGraphFromJson(jsonString)
+
+println("Original: ${originalGraph.vertices().asSequence().count()} vertices")
+println("Restored: ${restoredGraph.vertices().asSequence().count()} vertices")
+----
+
+== Platform-Specific Examples
+
+=== JVM Platform Features
+
+==== Concurrent Access
+
+[source,kotlin]
+----
+import java.util.concurrent.*
+import java.util.concurrent.atomic.AtomicInteger
+
+// Enable concurrent access
+val concurrentGraph = TinkerGraph.open(mapOf(
+    TinkerGraph.GREMLIN_TINKERGRAPH_CONCURRENT_ACCESS to true
+))
+
+// Concurrent vertex creation
+fun testConcurrentVertexCreation() {
+    val executor = Executors.newFixedThreadPool(8)
+    val vertexCount = AtomicInteger(0)
+    val futures = mutableListOf<Future<*>>()
+
+    repeat(8) { threadId ->
+        val future = executor.submit {
+            repeat(1000) { i ->
+                val vertex = concurrentGraph.addVertex("person")
+                vertex.property("name", "User-$threadId-$i")
+                vertex.property("thread", threadId)
+                vertex.property("sequence", i)
+                vertexCount.incrementAndGet()
+            }
+        }
+        futures.add(future)
+    }
+
+    // Wait for all threads to complete
+    futures.forEach { it.get() }
+    executor.shutdown()
+
+    println("Created ${vertexCount.get()} vertices concurrently")
+    println("Actual vertex count: ${concurrentGraph.vertices().asSequence().count()}")
+}
+
+testConcurrentVertexCreation()
+
+// Concurrent traversals
+fun testConcurrentTraversals() {
+    val executor = Executors.newFixedThreadPool(4)
+    val queryResults = mutableListOf<Future<List<Vertex>>>()
+
+    repeat(4) { threadId ->
+        val future = executor.submit<List<Vertex>> {
+            concurrentGraph.traversal()
+                .V()
+                .has("thread", threadId)
+                .toList()
+        }
+        queryResults.add(future)
+    }
+
+    queryResults.forEachIndexed { index, future ->
+        val results = future.get()
+        println("Thread $index found ${results.size} vertices")
+    }
+
+    executor.shutdown()
+}
+
+testConcurrentTraversals()
+----
+
+==== Transaction Management
+
+[source,kotlin]
+----
+// Transaction support (JVM platform)
+val transactionalGraph = TinkerGraph.open(mapOf(
+    TinkerGraph.GREMLIN_TINKERGRAPH_TRANSACTIONS to true
+))
+
+// Basic transaction usage
+fun basicTransactionExample() {
+    val tx = transactionalGraph.tx()
+
+    try {
+        tx.open()
+
+        val user = transactionalGraph.addVertex("user", "name", "TransactionalUser")
+        val profile = transactionalGraph.addVertex("profile", "bio", "Test user")
+        user.addEdge("has_profile", profile)
+
+        // Commit transaction
+        tx.commit()
+        println("Transaction committed successfully")
+
+    } catch (e: Exception) {
+        tx.rollback()
+        println("Transaction rolled back: ${e.message}")
+    }
+}
+
+// Batch operations with transactions
+fun batchTransactionExample() {
+    val batchSize = 100
+    val totalOperations = 1000
+
+    (0 until totalOperations step batchSize).forEach { batchStart ->
+        val tx = transactionalGraph.tx()
+
+        try {
+            tx.open()
+
+            repeat(batchSize) { i ->
+                val index = batchStart + i
+                if (index < totalOperations) {
+                    val vertex = transactionalGraph.addVertex("batch_item")
+                    vertex.property("index", index)
+                    vertex.property("batch", batchStart / batchSize)
+                }
+            }
+
+            tx.commit()
+            println("Committed batch ${batchStart / batchSize}")
+
+        } catch (e: Exception) {
+            tx.rollback()
+            println("Rolled back batch ${batchStart / batchSize}: ${e.message}")
+        }
+    }
+}
+
+basicTransactionExample()
+batchTransactionExample()
+----
+
+=== Native Platform Features
+
+==== Memory Pool Optimization
+
+[source,kotlin]
+----
+import org.apache.tinkerpop.gremlin.tinkergraph.optimization.*
+
+// Initialize native optimizations
+NativeThreading.initialize(threadCount = 8)
+MemoryPool.warmupPools(
+    vertexCount = 10000,
+    edgeCount = 50000,
+    propertyCount = 25000
+)
+
+// Monitor memory pool performance
+fun demonstrateMemoryPools() {
+    val graph = TinkerGraph.open()
+
+    // Create many vertices to test pool efficiency
+    repeat(10000) { i ->
+        val vertex = graph.addVertex("test_vertex")
+        vertex.property("id", i)
+        vertex.property("category", "batch_${i % 100}")
+
+        // Track pool allocation
+        NativeMemoryManager.trackAllocation(64, fromPool = true)
+    }
+
+    // Get pool statistics
+    val poolStats = MemoryPool.getPoolStatistics()
+    poolStats.forEach { (type, stats) ->
+        println("$type pool: ${stats.hitRatio}% hit ratio, ${stats.efficiency}% efficiency")
+    }
+
+    // Get optimization recommendations
+    val recommendations = MemoryPool.getOptimizationRecommendations()
+    recommendations.forEach { rec ->
+        println("🔧 $rec")
+    }
+}
+
+demonstrateMemoryPools()
+
+// SIMD operations for large datasets
+fun demonstrateSimdOperations() {
+    val largeDataset = (1..10000).map { it.toDouble() }.toDoubleArray()
+    val weights = DoubleArray(largeDataset.size) { 1.0 }
+    val results = DoubleArray(largeDataset.size)
+
+    // Vectorized distance calculations
+    val processed = SimdOptimizations.vectorizedDistanceCalculation(
+        sourceDistances = largeDataset,
+        targetDistances = largeDataset,
+        weights = weights,
+        result = results
+    )
+
+    println("Processed $processed elements with SIMD optimizations")
+
+    // Aggregation operations
+    val sum = SimdOptimizations.vectorizedAggregation(
+        largeDataset,
+        SimdOptimizations.AggregationOperation.SUM
+    )
+    val avg = SimdOptimizations.vectorizedAggregation(
+        largeDataset,
+        SimdOptimizations.AggregationOperation.AVERAGE
+    )
+
+    println("Dataset sum: $sum, average: $avg")
+
+    // Get SIMD statistics
+    val simdStats = SimdOptimizations.getSimdStatistics()
+    println("SIMD efficiency: ${simdStats.vectorizationRatio * 100}%")
+}
+
+demonstrateSimdOperations()
+----
+
+==== Profile-Guided Optimization
+
+[source,kotlin]
+----
+// Demonstrate profile-guided optimization
+fun demonstrateProfileGuidedOptimization() {
+    val graph = TinkerGraph.open()
+
+    // Profile various operations
+    ProfileGuidedOptimization.profileOperation(
+        "vertex_creation",
+        mapOf("batch_size" to 1000)
+    ) {
+        repeat(1000) { i ->
+            val vertex = graph.addVertex("profiled_vertex")
+            vertex.property("index", i)
+        }
+    }
+
+    ProfileGuidedOptimization.profileOperation(
+        "graph_traversal",
+        mapOf("max_depth" to 3)
+    ) {
+        graph.traversal()
+            .V()
+            .hasLabel("profiled_vertex")
+            .has("index", P.lt(100))
+            .toList()
+    }
+
+    // Run optimization analysis
+    ProfileGuidedOptimization.optimizeAll()
+
+    // Get optimization results
+    val stats = ProfileGuidedOptimization.getOptimizationStatistics()
+    println("Profiled ${stats.totalOperationsProfiled} operation types")
+    println("Applied ${stats.totalOptimizationsApplied} optimizations")
+    println("Average improvement: ${stats.averageImprovement * 100}%")
+
+    // Get recommendations
+    val recommendations = ProfileGuidedOptimization.getOptimizationRecommendations()
+    recommendations.forEach { rec ->
+        println("💡 $rec")
+    }
+}
+
+demonstrateProfileGuidedOptimization()
+----
+
+== Performance Monitoring Examples
+
+=== Graph Statistics
+
+[source,kotlin]
+----
+// Comprehensive graph statistics
+fun analyzeGraphPerformance(graph: TinkerGraph) {
+    // Basic graph metrics
+    val vertexCount = graph.vertices().asSequence().count()
+    val edgeCount = graph.edges().asSequence().count()
+    val avgDegree = if (vertexCount > 0) edgeCount.toDouble() / vertexCount else 0.0
+
+    println("Graph Statistics:")
+    println("  Vertices: $vertexCount")
+    println("  Edges: $edgeCount")
+    println("  Average degree: ${"%.2f".format(avgDegree)}")
+
+    // Label distribution
+    val vertexLabels = graph.vertices().asSequence()
+        .groupingBy { it.label() }
+        .eachCount()
+
+    val edgeLabels = graph.edges().asSequence()
+        .groupingBy { it.label() }
+        .eachCount()
+
+    println("  Vertex labels: $vertexLabels")
+    println("  Edge labels: $edgeLabels")
+
+    // Memory usage (Native platform)
+    val memStats = NativeMemoryManager.getMemoryStatistics()
+    println("Memory Statistics:")
+    println("  Total allocated: ${memStats.totalAllocated} bytes")
+    println("  Memory efficiency: ${memStats.allocationEfficiency * 100}%")
+    println("  Pool efficiency: ${memStats.poolEfficiency * 100}%")
+
+    // Index statistics
+    val indexStats = graph.getIndexStatistics()
+    println("Index Statistics:")
+    indexStats.forEach { (indexName, stats) ->
+        println("  $indexName: ${stats.hitRatio}% hit ratio, ${stats.totalQueries} queries")
+    }
+}
+
+// Performance benchmarking
+fun benchmarkOperations(graph: TinkerGraph) {
+    val iterations = 1000
+
+    // Benchmark vertex creation
+    val vertexCreationTime = measureTimeMillis {
+        repeat(iterations) { i ->
+            val vertex = graph.addVertex("benchmark")
+            vertex.property("index", i)
+        }
+    }
+
+    // Benchmark traversals
+    val traversalTime = measureTimeMillis {
+        repeat(iterations) {
+            graph.traversal().V().hasLabel("benchmark").count().next()
+        }
+    }
+
+    // Benchmark property queries
+    val propertyQueryTime = measureTimeMillis {
+        repeat(iterations) { i ->
+            graph.traversal().V().has("index", i % 100).tryNext()
+        }
+    }
+
+    println("Performance Benchmarks (${iterations} iterations):")
+    println("  Vertex creation: ${vertexCreationTime}ms (${vertexCreationTime.toDouble() / iterations} ms/op)")
+    println("  Traversals: ${traversalTime}ms (${traversalTime.toDouble() / iterations} ms/op)")
+    println("  Property queries: ${propertyQueryTime}ms (${propertyQueryTime.toDouble() / iterations} ms/op)")
+}
+
+// Usage
+val graph = TinkerGraph.open()
+// ... populate graph with test data ...
+
+analyzeGraphPerformance(graph)
+benchmarkOperations(graph)
+----
+
+== Error Handling and Best Practices
+
+=== Exception Management
+
+[source,kotlin]
+----
+// Comprehensive error handling
+class GraphOperationService(private val graph: TinkerGraph) {
+
+    fun safeAddVertex(label: String, properties: Map<String, Any>): Vertex? {
+        return try {
+            val vertex = graph.addVertex(label)
+            properties.forEach { (key, value) ->
+                vertex.property(key, value)
+            }
+            vertex
+        } catch (e: IllegalArgumentException) {
+            println("Invalid vertex properties: ${e.message}")
+            null
+        } catch (e: Exception) {
+            println("Unexpected error creating vertex: ${e.message}")
+            null
+        }
+    }
+
+    fun safeTraversal(traversalFn: () -> List<Vertex>): List<Vertex> {
+        return try {
+            traversalFn()
+        } catch (e: NoSuchElementException) {
+            println("No elements found in traversal")
+            emptyList()
+        } catch (e: IllegalStateException) {
+            println("Invalid traversal state: ${e.message}")
+            emptyList()
+        } catch (e: Exception) {
+            println("Traversal error: ${e.message}")
+            emptyList()
+        }
+    }
+
+    fun validateGraphIntegrity(): List<String> {
+        val issues = mutableListOf<String>()
+
+        // Check for orphaned edges
+        graph.edges().forEach { edge ->
+            try {
+                val outVertex = edge.outVertex()
+                val inVertex = edge.inVertex()
+
+                if (outVertex == null || inVertex == null) {
+                    issues.add("Edge ${edge.id()} has null vertices")
+                }
+            } catch (e: Exception) {
+                issues.add("Edge ${edge.id()} validation failed: ${e.message}")
+            }
+        }
+
+        // Check for vertices without required properties
+        graph.vertices().forEach { vertex ->
+            if (vertex.label().isBlank()) {
+                issues.add("Vertex ${vertex.id()} has empty label")
+            }
+
+            // Check for required properties based on label
+            when (vertex.label()) {
+                "person" -> {
+                    if (!vertex.property("name").isPresent) {
+                        issues.add("Person vertex ${vertex.id()} missing name")
+                    }
+                }
+                "company" -> {
+                    if (!vertex.property("name").isPresent) {
+                        issues.add("Company vertex ${vertex.id()} missing name")
+                    }
+                }
+            }
+        }
+
+        return issues
+    }
+}
+
+// Usage example
+val graphService = GraphOperationService(graph)
+
+val newVertex = graphService.safeAddVertex("person", mapOf(
+    "name" to "John Doe",
+    "age" to 30,
+    "email" to "john@example.com"
+))
+
+val results = graphService.safeTraversal {
+    graph.traversal().V().hasLabel("person").has("age", P.gt(25)).toList()
+}
+
+val validationIssues = graphService.validateGraphIntegrity()
+if (validationIssues.isNotEmpty()) {
+    println("Graph validation issues:")
+    validationIssues.forEach { issue ->
+        println("  ⚠️  $issue")
+    }
+}
+----
+
+=== Resource Management
+
+[source,kotlin]
+----
+// Resource management patterns
+class ManagedGraph : AutoCloseable {
+    private val graph: TinkerGraph
+    private var closed = false
+
+    init {
+        graph = TinkerGraph.open(mapOf(
+            TinkerGraph.GREMLIN_TINKERGRAPH_CONCURRENT_ACCESS to true
+        ))
+
+        // Initialize optimizations if on native platform
+        try {
+            NativeThreading.initialize()
+            MemoryPool.warmupPools()
+        } catch (e: Exception) {
+            println("Native optimizations not available: ${e.message}")
+        }
+    }
+
+    fun executeInTransaction(operation: (TinkerGraph) -> Unit) {
+        checkNotClosed()
+
+        val tx = graph.tx()
+        try {
+            tx.open()
+            operation(graph)
+            tx.commit()
+        } catch (e: Exception) {
+            tx.rollback()
+            throw e
+        }
+    }
+
+    fun <T> queryWithTimeout(timeoutMs: Long, query: () -> T): T? {
+        checkNotClosed()
+
+        return try {
+            val future = CompletableFuture.supplyAsync(query)
+            future.get(timeoutMs, TimeUnit.MILLISECONDS)
+        } catch (e: TimeoutException) {
+            println("Query timed out after ${timeoutMs}ms")
+            null
+        } catch (e: Exception) {
+            println("Query failed: ${e.message}")
+            null
+        }
+    }
+
+    private fun checkNotClosed() {
+        if (closed) {
+            throw IllegalStateException("Graph has been closed")
+        }
+    }
+
+    override fun close() {
+        if (!closed) {
+            try {
+                // Cleanup native resources
+                NativeThreading.shutdown()
+                MemoryPool.clearAllPools()
+                NativeMemoryManager.forceCleanup()
+
+                graph.close()
+                closed = true
+                println("Graph resources cleaned up")
+            } catch (e: Exception) {
+                println("Error during cleanup: ${e.message}")
+            }
+        }
+    }
+}
+
+// Usage with resource management
+fun processGraphWithProperCleanup() {
+    ManagedGraph().use { managedGraph ->
+        managedGraph.executeInTransaction { graph ->
+            val vertex = graph.addVertex("temp")
+            vertex.property("timestamp", System.currentTimeMillis())
+        }
+
+        val result = managedGraph.queryWithTimeout(5000) {
+            graph.traversal().V().hasLabel("temp").count().next()
+        }
+
+        println("Found $result temporary vertices")
+    } // Automatic cleanup occurs here
+}
+
+processGraphWithProperCleanup()
+----
+
+== Conclusion
+
+This comprehensive API guide demonstrates the full capabilities of TinkerGraphs across different platforms and use cases. The examples show:
+
+- **Basic Operations**: Creating graphs, vertices, and edges
+- **Advanced Traversals**: Complex query patterns and algorithms
+- **Performance Optimization**: Indexing, memory management, and platform-specific features
+- **Serialization**: Multiple formats and platform-specific optimizations
+- **Error Handling**: Robust error management and validation
+- **Resource Management**: Proper cleanup and lifecycle management
+
+For more detailed information about specific APIs, consult the generated API documentation. The examples in this guide provide a solid foundation for building high-performance graph applications with TinkerGraphs.
+
+=== Additional Resources
+
+- **API Reference**: Complete method documentation with parameters and return types
+- **Performance Guide**: Detailed optimization strategies and benchmarking
+- **Platform-Specific Guides**: JVM, JavaScript, and Native platform specifics
+- **Migration Guide**: Step-by-step migration from other graph databases
+- **Community Examples**: Real-world use cases and implementation patterns
+
+Happy graphing! 🚀
