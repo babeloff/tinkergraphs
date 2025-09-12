@@ -149,3 +149,30 @@ description = "Run JavaScript platform demonstration in Node.js environment"
 [tasks.runNativeDemo]
 cmd = "gradle runNativeDemo"
 description = "Run Native platform demonstration showcasing native performance optimizations"
+
+# Compliance deviation analysis tasks
+
+# Run compliance deviation analysis with AsciiDoc report
+[tasks.compliance-deviation]
+cmd = "python pixi-scripts/compliance_deviation_analysis.py --format adoc"
+description = "Analyze deviations between upstream TinkerPop and local compliance tests (AsciiDoc report)"
+
+# Run compliance deviation analysis with HTML report
+[tasks.compliance-deviation-html]
+cmd = "python pixi-scripts/compliance_deviation_analysis.py --format html"
+description = "Analyze deviations between upstream TinkerPop and local compliance tests (HTML report)"
+
+# Run compliance deviation analysis with JSON report
+[tasks.compliance-deviation-json]
+cmd = "python pixi-scripts/compliance_deviation_analysis.py --format json"
+description = "Analyze deviations between upstream TinkerPop and local compliance tests (JSON report)"
+
+# Run compliance deviation analysis with fresh upstream download
+[tasks.compliance-deviation-fresh]
+cmd = "python pixi-scripts/compliance_deviation_analysis.py --download --format adoc"
+description = "Download fresh upstream tests and analyze compliance deviations"
+
+# Generate all compliance deviation report formats
+[tasks.compliance-deviation-all]
+cmd = "python pixi-scripts/compliance_deviation_analysis.py --format adoc && python pixi-scripts/compliance_deviation_analysis.py --format html && python pixi-scripts/compliance_deviation_analysis.py --format json"
+description = "Generate compliance deviation reports in all formats (AsciiDoc, HTML, JSON)"
